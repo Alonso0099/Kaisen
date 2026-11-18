@@ -84,3 +84,18 @@ test('especie de mascota: ids y nombres del catálogo, y se conserva por perfil'
   P.switchProfile(a.id);
   assert.equal(P.boot().state.pet.species, 'marea');        // cada perfil conserva su elección
 });
+
+test('nombre de mascota por perfil: cada perfil guarda el suyo', async () => {
+  store.clear();
+  const a = P.boot();
+  G.setPetName(a.state, 'Brasa');
+  P.saveProfileState(a.id, a.state);
+  const b = P.createProfile({ name: 'B', character: 'exploradora' });
+  assert.equal(G.petCustomName(b.state), '');
+  G.setPetName(b.state, 'Fuego');
+  P.saveProfileState(b.id, b.state);
+  P.switchProfile(a.id);
+  assert.equal(G.petCustomName(P.boot().state), 'Brasa');
+  P.switchProfile(b.id);
+  assert.equal(G.petCustomName(P.boot().state), 'Fuego');
+});

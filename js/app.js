@@ -8,7 +8,7 @@ import { makeCard, shareCard } from './share.js';
 import * as Profiles from './profiles.js';
 import { art, CHARACTERS, characterById, characterImg, guardianFor, WORLDS, worldById, DEFAULT_WORLD, DEFAULT_PET, PET_SPECIES, speciesById } from './catalog.js';
 
-export const APP_VERSION = '1.3.0';
+export const APP_VERSION = '1.4.0';
 const BACKUP_REMINDER_DAYS = 7;
 
 const $ = sel => document.querySelector(sel);
@@ -91,8 +91,36 @@ function celebrateAdventure(before, after) {
     if (m.done && b && b.refId === m.refId && !b.done) toast(`🗓️ Misión semanal cumplida: <b>${esc(m.title)}</b>`, { kind: 'ach', duration: 4500 });
   });
   if (after.pet.stage > before.pet.stage) {
-    toast(`🐣 ¡${esc(state.pet.name)} evolucionó a <b>${after.pet.stageName}</b>!`, { kind: 'ach', duration: 5000 });
+    // Se espera un momento: si este mismo registro sube de nivel, la animación
+    // de nivel aparece primero y el nombre se pide al cerrarla.
+    if (G.shouldAskPetName(state, before.pet.stage, after.pet.stage)) setTimeout(askPetNameOnHatch, 900);
+    else toast(`🐣 ¡${esc(petName())} evolucionó a <b>${after.pet.stageName}</b>!`, { kind: 'ach', duration: 5000 });
   }
+}
+
+/** Al eclosionar: "Ponle nombre a tu compañero" (se puede omitir). */
+let hatchPending = false;
+async function askPetNameOnHatch() {
+  // Si está la animación de subir de nivel, espera a que se cierre.
+  if (levelUpOpen || !$('#sheetBackdrop').hidden) { hatchPending = true; return; }
+  hatchPending = false;
+  const sp = speciesById(state.pet.species);
+  const p = openSheet(`
+    <h3>¡Tu huevo eclosionó!</h3>
+    <div class="pet-sheet-art hatch"><img class="pet-img happy" src="${petImg(1)}" alt=""></div>
+    <label class="field"><span>Ponle nombre a tu compañero</span>
+      <input type="text" id="hatchName" maxlength="${G.PET_NAME_MAX}" placeholder="${esc(sp.name)}" autocomplete="off"></label>
+    <p class="small">Si lo dejas vacío se llamará <b>${esc(sp.name)}</b>. Puedes cambiarlo cuando quieras desde su ficha.</p>
+    <div class="btn-row"><button class="btn" data-close="skip">Omitir</button><button class="btn btn-primary" id="hatchSave">Guardar</button></div>`);
+  $('#hatchSave').onclick = () => closeSheet({ name: $('#hatchName').value });
+  $('#hatchName').addEventListener('keydown', e => { if (e.key === 'Enter') $('#hatchSave').click(); });
+  const res = await p;
+  // Omitir, cerrar tocando fuera o guardar vacío: se recuerda que ya se preguntó.
+  if (res && typeof res === 'object') G.setPetName(state, res.name);
+  else G.markPetNameAsked(state);
+  save();
+  renderAll();
+  toast(`🐣 ¡Conoce a <b>${esc(petName())}</b>!`, { kind: 'ach', duration: 4000 });
 }
 
 function celebrateChanges(before, after) {
@@ -304,7 +332,7 @@ function renderGoal(p, { boss, weekly, pet }) {
     }
     if (boss.defeated && !boss.claimed) cands.push({ ico: '👹', text: '¡Jefe derrotado! Reclama tu premio', pct: 2, view: 'quests' });
     else if (!boss.defeated) cands.push({ ico: '👹', text: `A ${boss.name.split(',')[0]} le quedan ${boss.hpLeft} PV`, pct: boss.pct, view: 'quests' });
-    if (pet.next) cands.push({ ico: '🐣', text: `${state.pet.name} evoluciona en ${plural(pet.daysToNext, 'día', 'días')}`, pct: pet.pct * 0.9, view: null });
+    if (pet.next) cands.push({ ico: '🐣', text: `${petName()} evoluciona en ${plural(pet.daysToNext, 'día', 'días')}`, pct: pet.pct * 0.9, view: null });
     g = cands.sort((a, b) => b.pct - a.pct)[0];
   }
   el.dataset.view = g.view || '';
@@ -392,6 +420,9 @@ const PET_MOOD = {
   hungry: n => `${n} tiene hambre: registra hoy`,
   sad: n => `${n} te extraña`,
 };
+/** Nombre visible de la mascota: el que eligió el jugador o el de la especie. */
+const petName = () => G.petCustomName(state) || speciesById(state.pet.species).name;
+
 const PET_MOOD_SHORT = { egg: 'Dale calor', happy: '¡Está feliz!', hungry: 'Tiene hambre', sad: 'Te extraña' };
 const bossImg = id => art.boss(id);
 const petImg = stage => art.pet(state.pet.species || DEFAULT_PET, stage);
@@ -413,7 +444,7 @@ function renderMinis({ boss, pet }) {
         : `<div class="hpbar"><i style="width:${Math.round((1 - boss.pct) * 100)}%"></i></div>
            <div class="mini-sub">${boss.hpLeft} PV · ${boss.daysLeft} d</div>`}
     </div>`;
-  const name = state.pet.name || 'Mascota';
+  const name = petName();
   $('#petMini').innerHTML = `
     <img class="pet-img ${pet.mood}" src="${petImg(pet.stage)}" alt="">
     <div class="mini-body">
@@ -890,7 +921,7 @@ function claimReward(fn, btn, label) {
 /** Hoja con la mascota en grande, su progreso y sus etapas. */
 async function openPetSheet() {
   const pet = G.petStatus(state);
-  const name = state.pet.name || 'Mascota';
+  const name = petName();
   const p = openSheet(`
     <h3>${esc(name)}</h3>
     <div class="pet-sheet-art"><img class="pet-img ${pet.mood}" src="${petImg(pet.stage)}" alt=""></div>
@@ -906,22 +937,24 @@ async function openPetSheet() {
         : `Ya eclosionó: es de la especie ${esc(speciesById(state.pet.species).name)}.`}</p>
       <div class="egg-grid" id="eggGrid">${eggCards(pet.stage)}</div>
     </div>
-    <label class="field"><span>Nombre</span><input type="text" id="petName" maxlength="14" value="${esc(state.pet.name)}" autocomplete="off"></label>
+    <label class="field"><span>Nombre de tu compañero</span><input type="text" id="petName" maxlength="${G.PET_NAME_MAX}" value="${esc(G.petCustomName(state))}" placeholder="${esc(speciesById(state.pet.species).name)}" autocomplete="off"></label>
     <button class="btn btn-primary btn-block" data-close="ok">Listo</button>`);
-  $('#petName').addEventListener('input', e => { state.pet.name = e.target.value.trim() || speciesById(state.pet.species).name; save(); });
+  $('#petName').addEventListener('input', e => {
+    G.setPetName(state, e.target.value);  // vacío = se muestra el nombre de la especie
+    save();
+    document.querySelector('.sheet h3').textContent = petName();
+  });
   $('#eggGrid').addEventListener('click', e => {
     const c = e.target.closest('[data-egg]');
     if (!c || c.disabled) return;
-    const prev = speciesById(state.pet.species), next = speciesById(c.dataset.egg);
-    state.pet.species = next.id;
-    // Si la mascota conservaba el nombre por defecto, toma el de la nueva especie
-    if (!state.pet.name || state.pet.name === prev.name) state.pet.name = next.name;
+    state.pet.species = c.dataset.egg;  // cada especie guarda su propio nombre
     save();
     $('#eggGrid').innerHTML = eggCards(0);
-    $('#petName').value = state.pet.name;
+    $('#petName').value = G.petCustomName(state);
+    $('#petName').placeholder = speciesById(state.pet.species).name;
     document.querySelector('.pet-sheet-art img').src = petImg(0);
     document.querySelectorAll('.pet-stages img').forEach((img, i) => { img.src = petImg(i); });
-    document.querySelector('.sheet h3').textContent = state.pet.name;
+    document.querySelector('.sheet h3').textContent = petName();
   });
   await p;
   renderAll();
@@ -1145,6 +1178,7 @@ function showLevelUp(p) {
     stopSparks?.(); stopSparks = null;
     levelUpOpen = false;
     pendingToasts.splice(0).forEach(([h, o], i) => setTimeout(() => toast(h, o), i * 250));
+    if (hatchPending) setTimeout(askPetNameOnHatch, 400);
   };
 }
 

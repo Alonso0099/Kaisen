@@ -249,7 +249,9 @@ export function defaultState() {
     schema: SCHEMA_VERSION,
     profile: { name: 'Héroe', character: 'guardabosques' },  // nombre y personaje de este perfil
     prefs: { idle: 'sway' },         // animación del personaje en reposo: 'sway' | 'static'
-    pet: { name: 'Chispa', species: 'chispa' },  // la mascota (la especie decide su arte)
+    // La mascota: la especie decide su arte. Los nombres se guardan por especie;
+    // si no hay nombre, la app muestra el nombre de la especie.
+    pet: { species: 'chispa', names: {}, asked: {} },
     activities: [...DEFAULT_ACTIVITIES, ...DEFAULT_RESIST].map(a => ({ ...a, bonus: a.bonus ? { ...a.bonus } : null })),
     rewards: DEFAULT_REWARDS.map(r => ({ ...r })),  // recompensas reales de la tienda
     purchases: [],                                   // todo lo comprado con monedas
@@ -342,7 +344,7 @@ export function validateImport(obj) {
     schema: SCHEMA_VERSION,
     profile: { ...base.profile, ...(data.profile || {}) },
     prefs: { ...base.prefs, ...(data.prefs || {}) },
-    pet: { ...base.pet, ...(data.pet || {}) },
+    pet: migratePet(base.pet, data.pet),
     activities,
     rewards: Array.isArray(data.rewards) ? data.rewards.filter(r => r && typeof r.name === 'string' && Number.isFinite(r.cost)) : base.rewards,
     purchases: Array.isArray(data.purchases) ? data.purchases.filter(x => x && Number.isFinite(x.cost)) : [],
@@ -681,4 +683,47 @@ export function applyShields(state, now = Date.now()) {
   if (!gap.length || !hadStreak || gap.length > shieldsLeft(state)) return [];
   state.shieldDays.push(...gap);
   return gap;
+}
+
+// =====================================================================
+// Nombre de la mascota (por especie y por perfil)
+// =====================================================================
+export const PET_NAME_MAX = 14;
+const LEGACY_DEFAULT_PET_NAME = 'Chispa'; // nombre automático de versiones anteriores
+
+/** Convierte el formato viejo (pet.name único) al nuevo (pet.names por especie). */
+function migratePet(base, pet = {}) {
+  const out = { ...base, ...pet, names: { ...(pet.names || {}) }, asked: { ...(pet.asked || {}) } };
+  if (typeof pet.name === 'string') {
+    const n = pet.name.trim();
+    // "Chispa" era el nombre que la app ponía sola: no lo eligió el jugador.
+    if (n && n !== LEGACY_DEFAULT_PET_NAME && !out.names[out.species]) out.names[out.species] = n.slice(0, PET_NAME_MAX);
+    delete out.name;
+  }
+  return out;
+}
+
+/** Nombre elegido por el jugador para la mascota actual ('' si no tiene). */
+export function petCustomName(state) {
+  return state.pet?.names?.[state.pet.species] || '';
+}
+
+/** Guarda (o borra, si viene vacío) el nombre de la mascota actual. */
+export function setPetName(state, name) {
+  const n = String(name ?? '').trim().slice(0, PET_NAME_MAX);
+  state.pet.names = state.pet.names || {};
+  if (n) state.pet.names[state.pet.species] = n;
+  else delete state.pet.names[state.pet.species];
+  markPetNameAsked(state);
+  return n;
+}
+
+export function markPetNameAsked(state) {
+  state.pet.asked = state.pet.asked || {};
+  state.pet.asked[state.pet.species] = true;
+}
+
+/** ¿Hay que ofrecer "Ponle nombre a tu compañero"? Solo al eclosionar, una vez por especie. */
+export function shouldAskPetName(state, beforeStage, afterStage) {
+  return beforeStage === 0 && afterStage >= 1 && !petCustomName(state) && !state.pet?.asked?.[state.pet.species];
 }

@@ -987,3 +987,6 @@ body.scrolled .topbar {
 .field p.small { text-transform: none; letter-spacing: 0; font-weight: 700; }
 .sheet { overflow-x: hidden; }
 .egg-card b { white-space: normal; font-size: 11px; line-height: 1.15; min-height: 2.3em; display: flex; align-items: center; justify-content: center; }
+
+.pet-sheet-art.hatch { animation: hatchPop .6s cubic-bezier(.2,1.5,.4,1); }
+@keyframes hatchPop { from { transform: scale(.6); opacity: 0; } }

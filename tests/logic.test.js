@@ -438,3 +438,48 @@ test('escudo de racha: si el hueco es mayor que tus escudos, no se gasta ninguno
   assert.equal(L.shieldsLeft(s), 1);
   assert.equal(L.deriveProfile(s, last + 3 * DAY).streak.current, 0);
 });
+
+// ---------------- Nombre de la mascota ----------------
+
+test('nombre de mascota: vacío por defecto, se guarda por especie y se puede borrar', () => {
+  const s = L.defaultState();
+  assert.equal(L.petCustomName(s), '');
+  L.setPetName(s, '  Brasa  ');
+  assert.equal(L.petCustomName(s), 'Brasa');
+  s.pet.species = 'marea';
+  assert.equal(L.petCustomName(s), '');            // otra especie, otro nombre
+  L.setPetName(s, 'Ola');
+  s.pet.species = 'chispa';
+  assert.equal(L.petCustomName(s), 'Brasa');
+  L.setPetName(s, '');                              // vacío = vuelve al nombre de la especie
+  assert.equal(L.petCustomName(s), '');
+  assert.equal(L.setPetName(s, 'NombreDemasiadoLargoParaCaber').length, L.PET_NAME_MAX);
+});
+
+test('nombre de mascota: se pregunta una sola vez al eclosionar', () => {
+  const s = L.defaultState();
+  assert.equal(L.shouldAskPetName(s, 0, 1), true);
+  assert.equal(L.shouldAskPetName(s, 1, 2), false); // solo al salir del huevo
+  L.markPetNameAsked(s);                             // "Omitir"
+  assert.equal(L.shouldAskPetName(s, 0, 1), false);
+  const t = L.defaultState();
+  L.setPetName(t, 'Ya tengo nombre');
+  assert.equal(L.shouldAskPetName(t, 0, 1), false);
+});
+
+test('nombre de mascota: migra el formato viejo y descarta el "Chispa" automático', () => {
+  const old = L.defaultState();
+  old.pet = { name: 'Chispa' };                      // nombre que ponía la app sola
+  let back = L.validateImport(JSON.parse(JSON.stringify(L.exportPayload(old))));
+  assert.equal(L.petCustomName(back), '');
+  assert.equal(back.pet.name, undefined);
+  assert.equal(back.pet.species, 'chispa');
+  old.pet = { name: 'Brasa', species: 'chispa' };    // nombre elegido por el jugador
+  back = L.validateImport(JSON.parse(JSON.stringify(L.exportPayload(old))));
+  assert.equal(L.petCustomName(back), 'Brasa');
+  // ida y vuelta conserva nombres y "ya preguntado"
+  L.markPetNameAsked(back);
+  const again = L.validateImport(JSON.parse(JSON.stringify(L.exportPayload(back))));
+  assert.equal(L.petCustomName(again), 'Brasa');
+  assert.equal(again.pet.asked.chispa, true);
+});
