@@ -959,3 +959,30 @@ body.scrolled .topbar {
 .g-pips i.on { background: var(--c); box-shadow: 0 0 6px var(--c); }
 .g-next { font-size: 11px; color: var(--muted); font-weight: 900; }
 .world-prev img { object-position: 50% 22%; }
+
+/* Jefes verticales (720×1000): en espacios pequeños se enfoca la cara */
+.mini img.boss-hit, .act-btn.resist .act-ico { object-fit: cover; object-position: 50% 6%; border-radius: 12px; background: rgba(0,0,0,.25); }
+.boss-art { width: auto; height: 270px; max-width: 80%; object-fit: contain; object-position: 50% 100%; }
+.boss-stamp { top: 110px; }
+.trophy img { aspect-ratio: 720 / 1000; object-fit: contain; }
+
+/* Selector de huevo */
+.egg-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.egg-card {
+  padding: 6px 4px 8px; border-radius: 14px; text-align: center; color: var(--text);
+  border: 1px solid var(--sys-line); background: rgba(0,0,0,.3); text-transform: none; letter-spacing: 0;
+}
+.egg-card.on { border-color: var(--sys); box-shadow: 0 0 14px rgba(169,155,255,.5); }
+.egg-card[disabled] { opacity: .5; }
+.egg-art { height: 58px; display: grid; place-items: center; }
+.egg-art img { height: 58px; width: 100%; object-fit: contain; }
+.egg-art .soon { width: 44px; height: 54px; border-radius: 50% 50% 46% 46% / 60% 60% 40% 40%; font-size: 18px; letter-spacing: 0; }
+.egg-card b { display: block; font-size: 12px; font-weight: 900; margin-top: 4px; }
+.egg-card small { display: block; font-size: 9.5px; color: var(--muted); font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
+.egg-grid, .pet-stages { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.pet-stages { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.egg-card { min-width: 0; }
+.egg-card b, .egg-card small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.egg-card small { font-size: 8.5px; letter-spacing: .04em; }
+.field p.small { text-transform: none; letter-spacing: 0; font-weight: 700; }
+.sheet { overflow-x: hidden; }

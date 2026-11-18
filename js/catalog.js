@@ -58,17 +58,21 @@ export function guardianFor(statId, statLevel) {
 // Mascotas: cada huevo es una especie con 6 etapas (8 × 6 = 48).
 // Solo "chispa" tiene arte por ahora; las demás aparecen como próximas.
 // ---------------------------------------------------------------------
+// `ready: true` = ya tiene arte de sus 6 etapas. Las demás se ven en el
+// selector como "Próximamente" y no se pueden elegir todavía (para que
+// nadie se quede con una mascota invisible). Cambia a true al subir su arte.
 export const PET_SPECIES = [
-  { id: 'chispa', name: 'Chispa', element: 'Fuego' },
-  { id: 'brisa',  name: null, element: 'Viento' },
-  { id: 'marea',  name: null, element: 'Agua' },
-  { id: 'roca',   name: null, element: 'Tierra' },
-  { id: 'rayo',   name: null, element: 'Trueno' },
-  { id: 'escarcha', name: null, element: 'Hielo' },
-  { id: 'luz',    name: null, element: 'Luz' },
-  { id: 'sombra', name: null, element: 'Sombra' },
+  { id: 'chispa',   name: 'Chispa',   element: 'Fuego',  ready: true },
+  { id: 'brisa',    name: 'Céfiro',   element: 'Viento', ready: false },
+  { id: 'marea',    name: 'Marea',    element: 'Agua',   ready: false },
+  { id: 'roca',     name: 'Pedernal', element: 'Tierra', ready: false },
+  { id: 'rayo',     name: 'Trueno',   element: 'Trueno', ready: false },
+  { id: 'escarcha', name: 'Nival',    element: 'Hielo',  ready: false },
+  { id: 'luz',      name: 'Alba',     element: 'Luz',    ready: false },
+  { id: 'sombra',   name: 'Umbra',    element: 'Sombra', ready: false },
 ];
 export const DEFAULT_PET = 'chispa';
+export const speciesById = id => PET_SPECIES.find(s => s.id === id) || PET_SPECIES[0];
 
 // ---------------------------------------------------------------------
 // Mundos (fondos de Inicio): se desbloquean por rango.

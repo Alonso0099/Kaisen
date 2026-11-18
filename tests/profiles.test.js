@@ -67,3 +67,20 @@ test('migra el guardado de la versión anterior como primer perfil', () => {
   assert.equal(state.profile.character, 'guardabosques');
   assert.equal(state.partner, undefined);
 });
+
+test('especie de mascota: ids y nombres del catálogo, y se conserva por perfil', async () => {
+  const C = await import('../js/catalog.js');
+  assert.deepEqual(C.PET_SPECIES.map(s => `${s.id}:${s.name}`), [
+    'chispa:Chispa', 'brisa:Céfiro', 'marea:Marea', 'roca:Pedernal',
+    'rayo:Trueno', 'escarcha:Nival', 'luz:Alba', 'sombra:Umbra',
+  ]);
+  store.clear();
+  const a = P.boot();
+  assert.equal(a.state.pet.species, 'chispa');             // perfiles viejos y nuevos empiezan en Chispa
+  a.state.pet.species = 'marea';
+  P.saveProfileState(a.id, a.state);
+  const b = P.createProfile({ name: 'B', character: 'exploradora' });
+  assert.equal(b.state.pet.species, 'chispa');
+  P.switchProfile(a.id);
+  assert.equal(P.boot().state.pet.species, 'marea');        // cada perfil conserva su elección
+});

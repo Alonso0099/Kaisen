@@ -32,7 +32,7 @@ Si GPT te da otro tamaño, no pasa nada: pídeme "normaliza este arte" y lo reco
 | **Guardianes** | `art/guardians/<stat>-<1..5>.webp` | 6 stats × 5 = 30 | 720×1000 | Ej.: `fuerza-1.webp` es Astrid en su primera forma. |
 | **Jefes** | `art/bosses/<id>.webp` | 10 | 720×1000 o cuadrado 1000×1000 | Hoy hay 6 ids (abajo). Para los 4 nuevos, pásame nombre, debilidad y reto. |
 | **Mascotas** | `art/pets/<especie>-<0..5>.webp` | 8 × 6 = 48 | 600×600 | Etapa 0 = huevo; 5 = forma final. |
-| **Huevos** | `art/eggs/<especie>.webp` | 8 | 600×600 | Para el selector de huevo al empezar (próxima fase). |
+| **Huevos** | `art/eggs/<especie>.webp` | 8 | 600×600 | Selector de huevo en la hoja de la mascota. Si falta, se usa la etapa 0 de esa especie. Al tener las 6 etapas de una especie, pon `ready: true` en `PET_SPECIES`. |
 | **Mundos** | `art/worlds/<id>.webp` | 6 (o más) | 1200×1600 vertical | Paisaje sin personas; el centro-abajo queda despejado para el personaje. |
 | **Insignias de logros** | `art/badges/<id-logro>.webp` | 18 | 512×512 | Si falta una, se muestra el emoji. |
 | **Emblemas de stats** | `art/stats/<stat>.webp` | 6 | 512×512 | Circulares. |

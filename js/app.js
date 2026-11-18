@@ -6,9 +6,9 @@ import * as G from './logic.js';
 import { embers, sparks } from './fx.js';
 import { makeCard, shareCard } from './share.js';
 import * as Profiles from './profiles.js';
-import { art, CHARACTERS, characterById, characterImg, guardianFor, WORLDS, worldById, DEFAULT_WORLD, DEFAULT_PET } from './catalog.js';
+import { art, CHARACTERS, characterById, characterImg, guardianFor, WORLDS, worldById, DEFAULT_WORLD, DEFAULT_PET, PET_SPECIES, speciesById } from './catalog.js';
 
-export const APP_VERSION = '1.1.0';
+export const APP_VERSION = '1.2.0';
 const BACKUP_REMINDER_DAYS = 7;
 
 const $ = sel => document.querySelector(sel);
@@ -900,11 +900,44 @@ async function openPetSheet() {
     <div class="pet-stages">${G.PET_STAGES.map((st, i) => `
       <div class="${i > pet.stage ? 'locked' : i === pet.stage ? 'current' : ''}"><img src="${petImg(i)}" alt="">${i > pet.stage ? `${st.min} días` : st.name}</div>`).join('')}
     </div>
+    <div class="field"><span>Huevo</span>
+      <p class="small" style="margin:0">${pet.stage === 0
+        ? 'Elige qué huevo empollar. Puedes cambiarlo mientras no haya eclosionado.'
+        : `Ya eclosionó: es de la especie ${esc(speciesById(state.pet.species).name)}.`}</p>
+      <div class="egg-grid" id="eggGrid">${eggCards(pet.stage)}</div>
+    </div>
     <label class="field"><span>Nombre</span><input type="text" id="petName" maxlength="14" value="${esc(state.pet.name)}" autocomplete="off"></label>
     <button class="btn btn-primary btn-block" data-close="ok">Listo</button>`);
-  $('#petName').addEventListener('input', e => { state.pet.name = e.target.value.trim() || 'Chispa'; save(); });
+  $('#petName').addEventListener('input', e => { state.pet.name = e.target.value.trim() || speciesById(state.pet.species).name; save(); });
+  $('#eggGrid').addEventListener('click', e => {
+    const c = e.target.closest('[data-egg]');
+    if (!c || c.disabled) return;
+    const prev = speciesById(state.pet.species), next = speciesById(c.dataset.egg);
+    state.pet.species = next.id;
+    // Si la mascota conservaba el nombre por defecto, toma el de la nueva especie
+    if (!state.pet.name || state.pet.name === prev.name) state.pet.name = next.name;
+    save();
+    $('#eggGrid').innerHTML = eggCards(0);
+    $('#petName').value = state.pet.name;
+    document.querySelector('.pet-sheet-art img').src = petImg(0);
+    document.querySelectorAll('.pet-stages img').forEach((img, i) => { img.src = petImg(i); });
+    document.querySelector('.sheet h3').textContent = state.pet.name;
+  });
   await p;
   renderAll();
+}
+
+/** Los 8 huevos: el elegido resaltado; los que no tienen arte, "Próximamente". */
+function eggCards(stage) {
+  const current = state.pet.species || DEFAULT_PET;
+  return PET_SPECIES.map(sp => {
+    const on = sp.id === current;
+    const locked = !sp.ready || (stage > 0 && !on);
+    return `<button class="egg-card ${on ? 'on' : ''}" data-egg="${sp.id}" ${locked ? 'disabled' : ''}>
+      <div class="egg-art">${artImg(art.egg(sp.id), { fb: art.pet(sp.id, 0) })}<span class="soon">?</span></div>
+      <b>${esc(sp.name)}</b><small>${sp.ready ? sp.element : 'Pronto'}</small>
+    </button>`;
+  }).join('');
 }
 
 // ---------------------------------------------------------------------
