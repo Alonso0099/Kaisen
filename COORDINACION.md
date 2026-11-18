@@ -25,7 +25,7 @@ Prioridad de arriba hacia abajo. Tamaños y nombres según ARTE.md.
 | A-02 | Forma 1 de los otros 5 guardianes, **con su nombre** | `art/guardians/{resistencia,intelecto,sabiduria,vinculo,hogar}-1.webp` | ✅ |
 | A-03 | 6 mundos (paisaje vertical, centro inferior despejado) | `art/worlds/{atardecer,bosque,montana,islas,ciudadela,cosmos}.webp` | ✅ |
 | A-04 | 6 jefes actuales en tu estilo (reemplazan los temporales) | `art/bosses/{pereza,procrastinacion,desorden,estres,distraccion,soledad}.webp` | ✅ |
-| A-05 | Mascota inicial: 6 etapas (0 = huevo … 5 = forma final) | `art/pets/chispa-{0..5}.webp` | ⏳ |
+| A-05 | Mascota inicial: 6 etapas (0 = huevo … 5 = forma final) | `art/pets/chispa-{0..5}.webp` | ✅ |
 | A-06 | 6 emblemas de stats (circulares) | `art/stats/<stat>.webp` | ⏳ |
 | A-07 | 18 insignias de logros | `art/badges/<id-logro>.webp` | ⏳ |
 | A-08 | Más personajes jugables (las clases que quieras) | `art/chars/<id>.webp` | ⏳ |
@@ -59,3 +59,4 @@ Prioridad de arriba hacia abajo. Tamaños y nombres según ARTE.md.
 | A-03 | Seis mundos de Inicio | 2026-11-18 |
 | A-04 | Seis jefes en estilo Kaisen | 2026-11-18 |
 | T-02 | Nombres de guardianas y de las 8 especies | 2026-11-18 |
+| A-05 | Dragón de Fuego: 6 etapas (especie `chispa`) | 2026-11-18 |

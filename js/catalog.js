@@ -62,7 +62,7 @@ export function guardianFor(statId, statLevel) {
 // selector como "Próximamente" y no se pueden elegir todavía (para que
 // nadie se quede con una mascota invisible). Cambia a true al subir su arte.
 export const PET_SPECIES = [
-  { id: 'chispa',   name: 'Chispa',   element: 'Fuego',  ready: true },
+  { id: 'chispa',   name: 'Dragón de Fuego', element: 'Fuego', ready: true },  // nombre provisional
   { id: 'brisa',    name: 'Céfiro',   element: 'Viento', ready: false },
   { id: 'marea',    name: 'Marea',    element: 'Agua',   ready: false },
   { id: 'roca',     name: 'Pedernal', element: 'Tierra', ready: false },

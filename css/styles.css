@@ -986,3 +986,4 @@ body.scrolled .topbar {
 .egg-card small { font-size: 8.5px; letter-spacing: .04em; }
 .field p.small { text-transform: none; letter-spacing: 0; font-weight: 700; }
 .sheet { overflow-x: hidden; }
+.egg-card b { white-space: normal; font-size: 11px; line-height: 1.15; min-height: 2.3em; display: flex; align-items: center; justify-content: center; }

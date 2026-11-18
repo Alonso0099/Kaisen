@@ -71,7 +71,7 @@ test('migra el guardado de la versión anterior como primer perfil', () => {
 test('especie de mascota: ids y nombres del catálogo, y se conserva por perfil', async () => {
   const C = await import('../js/catalog.js');
   assert.deepEqual(C.PET_SPECIES.map(s => `${s.id}:${s.name}`), [
-    'chispa:Chispa', 'brisa:Céfiro', 'marea:Marea', 'roca:Pedernal',
+    'chispa:Dragón de Fuego', 'brisa:Céfiro', 'marea:Marea', 'roca:Pedernal',
     'rayo:Trueno', 'escarcha:Nival', 'luz:Alba', 'sombra:Umbra',
   ]);
   store.clear();

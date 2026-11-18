@@ -8,7 +8,7 @@ import { makeCard, shareCard } from './share.js';
 import * as Profiles from './profiles.js';
 import { art, CHARACTERS, characterById, characterImg, guardianFor, WORLDS, worldById, DEFAULT_WORLD, DEFAULT_PET, PET_SPECIES, speciesById } from './catalog.js';
 
-export const APP_VERSION = '1.2.0';
+export const APP_VERSION = '1.3.0';
 const BACKUP_REMINDER_DAYS = 7;
 
 const $ = sel => document.querySelector(sel);
