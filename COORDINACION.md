@@ -21,9 +21,9 @@ Prioridad de arriba hacia abajo. Tamaños y nombres según ARTE.md.
 
 | Código | Qué | Archivos | Estado |
 |---|---|---|---|
-| A-01 | **Astrid**, guardiana de Fuerza, forma 1 | `art/guardians/fuerza-1.webp` | ⏳ |
-| A-02 | Forma 1 de los otros 5 guardianes, **con su nombre** | `art/guardians/{resistencia,intelecto,sabiduria,vinculo,hogar}-1.webp` | ⏳ |
-| A-03 | 6 mundos (paisaje vertical, centro inferior despejado) | `art/worlds/{atardecer,bosque,montana,islas,ciudadela,cosmos}.webp` | ⏳ |
+| A-01 | **Astrid**, guardiana de Fuerza, forma 1 | `art/guardians/fuerza-1.webp` | ✅ |
+| A-02 | Forma 1 de los otros 5 guardianes, **con su nombre** | `art/guardians/{resistencia,intelecto,sabiduria,vinculo,hogar}-1.webp` | ✅ |
+| A-03 | 6 mundos (paisaje vertical, centro inferior despejado) | `art/worlds/{atardecer,bosque,montana,islas,ciudadela,cosmos}.webp` | ✅ |
 | A-04 | 6 jefes actuales en tu estilo (reemplazan los temporales) | `art/bosses/{pereza,procrastinacion,desorden,estres,distraccion,soledad}.webp` | ⏳ |
 | A-05 | Mascota inicial: 6 etapas (0 = huevo … 5 = forma final) | `art/pets/chispa-{0..5}.webp` | ⏳ |
 | A-06 | 6 emblemas de stats (circulares) | `art/stats/<stat>.webp` | ⏳ |
@@ -32,7 +32,7 @@ Prioridad de arriba hacia abajo. Tamaños y nombres según ARTE.md.
 | A-09 | Formas 2–5 de los guardianes | `art/guardians/<stat>-{2..5}.webp` | ⏳ |
 | A-10 | 8 huevos y las otras 7 especies de mascota | `art/eggs/…`, `art/pets/…` | ⏳ |
 | T-01 | Para cada **jefe nuevo** (hasta 4 más): nombre, a qué miedo o mal hábito representa, frase de burla, stat débil y reto de resistencia | texto | ⏳ |
-| T-02 | Nombres de: los 5 guardianes, las 7 especies de mascota y los mundos (si quieres cambiar los actuales) | texto | ⏳ |
+| T-02 | Nombres de: ~~los 5 guardianes~~ (✅ Skadi, Runa, Véra, Eira, Liv), las 7 especies de mascota y los mundos (si quieres cambiar los actuales) | texto | 🟡 |
 | T-03 | Una frase corta de cada guardián al evolucionar | texto | ⏳ |
 
 **Reglas que hacen que todo encaje:** fondo transparente (salvo los mundos), lienzo 720×1000 con los pies en el borde inferior para las figuras de pie, mismo estilo en toda la serie (adjuntar una imagen anterior como referencia) y sin texto dentro de las imágenes.
@@ -55,3 +55,5 @@ Prioridad de arriba hacia abajo. Tamaños y nombres según ARTE.md.
 | Código | Qué | Fecha |
 |---|---|---|
 | — | Exploradora y Guardabosques (personajes jugables) | 2026-11-18 |
+| A-01, A-02 | Guardianas forma 1: Astrid, Skadi, Runa, Véra, Eira, Liv | 2026-11-18 |
+| A-03 | Seis mundos de Inicio | 2026-11-18 |

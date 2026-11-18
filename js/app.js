@@ -8,7 +8,7 @@ import { makeCard, shareCard } from './share.js';
 import * as Profiles from './profiles.js';
 import { art, CHARACTERS, characterById, characterImg, guardianFor, WORLDS, worldById, DEFAULT_WORLD, DEFAULT_PET } from './catalog.js';
 
-export const APP_VERSION = '1.0.0';
+export const APP_VERSION = '1.1.0';
 const BACKUP_REMINDER_DAYS = 7;
 
 const $ = sel => document.querySelector(sel);
@@ -133,6 +133,7 @@ function renderAll(p = G.deriveProfile(state)) {
   renderQuests();
   renderHistory();
   renderAchievements(p);
+  renderGuardians(p);
   renderSettings();
 }
 
@@ -530,6 +531,24 @@ function renderHistory() {
   }
   if (log.length > historyLimit) html += `<button class="btn btn-block" id="moreHistory" style="margin-top:14px">Ver más</button>`;
   $('#historyList').innerHTML = html;
+}
+
+/** Galería de guardianas: forma actual de cada una y cuándo evoluciona. */
+function renderGuardians(p) {
+  $('#guardianGrid').innerHTML = G.STATS.map(s => {
+    const st = p.stats[s.id];
+    const g = guardianFor(s.id, st.level);
+    const name = g.name || `Guardián de ${s.name}`;
+    return `<button class="g-card" data-stat="${s.id}" style="--c:${s.color}">
+      <div class="g-art">${artImg(g.img, { alt: esc(name), fb: g.tier > 1 ? g.fallback : null })}<span class="soon">Próximamente</span></div>
+      <div class="g-info">
+        <b>${esc(name)}</b>
+        <small>${s.name} · Forma ${g.tier}/5</small>
+        <div class="g-pips">${[1, 2, 3, 4, 5].map(t => `<i class="${t <= g.tier ? 'on' : ''}"></i>`).join('')}</div>
+        <span class="g-next">${g.nextAt ? `Evoluciona en LV ${g.nextAt}` : 'Forma final'}</span>
+      </div>
+    </button>`;
+  }).join('');
 }
 
 function renderAchievements(p) {
@@ -1148,7 +1167,7 @@ async function importBackup(file) {
 // ---------------------------------------------------------------------
 function showView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === `view-${name}`));
-  const tabFor = name === 'history' ? 'achievements' : name;
+  const tabFor = name === 'history' || name === 'guardians' ? 'achievements' : name;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === tabFor));
   window.scrollTo({ top: 0 });
   if (name === 'home' && pendingFlash) setTimeout(heroFlash, 120);
@@ -1225,6 +1244,10 @@ $('#weeklyList').addEventListener('click', e => {
   if (b) claimReward(s => G.claimWeekly(s, b.dataset.weekly), b, '🗓️ ¡Misión semanal!');
 });
 
+$('#guardianGrid').addEventListener('click', e => {
+  const c = e.target.closest('[data-stat]');
+  if (c) openStatDetail(c.dataset.stat);
+});
 $('#statsGrid').addEventListener('click', e => {
   const st = e.target.closest('.stat[data-stat]');
   if (st) openStatDetail(st.dataset.stat);

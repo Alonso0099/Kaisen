@@ -41,11 +41,11 @@ export const characterImg = id => art.char(characterById(id).id);
 export const GUARDIAN_TIERS = [1, 5, 10, 20, 35]; // nivel de stat para cada evolución
 export const GUARDIANS = {
   fuerza:      { name: 'Astrid' },
-  resistencia: { name: null },
-  intelecto:   { name: null },
-  sabiduria:   { name: null },
-  vinculo:     { name: null },
-  hogar:       { name: null },
+  resistencia: { name: 'Skadi' },
+  intelecto:   { name: 'Runa' },
+  sabiduria:   { name: 'Véra' },
+  vinculo:     { name: 'Eira' },
+  hogar:       { name: 'Liv' },
 };
 export function guardianFor(statId, statLevel) {
   let tier = 1;

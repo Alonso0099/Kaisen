@@ -133,16 +133,24 @@
 
     <!-- ============ PROGRESO: LOGROS ============ -->
     <section class="view" id="view-achievements" aria-label="Logros">
-      <div class="seg"><button class="seg-btn on" data-view="achievements">Logros</button><button class="seg-btn" data-view="history">Historial</button></div>
+      <div class="seg seg-3"><button class="seg-btn on" data-view="achievements">Logros</button><button class="seg-btn" data-view="guardians">Guardianes</button><button class="seg-btn" data-view="history">Historial</button></div>
       <button class="btn btn-yellow btn-block" id="shareProgressBtn">Compartir mi progreso</button>
       <h2 class="section-title">Logros</h2>
       <div class="ach-summary" id="achSummary"></div>
       <div id="achList" class="ach-grid"></div>
     </section>
 
+    <!-- ============ PROGRESO: GUARDIANES ============ -->
+    <section class="view" id="view-guardians" aria-label="Guardianes">
+      <div class="seg seg-3"><button class="seg-btn" data-view="achievements">Logros</button><button class="seg-btn on" data-view="guardians">Guardianes</button><button class="seg-btn" data-view="history">Historial</button></div>
+      <h2 class="section-title">Guardianes</h2>
+      <p class="hint">Cada stat tiene una guardiana que evoluciona cuando esa stat sube de nivel. Toca una para ver su detalle.</p>
+      <div id="guardianGrid" class="guardian-grid"></div>
+    </section>
+
     <!-- ============ PROGRESO: HISTORIAL ============ -->
     <section class="view" id="view-history" aria-label="Historial">
-      <div class="seg"><button class="seg-btn" data-view="achievements">Logros</button><button class="seg-btn on" data-view="history">Historial</button></div>
+      <div class="seg seg-3"><button class="seg-btn" data-view="achievements">Logros</button><button class="seg-btn" data-view="guardians">Guardianes</button><button class="seg-btn on" data-view="history">Historial</button></div>
       <h2 class="section-title">Historial</h2>
       <p class="hint">¿Te equivocaste? Toca ↶ para deshacer un registro.</p>
       <div id="historyList"></div>
