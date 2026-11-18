@@ -1,0 +1,9 @@
+{
+  "name": "kaisen",
+  "private": true,
+  "type": "module",
+  "description": "Kaisen — RPG de tu vida real (PWA)",
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}
