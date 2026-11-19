@@ -7,9 +7,10 @@ import { embers, sparks } from './fx.js';
 import { makeCard, shareCard } from './share.js';
 import * as Profiles from './profiles.js';
 import * as Gear from './gear.js';
+import { installInfo, isStandalone } from './install.js';
 import { art, CHARACTERS, characterById, characterImg, guardianFor, guardianEvolutions, syncGuardianSeen, GUARDIANS, WORLDS, worldById, DEFAULT_WORLD, DEFAULT_PET, PET_SPECIES, speciesById } from './catalog.js';
 
-export const APP_VERSION = '2.0.0';
+export const APP_VERSION = '2.1.0';
 const BACKUP_REMINDER_DAYS = 7;
 
 const $ = sel => document.querySelector(sel);
@@ -1650,6 +1651,35 @@ function noticeSkyRefund() {
   save();
   setTimeout(() => toast(`🪙 Retiramos los Ambientes de la Tienda y te devolvimos <b>${refund} monedas</b>`, { kind: 'ach', duration: 6000 }), 800);
 }
+
+// ---------------------------------------------------------------------
+// Instalar la app (ver install.js)
+// ---------------------------------------------------------------------
+let installPrompt = null;   // evento beforeinstallprompt guardado (Android / escritorio)
+let justInstalled = false;  // se instaló durante esta visita (la pestaña sigue siendo la del navegador)
+function renderInstall() {
+  const info = installInfo({ standalone: isStandalone() || justInstalled, hasPrompt: !!installPrompt, ua: navigator.userAgent });
+  const steps = info.steps ? `<ol class="install-steps">${info.steps.map(t => `<li>${esc(t)}</li>`).join('')}</ol>` : '';
+  $('#installCard').innerHTML = `
+    <p class="install-title">${esc(info.title)}</p>
+    ${steps}
+    ${info.button ? `<button class="btn btn-primary btn-block" id="installBtn">${esc(info.button)}</button>` : ''}`;
+  $('#installCard').dataset.kind = info.kind;
+}
+addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; renderInstall(); });
+addEventListener('appinstalled', () => { installPrompt = null; justInstalled = true; renderInstall(); toast('📲 ¡Kaisen instalada!', { kind: 'ach' }); });
+$('#installCard').addEventListener('click', async e => {
+  if (!e.target.closest('#installBtn') || !installPrompt) return;
+  const p = installPrompt; installPrompt = null;
+  p.prompt();
+  const choice = await p.userChoice.catch(() => ({ outcome: 'dismissed' }));
+  // Si lo cancela, Chrome no vuelve a ofrecer el aviso hasta más tarde: se explica el menú.
+  if (choice.outcome === 'accepted') justInstalled = true;
+  else toast('Puedes instalarla después desde Ajustes o el menú del navegador');
+  renderInstall();
+});
+matchMedia('(display-mode: standalone)').addEventListener?.('change', renderInstall);
+renderInstall();
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   navigator.serviceWorker.register('./sw.js').catch(err => console.warn('SW no registrado', err));

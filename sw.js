@@ -1,7 +1,7 @@
 // Service worker de Kaisen: guarda la app en caché para que funcione
 // sin conexión. Al publicar cambios, sube CACHE_VERSION para que los
 // iPhones descarguen la nueva versión.
-const CACHE_VERSION = 'kaisen-v2.0.0';
+const CACHE_VERSION = 'kaisen-v2.1.0';
 // Lo esencial para funcionar offline. El arte nuevo que agregues se
 // guarda en caché automáticamente la primera vez que se muestra.
 const ASSETS = [
@@ -15,6 +15,7 @@ const ASSETS = [
   './js/profiles.js',
   './js/catalog.js',
   './js/gear.js',
+  './js/install.js',
   './manifest.webmanifest',
   './fonts/bangers.woff2',
   './fonts/nunito-700.woff2',

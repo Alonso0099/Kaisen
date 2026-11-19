@@ -127,6 +127,10 @@ tests/logic.test.js    Pruebas automáticas de la lógica
 
 ---
 
+## 📲 Instalar la app
+
+En **Ajustes → Instalar la app** hay una tarjeta que cambia según el dispositivo: en Android y escritorio (Chrome, Edge) un botón **Instalar Kaisen**; en iPhone, los tres pasos de Safari (iOS no permite un botón); y si ya está instalada, lo dice. La lógica está en `js/install.js`.
+
 ## ✨ Al registrar
 
 Cada registro muestra **un solo aviso**: qué registraste, el XP y las monedas, hasta dos líneas con lo que desbloqueaste (logros, stats, misión cumplida…) y **Deshacer**, que no se borra aunque lleguen otros avisos. Como máximo hay una celebración a pantalla completa por registro (subir de nivel > eclosión > evolución de guardiana); lo demás va en ese aviso.

@@ -106,3 +106,29 @@ test('personajes: los existentes conservan id y orden (Guardabosques sigue por d
   assert.equal(C.DEFAULT_CHARACTER, 'guardabosques');
   assert.equal(C.characterById('no-existe').id, 'guardabosques');
 });
+
+test('instalación: qué se muestra según el dispositivo', async () => {
+  const I = await import('../js/install.js');
+  const IPHONE = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1';
+  const ANDROID = 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 Chrome/120.0 Mobile Safari/537.36';
+  const DESKTOP = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0 Safari/537.36';
+  // ya instalada gana sobre todo lo demás
+  assert.equal(I.installInfo({ standalone: true, hasPrompt: true, ua: IPHONE }).kind, 'installed');
+  // si el navegador ofrece instalar, hay botón
+  const p = I.installInfo({ standalone: false, hasPrompt: true, ua: ANDROID });
+  assert.equal(p.kind, 'prompt'); assert.ok(p.button);
+  // iPhone / iPad (incluido iPadOS que se anuncia como Mac): instrucciones, sin botón
+  for (const ua of [IPHONE, 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1']) {
+    const i = I.installInfo({ standalone: false, hasPrompt: false, ua });
+    assert.equal(i.kind, 'ios'); assert.equal(i.button, undefined); assert.equal(i.steps.length, 3);
+  }
+  // Android sin evento (p. ej. ya la rechazó): instrucciones del menú
+  assert.equal(I.installInfo({ standalone: false, hasPrompt: false, ua: ANDROID }).kind, 'android-menu');
+  // escritorio sin evento: texto genérico; un Mac normal NO es iOS
+  assert.equal(I.installInfo({ standalone: false, hasPrompt: false, ua: DESKTOP }).kind, 'other');
+  assert.equal(I.isIOS('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Safari/605.1.15'), false);
+  // modo de pantalla
+  assert.equal(I.isStandalone({ matchMedia: q => ({ matches: q.includes('standalone') }) }), true);
+  assert.equal(I.isStandalone({ matchMedia: () => ({ matches: false }), navigator: { standalone: true } }), true);
+  assert.equal(I.isStandalone({ matchMedia: () => ({ matches: false }), navigator: {} }), false);
+});

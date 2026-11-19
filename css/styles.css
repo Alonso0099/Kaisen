@@ -1122,3 +1122,10 @@ body.scrolled .topbar {
   .quick-grid .act-btn { min-height: 84px; padding: 6px 4px; }
   .quick-grid .act-ico { width: 32px; height: 32px; }
 }
+
+/* Instalar la app */
+.install-card { display: grid; gap: 10px; }
+.install-title { margin: 0; font-weight: 800; font-size: 14px; line-height: 1.4; }
+.install-card[data-kind="installed"] .install-title { color: #8ff0b0; }
+.install-steps { margin: 0; padding-left: 20px; display: grid; gap: 6px; font-size: 13px; font-weight: 700; color: var(--muted); }
+.install-card .btn { margin: 0; }
