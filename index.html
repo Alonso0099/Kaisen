@@ -51,6 +51,7 @@
               <div class="hero-title" id="heroTitle" hidden></div>
               <div class="rank-badge" id="rankBadge">Novato</div>
               <div class="hero-name" id="heroName">Héroe</div>
+              <button class="gear-chip" id="gearChip">🎒 Equipo <b id="gearChipBonus"></b></button>
             </div>
             <div class="lv"><span class="lv-label">LV</span><span class="lv-num" id="lvNum">1</span></div>
           </div>
@@ -117,6 +118,10 @@
       <h3 class="sub-title">Mis cupones</h3>
       <div id="couponList" class="list"></div>
 
+      <h2 class="section-title">Equipo</h2>
+      <p class="hint">Cada pieza da XP extra en una stat. Equípalas desde Inicio → 🎒 Equipo. Los jefes sueltan piezas épicas.</p>
+      <div id="shopGear" class="list"></div>
+
       <h2 class="section-title">Escudo de racha</h2>
       <div id="shieldCard"></div>
 
@@ -138,6 +143,21 @@
       <h2 class="section-title">Logros</h2>
       <div class="ach-summary" id="achSummary"></div>
       <div id="achList" class="ach-grid"></div>
+    </section>
+
+    <!-- ============ EQUIPO ============ -->
+    <section class="view" id="view-gear" aria-label="Equipo">
+      <button class="back-btn" id="gearBack">‹ Inicio</button>
+      <h2 class="section-title">Equipo</h2>
+      <div class="gear-board panel">
+        <div class="gear-col" id="gearLeft"></div>
+        <div class="gear-hero"><img id="gearHero" alt="" draggable="false"></div>
+        <div class="gear-col" id="gearRight"></div>
+      </div>
+      <div class="gear-bonus" id="gearBonus"></div>
+      <h2 class="section-title">Inventario</h2>
+      <p class="hint" id="invHint"></p>
+      <div class="inv-grid" id="invGrid"></div>
     </section>
 
     <!-- ============ PROGRESO: GUARDIANES ============ -->

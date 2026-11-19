@@ -4,6 +4,8 @@
 // poder probarlo con Node (ver tests/logic.test.js).
 // =====================================================================
 
+import { gearExtra, itemById, ownsItem, bossDrop } from './gear.js';
+
 export const STATS = [
   { id: 'fuerza',      name: 'Fuerza',      short: 'FUE', icon: '💪', color: '#e63946' },
   { id: 'resistencia', name: 'Resistencia', short: 'RES', icon: '🔥', color: '#ff7a1a' },
@@ -256,7 +258,7 @@ export function defaultState() {
     rewards: DEFAULT_REWARDS.map(r => ({ ...r })),  // recompensas reales de la tienda
     purchases: [],                                   // todo lo comprado con monedas
     shieldDays: [],                                  // días salvados por un escudo de racha
-    equipped: { sky: 'sky-default', title: null, world: 'atardecer' },
+    equipped: { sky: 'sky-default', title: null, world: 'atardecer', gear: {} },
     quests: [],
     questHistory: [],
     log: [],
@@ -282,11 +284,15 @@ export function logActivity(state, activityId, { bonus = false, now = Date.now()
     throw new Error('Este reto ya lo hiciste hoy');
   }
   const extra = bonus && a.bonus ? a.bonus.xp : 0;
+  // El equipo da un % extra sobre la XP de la actividad (con bono incluido).
+  // Se guarda en el registro: si después cambias de equipo, lo ya ganado no cambia.
+  const gear = gearExtra(state, a.stat, a.xp + extra);
   const entry = {
     id: uid(), ts: now, type: 'activity', refId: a.id,
     name: bonus && a.bonus ? `${a.name} · ${a.bonus.label}` : a.name,
-    stat: a.stat, xp: a.xp + extra,
+    stat: a.stat, xp: a.xp + extra + gear,
   };
+  if (gear) entry.gearXp = gear;
   if (a.resist) entry.resist = a.resist;
   state.log.push(entry);
   return entry;
@@ -349,7 +355,7 @@ export function validateImport(obj) {
     rewards: Array.isArray(data.rewards) ? data.rewards.filter(r => r && typeof r.name === 'string' && Number.isFinite(r.cost)) : base.rewards,
     purchases: Array.isArray(data.purchases) ? data.purchases.filter(x => x && Number.isFinite(x.cost)) : [],
     shieldDays: Array.isArray(data.shieldDays) ? data.shieldDays : [],
-    equipped: { ...base.equipped, ...(data.equipped || {}) },
+    equipped: { ...base.equipped, ...(data.equipped || {}), gear: { ...((data.equipped || {}).gear || {}) } },
     quests: Array.isArray(data.quests) ? data.quests.filter(okAct) : [],
     questHistory: Array.isArray(data.questHistory) ? data.questHistory : [],
     log: data.log.filter(okEntry),
@@ -668,6 +674,15 @@ export function equip(state, slot, itemId) {
   if (itemId && !owns(state, itemId)) throw new Error('Aún no lo tienes');
   state.equipped[slot] = itemId;
 }
+/** Compra una pieza de equipo en la Tienda. */
+export function buyItem(state, itemId, now = Date.now()) {
+  const item = itemById(itemId);
+  if (!item || !item.cost) throw new Error('Esa pieza no se vende');
+  if (ownsItem(state, itemId)) throw new Error('Ya la tienes');
+  return pay(state, { kind: 'item', itemId, name: item.name, cost: item.cost }, now);
+}
+export { bossDrop };
+
 export const titleName = state => SHOP.titles.find(t => t.id === state.equipped?.title)?.name || null;
 
 /**

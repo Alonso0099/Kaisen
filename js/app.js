@@ -6,9 +6,10 @@ import * as G from './logic.js';
 import { embers, sparks } from './fx.js';
 import { makeCard, shareCard } from './share.js';
 import * as Profiles from './profiles.js';
+import * as Gear from './gear.js';
 import { art, CHARACTERS, characterById, characterImg, guardianFor, WORLDS, worldById, DEFAULT_WORLD, DEFAULT_PET, PET_SPECIES, speciesById } from './catalog.js';
 
-export const APP_VERSION = '1.5.0';
+export const APP_VERSION = '1.6.0';
 const BACKUP_REMINDER_DAYS = 7;
 
 const $ = sel => document.querySelector(sel);
@@ -162,6 +163,7 @@ function renderAll(p = G.deriveProfile(state)) {
   renderHistory();
   renderAchievements(p);
   renderGuardians(p);
+  renderGear();
   renderSettings();
 }
 
@@ -289,7 +291,7 @@ function renderHome(p) {
           <img class="act-ico" src="${statIcon(s.id)}" alt="">
           <span class="act-text">
             <span class="act-name">${esc(a.name)}</span>
-            <span class="act-xp">+${a.xp} XP<span class="act-coins">+${G.coinsFor(a)} 🪙</span></span>
+            ${actXp(a)}
             ${a.bonus ? `<span class="act-bonus-tag">★ ${esc(a.bonus.label)} +${a.bonus.xp}</span>` : ''}
           </span>
         </button>`).join('')}
@@ -310,7 +312,7 @@ function renderHome(p) {
           <img class="act-ico" src="${art.boss(a.resist)}" alt="">
           <span class="act-text">
             <span class="act-name">${done ? '✔ ' : ''}${esc(a.name)}</span>
-            <span class="act-xp">+${a.xp} XP<span class="act-coins">+${G.coinsFor(a)} 🪙</span></span>
+            ${actXp(a)}
             ${now ? '<span class="act-crit">⚡ Crítico ×3 al jefe</span>' : ''}
           </span>
         </button>`;
@@ -341,6 +343,110 @@ function renderGoal(p, { boss, weekly, pet }) {
 
 const priceTag = n => `<span class="price"><i class="coin"></i>${n}</span>`;
 
+// ---------------------------------------------------------------------
+// Equipo e inventario
+// ---------------------------------------------------------------------
+const itemIcon = it => `<span class="it-ico">${artImg(art.item(it.id))}<i>${it.icon}</i></span>`;
+const bonusText = it => `+${it.pct}% XP ${it.stat === 'all' ? 'en todo' : `en ${G.statById(it.stat).name}`}`;
+
+/** XP que muestra un botón de actividad, con el extra del equipo. */
+function actXp(a) {
+  const extra = Gear.gearExtra(state, a.stat, a.xp);
+  return `<span class="act-xp">+${a.xp + extra} XP${extra ? `<span class="act-gear">⚔+${extra}</span>` : ''}<span class="act-coins">+${G.coinsFor({ xp: a.xp + extra })} 🪙</span></span>`;
+}
+
+function dropLine(boss) {
+  const d = G.bossDrop(boss.id);
+  if (!d) return '';
+  const got = Gear.ownsItem(state, d.id);
+  return `<div class="drop-line" style="--r:${Gear.RARITY[d.rarity].color}">${itemIcon(d)}
+    <span><small>Botín</small><b>${esc(d.name)}</b><em>${bonusText(d)}</em></span>${got ? '<span class="tag">Tuyo</span>' : ''}</div>`;
+}
+
+function renderGear() {
+  const eq = Gear.equippedItems(state);
+  const slotHtml = ({ slot, item }) => `
+    <button class="gear-slot ${item ? 'full' : ''}" data-slot="${slot.id}" style="--r:${item ? Gear.RARITY[item.rarity].color : 'transparent'}">
+      ${item ? itemIcon(item) : `<span class="it-ico empty"><i>${slot.icon}</i></span>`}
+      <small>${item ? esc(item.name) : slot.name}</small>
+    </button>`;
+  $('#gearLeft').innerHTML = eq.slice(0, 4).map(slotHtml).join('');
+  $('#gearRight').innerHTML = eq.slice(4).map(slotHtml).join('');
+  const src = characterImg(state.profile.character);
+  if ($('#gearHero').getAttribute('src') !== src) $('#gearHero').src = src;
+
+  const sum = Gear.gearSummary(state, G.STAT_IDS);
+  $('#gearBonus').innerHTML = sum.length
+    ? sum.map(x => { const s = G.statById(x.stat); return `<span class="chip" style="--c:${s.color}"><img src="${statIcon(s.id)}" alt="">+${x.pct}%</span>`; }).join('')
+    : '<span class="small muted">Sin bonus todavía. Equipa piezas para ganar XP extra.</span>';
+  const best = Math.max(0, ...G.STAT_IDS.map(id => Gear.gearPct(state, id)));
+  $('#gearChipBonus').textContent = best ? `+${best}%` : '';
+
+  const owned = Gear.ownedItemIds(state);
+  const worn = new Set(eq.filter(x => x.item).map(x => x.item.id));
+  $('#invHint').textContent = `${owned.size} de ${Gear.ITEMS.length} piezas. Toca una para ver de dónde sale o equiparla.`;
+  const order = Object.keys(Gear.RARITY);
+  const items = [...Gear.ITEMS].sort((a, b) => (owned.has(b.id) - owned.has(a.id)) || order.indexOf(a.rarity) - order.indexOf(b.rarity));
+  $('#invGrid').innerHTML = items.map(it => `
+    <button class="inv-item ${owned.has(it.id) ? 'own' : 'locked'}" data-item="${it.id}" style="--r:${Gear.RARITY[it.rarity].color}">
+      ${itemIcon(it)}${worn.has(it.id) ? '<span class="worn">✓</span>' : ''}
+    </button>`).join('');
+}
+
+/** Ficha de una pieza: bonus, de dónde sale y botón para equipar o comprar. */
+async function openItem(id) {
+  const it = Gear.itemById(id);
+  const own = Gear.ownsItem(state, id);
+  const wornIn = Object.entries(state.equipped.gear || {}).find(([, v]) => v === id)?.[0];
+  const r = Gear.RARITY[it.rarity];
+  const bal = Math.max(0, G.wallet(state).balance);
+  const source = it.boss
+    ? `Botín de <b>${esc(G.BOSSES.find(b => b.id === it.boss).name)}</b>.`
+    : `Se vende en la Tienda por <b>${it.cost} monedas</b>.`;
+  const action = own
+    ? (wornIn ? `<button class="btn btn-block" data-close="unequip">Quitar</button>` : `<button class="btn btn-primary btn-block" data-close="equip">Equipar</button>`)
+    : it.cost ? `<button class="btn btn-yellow btn-block" data-close="buy" ${bal < it.cost ? 'disabled' : ''}>Comprar · ${it.cost} 🪙</button>` : '';
+  const res = await openSheet(`
+    <div class="item-head" style="--r:${r.color}">${itemIcon(it)}
+      <div><h3>${esc(it.name)}</h3><span class="rarity">${r.name} · ${Gear.SLOTS.find(s => (s.type || s.id) === it.type).name}</span></div>
+    </div>
+    <p><b>${bonusText(it)}</b>. ${source}</p>
+    ${!own && it.cost && bal < it.cost ? `<p class="small">Te faltan ${it.cost - bal} monedas.</p>` : ''}
+    ${action}
+    <button class="btn btn-block" data-close="cancel">Cerrar</button>`);
+  if (res === 'equip') commit(s => Gear.equipItem(s, Gear.slotFor(s, it), id), { celebrate: false });
+  if (res === 'unequip') commit(s => Gear.equipItem(s, wornIn, null), { celebrate: false });
+  if (res === 'buy' && tryPay(s => G.buyItem(s, id), `🎒 ¡${esc(it.name)} es tuya!`)) {
+    heroReact();
+    if (await confirmSheet('¿Equiparla ahora?', `${esc(it.name)}: ${bonusText(it)}.`, 'Equipar')) {
+      commit(s => Gear.equipItem(s, Gear.slotFor(s, it), id), { celebrate: false });
+    }
+  }
+}
+
+/** Elegir qué pieza va en un espacio. */
+async function openSlot(slotId) {
+  const slot = Gear.SLOTS.find(s => s.id === slotId);
+  const type = Gear.slotType(slotId);
+  const owned = Gear.ownedItemIds(state);
+  const options = Gear.ITEMS.filter(i => i.type === type && owned.has(i.id));
+  const current = state.equipped.gear?.[slotId];
+  const res = await openSheet(`
+    <h3>${slot.name}</h3>
+    ${options.length ? `<div class="list">${options.map(it => `
+      <button class="row slot-opt ${it.id === current ? 'on' : ''}" data-close="${it.id}" style="--c:${Gear.RARITY[it.rarity].color}">
+        ${itemIcon(it)}<div class="row-main"><div class="row-title">${esc(it.name)}</div><div class="row-sub">${bonusText(it)}</div></div>
+        ${it.id === current ? '<span class="tag">Puesta</span>' : ''}
+      </button>`).join('')}</div>`
+      : `<p>No tienes piezas para este espacio. Consíguelas en la <b>Tienda</b> o derrotando jefes.</p>`}
+    ${current ? '<button class="btn btn-block" data-close="__none">Dejar vacío</button>' : ''}
+    ${options.length ? '' : '<button class="btn btn-primary btn-block" data-close="__shop">Ir a la Tienda</button>'}
+    <button class="btn btn-block" data-close="cancel">Cerrar</button>`);
+  if (!res || res === 'cancel') return;
+  if (res === '__shop') return showView('shop');
+  commit(s => Gear.equipItem(s, slotId, res === '__none' ? null : res), { celebrate: false });
+}
+
 function renderShop() {
   const w = G.wallet(state);
   const bal = Math.max(0, w.balance);
@@ -348,6 +454,16 @@ function renderShop() {
   $('#walletHint').textContent = w.chestToday === null
     ? 'Registra algo hoy para abrir tu cofre del día.'
     : `Cofre de hoy: +${w.chestToday}. Ganas monedas con cada registro, logro, misión y jefe.`;
+
+  const ownedGear = Gear.ownedItemIds(state);
+  $('#shopGear').innerHTML = Gear.shopItems().map(it => {
+    const own = ownedGear.has(it.id);
+    return `<div class="row shop-row" data-item="${it.id}" style="--c:${Gear.RARITY[it.rarity].color}">
+      ${itemIcon(it)}
+      <div class="row-main"><div class="row-title">${esc(it.name)}</div><div class="row-sub">${bonusText(it)}${own ? '' : ` · ${priceTag(it.cost)}`}</div></div>
+      ${own ? '<span class="tag">Tuya</span>' : `<button class="btn btn-yellow" data-item-buy="${it.id}" ${bal < it.cost ? 'disabled' : ''}>Comprar</button>`}
+    </div>`;
+  }).join('');
 
   $('#rewardList').innerHTML = state.rewards.length
     ? state.rewards.map(r => `
@@ -475,6 +591,7 @@ function renderAdventure({ boss, weekly }) {
              <button class="btn btn-block" id="shareBossBtn">Presumir la victoria</button>`
           : `<button class="btn btn-yellow btn-block" id="claimBossBtn">Reclamar +${boss.rewardXp} XP</button>`
         : `<p class="boss-note">Cada XP que ganas le quita 1 PV. Te ${boss.daysLeft === 1 ? 'queda 1 día' : `quedan ${boss.daysLeft} días`} para derrotarlo y ganar <b>+${boss.rewardXp} XP</b>.</p>`}
+      ${dropLine(boss)}
     </div>`;
 
   $('#weeklyHint').textContent = `Se renuevan cada lunes. ${weekly[0].daysLeft === 1 ? 'Queda 1 día' : `Quedan ${weekly[0].daysLeft} días`}.`;
@@ -1234,7 +1351,7 @@ async function importBackup(file) {
 // ---------------------------------------------------------------------
 function showView(name) {
   document.querySelectorAll('.view').forEach(v => v.classList.toggle('active', v.id === `view-${name}`));
-  const tabFor = name === 'history' || name === 'guardians' ? 'achievements' : name;
+  const tabFor = name === 'history' || name === 'guardians' ? 'achievements' : name === 'gear' ? 'home' : name;
   document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === tabFor));
   window.scrollTo({ top: 0 });
   if (name === 'home' && pendingFlash) setTimeout(heroFlash, 120);
@@ -1268,6 +1385,16 @@ $('#couponList').addEventListener('click', async e => {
     commit(s => G.useCoupon(s, use.dataset.couponUse), { celebrate: false });
   }
 });
+$('#gearChip').onclick = () => showView('gear');
+$('#gearBack').onclick = () => showView('home');
+$('#gearLeft').addEventListener('click', e => { const s = e.target.closest('[data-slot]'); if (s) openSlot(s.dataset.slot); });
+$('#gearRight').addEventListener('click', e => { const s = e.target.closest('[data-slot]'); if (s) openSlot(s.dataset.slot); });
+$('#invGrid').addEventListener('click', e => { const i = e.target.closest('[data-item]'); if (i) openItem(i.dataset.item); });
+$('#shopGear').addEventListener('click', e => {
+  const i = e.target.closest('[data-item]');
+  if (i) openItem(i.dataset.item);   // la ficha tiene el botón de compra y ofrece equipar
+});
+
 $('#shieldCard').addEventListener('click', e => {
   if (e.target.closest('#buyShieldBtn')) tryPay(s => G.buyShield(s), '🛡️ Escudo guardado');
 });
@@ -1303,7 +1430,13 @@ $('#bossMini').onclick = () => showView('quests');
 $('#petMini').onclick = openPetSheet;
 $('#bossCard').addEventListener('click', e => {
   const b = e.target.closest('#claimBossBtn');
-  if (b) return claimReward(s => G.claimBoss(s), b, '👹 ¡Jefe derrotado!');
+  if (b) {
+    const drop = G.bossDrop(G.bossStatus(state).id);
+    const hadIt = drop && Gear.ownsItem(state, drop.id);
+    claimReward(s => G.claimBoss(s), b, '👹 ¡Jefe derrotado!');
+    if (drop && !hadIt) setTimeout(() => toast(`🎁 Botín: <b>${esc(drop.name)}</b> · está en tu inventario`, { kind: 'ach', duration: 5000, action: 'Ver', onAction: () => showView('gear') }), 700);
+    return;
+  }
   if (e.target.closest('#shareBossBtn')) shareBoss();
 });
 $('#weeklyList').addEventListener('click', e => {

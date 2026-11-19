@@ -483,3 +483,93 @@ test('nombre de mascota: migra el formato viejo y descarta el "Chispa" automáti
   assert.equal(L.petCustomName(again), 'Brasa');
   assert.equal(again.pet.asked.chispa, true);
 });
+
+// ---------------- Equipo e inventario ----------------
+import * as Gear from '../js/gear.js';
+
+const rich = () => { // perfil con monedas de sobra
+  const s = L.defaultState();
+  const t0 = noon(2026, 10, 1);
+  for (let d = 0; d < 30; d++) for (const id of ['def-gym', 'def-tarea', 'def-tiempo']) L.logActivity(s, id, { now: t0 + d * DAY });
+  return s;
+};
+
+test('equipo: comprar, equipar y ganar % extra solo en su stat', () => {
+  const s = rich();
+  const now = noon(2026, 11, 2);
+  assert.throws(() => Gear.equipItem(s, 'casco', 'casco-cuero'), /Aún no/);
+  const bal = L.wallet(s, now).balance;
+  L.buyItem(s, 'casco-cuero', now);                       // fuerza +5 %
+  assert.equal(L.wallet(s, now).balance, bal - 150);
+  assert.throws(() => L.buyItem(s, 'casco-cuero', now), /Ya la tienes/);
+  Gear.equipItem(s, 'casco', 'casco-cuero');
+  assert.equal(Gear.gearPct(s, 'fuerza'), 5);
+  assert.equal(Gear.gearPct(s, 'intelecto'), 0);
+  const e = L.logActivity(s, 'def-gym', { now });         // 30 XP → +2 (5 % redondeado)
+  assert.equal(e.xp, 32);
+  assert.equal(e.gearXp, 2);
+  const e2 = L.logActivity(s, 'def-estudio', { now });    // otra stat: sin extra
+  assert.equal(e2.xp, 25);
+  assert.equal(e2.gearXp, undefined);
+});
+
+test('equipo: tipo de espacio, accesorios dobles y tope de bonus', () => {
+  const s = rich();
+  const now = noon(2026, 11, 2);
+  L.buyItem(s, 'anillo-vinculo', now); L.buyItem(s, 'capa-caminante', now);
+  assert.throws(() => Gear.equipItem(s, 'casco', 'anillo-vinculo'), /no va en ese espacio/);
+  Gear.equipItem(s, 'acc1', 'anillo-vinculo');
+  Gear.equipItem(s, 'acc2', 'anillo-vinculo');            // la misma pieza se mueve, no se duplica
+  assert.equal(s.equipped.gear.acc1, undefined);
+  assert.equal(s.equipped.gear.acc2, 'anillo-vinculo');
+  Gear.equipItem(s, 'capa', 'capa-caminante');
+  assert.equal(Gear.gearPct(s, 'vinculo'), 15);
+  // tope: sumando botín épico de vínculo (+15) y todo (+5) no pasa de 30
+  s.log.push({ id: 'b1', ts: now, type: 'boss', refId: '2026-10:soledad', name: 'x', stat: 'vinculo', xp: 150 });
+  s.log.push({ id: 'b2', ts: now, type: 'boss', refId: '2026-09:pereza', name: 'x', stat: 'fuerza', xp: 150 });
+  Gear.equipItem(s, 'capa', 'capa-lazo');                 // reemplaza a la capa común
+  Gear.equipItem(s, 'armadura', 'cota-constancia');
+  assert.equal(Gear.gearPct(s, 'vinculo'), 30);           // 10 + 15 + 5 = 30 (tope)
+  assert.equal(Gear.gearPct(s, 'hogar'), 5);              // la cota da a todo
+  Gear.equipItem(s, 'capa', null);
+  assert.equal(s.equipped.gear.capa, undefined);
+});
+
+test('equipo: los jefes sueltan su pieza; si deshaces el premio, la pieza se va', () => {
+  const s = L.defaultState();
+  assert.equal(L.bossDrop('estres').id, 'yelmo-calma');
+  assert.ok(Gear.ITEMS.filter(i => i.boss).length === 6);
+  const e = { id: 'b', ts: Date.now(), type: 'boss', refId: '2026-11:estres', name: 'x', stat: 'resistencia', xp: 150 };
+  s.log.push(e);
+  assert.ok(Gear.ownsItem(s, 'yelmo-calma'));
+  Gear.equipItem(s, 'casco', 'yelmo-calma');
+  assert.equal(Gear.gearPct(s, 'resistencia'), 15);
+  L.undoEntry(s, 'b');
+  assert.ok(!Gear.ownsItem(s, 'yelmo-calma'));
+  assert.equal(Gear.gearPct(s, 'resistencia'), 0);        // equipada pero ya no la tiene: no cuenta
+  assert.throws(() => L.buyItem(s, 'yelmo-calma'), /no se vende/);
+});
+
+test('equipo: deshacer un registro con bonus quita exactamente lo ganado', () => {
+  const s = rich();
+  const now = noon(2026, 11, 2);
+  L.buyItem(s, 'guanteletes', now); Gear.equipItem(s, 'guantes', 'guanteletes');
+  const before = L.deriveProfile(s, now).totalXp;
+  const e = L.logActivity(s, 'def-gym', { now });
+  assert.equal(L.deriveProfile(s, now).totalXp, before + 33);
+  Gear.equipItem(s, 'guantes', null);                     // quitarse el equipo no cambia lo ya ganado
+  assert.equal(L.deriveProfile(s, now).totalXp, before + 33);
+  L.undoEntry(s, e.id);
+  assert.equal(L.deriveProfile(s, now).totalXp, before);
+});
+
+test('equipo: respaldos viejos reciben gear vacío y el equipo sobrevive a exportar', () => {
+  const s = rich();
+  const old = JSON.parse(JSON.stringify(L.exportPayload(s)));
+  delete old.data.equipped.gear;
+  assert.deepEqual(L.validateImport(old).equipped.gear, {});
+  L.buyItem(s, 'botas-viaje'); Gear.equipItem(s, 'botas', 'botas-viaje');
+  const back = L.validateImport(JSON.parse(JSON.stringify(L.exportPayload(s))));
+  assert.equal(back.equipped.gear.botas, 'botas-viaje');
+  assert.equal(Gear.gearPct(back, 'resistencia'), 5);
+});
