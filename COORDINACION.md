@@ -33,7 +33,7 @@ Prioridad de arriba hacia abajo. Tamaños y nombres según ARTE.md.
 | A-10 | 8 huevos y las otras 7 especies de mascota | `art/eggs/…`, `art/pets/…` | ⏳ |
 | T-01 | Para cada **jefe nuevo** (hasta 4 más): nombre, a qué miedo o mal hábito representa, frase de burla, stat débil y reto de resistencia | texto | ⏳ |
 | T-02 | Nombres de guardianes (Skadi, Runa, Véra, Eira, Liv) y especies (Céfiro, Marea, Pedernal, Trueno, Nival, Alba, Umbra) | texto | ✅ |
-| T-03 | Una frase corta de cada guardián al evolucionar | texto | ⏳ |
+| T-03 | Una frase corta de cada guardián al evolucionar | texto | ✅ |
 | A-11 | 19 íconos de piezas de equipo (lista con ids en ARTE.md → Equipo) | `art/items/<id>.webp` | ⏳ |
 
 **Reglas que hacen que todo encaje:** fondo transparente (salvo los mundos), lienzo 720×1000 con los pies en el borde inferior para las figuras de pie, mismo estilo en toda la serie (adjuntar una imagen anterior como referencia) y sin texto dentro de las imágenes.

@@ -263,6 +263,7 @@ export function defaultState() {
     questHistory: [],
     log: [],
     seenAchievements: [],
+    guardianSeen: {},   // forma más alta ya anunciada de cada guardiana
     lastBackup: null,
     createdAt: Date.now(),
   };
@@ -360,6 +361,7 @@ export function validateImport(obj) {
     questHistory: Array.isArray(data.questHistory) ? data.questHistory : [],
     log: data.log.filter(okEntry),
     seenAchievements: Array.isArray(data.seenAchievements) ? data.seenAchievements : [],
+    guardianSeen: data.guardianSeen && typeof data.guardianSeen === 'object' ? { ...data.guardianSeen } : {},
     partner: undefined,  // la versión anterior guardaba aquí un segundo nombre; ya no se usa
   };
 }

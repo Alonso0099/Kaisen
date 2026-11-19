@@ -1047,3 +1047,19 @@ body.scrolled .topbar {
 .drop-line b { display: block; font-size: 14px; }
 .drop-line em { display: block; font-style: normal; font-size: 12px; color: var(--muted); font-weight: 700; }
 @media (max-width: 360px) { .gear-board { grid-template-columns: 66px 1fr 66px; } .gear-hero { min-height: 290px; } }
+
+/* Aviso de evolución de guardiana */
+.evo { text-align: center; position: relative; }
+.evo::before { content: ""; position: absolute; left: 50%; top: 40px; width: 280px; height: 280px; transform: translateX(-50%);
+  background: radial-gradient(circle, color-mix(in srgb, var(--c) 60%, transparent), transparent 65%), repeating-conic-gradient(rgba(255,255,255,.12) 0 4deg, transparent 4deg 14deg);
+  border-radius: 50%; animation: spin 30s linear infinite; pointer-events: none;
+  -webkit-mask-image: radial-gradient(circle, #000 35%, transparent 70%); mask-image: radial-gradient(circle, #000 35%, transparent 70%); }
+.evo > * { position: relative; }
+.evo-kicker { font-weight: 900; font-size: 12px; letter-spacing: .3em; text-transform: uppercase; color: var(--c); filter: brightness(1.4); }
+.evo-art { height: 260px; display: grid; place-items: end center; margin: 6px 0 4px; animation: evoRise .7s cubic-bezier(.2,1.4,.4,1) both; }
+.evo-art img { height: 260px; width: 100%; object-fit: contain; object-position: 50% 100%; filter: drop-shadow(0 0 18px var(--c)) drop-shadow(0 8px 12px rgba(0,0,0,.6)); }
+.evo-art .soon { height: 220px; width: 70%; }
+.evo h3 { margin: 4px 0 0; }
+.evo-form { font-size: 12px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-top: 4px; }
+.evo-quote { margin: 12px 8px 4px; font-size: 16px; font-style: italic; font-weight: 700; color: #fff; line-height: 1.35; }
+@keyframes evoRise { from { transform: translateY(30px) scale(.85); opacity: 0; } }

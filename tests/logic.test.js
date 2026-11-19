@@ -573,3 +573,37 @@ test('equipo: respaldos viejos reciben gear vacío y el equipo sobrevive a expor
   assert.equal(back.equipped.gear.botas, 'botas-viaje');
   assert.equal(Gear.gearPct(back, 'resistencia'), 5);
 });
+
+// ---------------- Evolución de guardianas ----------------
+import * as Cat from '../js/catalog.js';
+
+test('guardianas: forma según nivel de la stat (5, 10, 20, 35)', () => {
+  assert.deepEqual([1, 4, 5, 9, 10, 19, 20, 34, 35, 60].map(Cat.guardianTier), [1, 1, 2, 2, 3, 3, 4, 4, 5, 5]);
+  assert.ok(Object.values(Cat.GUARDIANS).every(g => g.name && g.phrase));
+});
+
+test('guardianas: se anuncia solo la forma más alta y nunca dos veces', () => {
+  const lv = o => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, { level: v }]));
+  // fuerza salta de nivel 4 a 12 → pasa por las formas 2 y 3: solo se anuncia la 3
+  let seen = {};
+  let evo = Cat.guardianEvolutions(lv({ fuerza: 12, hogar: 3 }), seen);
+  assert.deepEqual(evo, [{ stat: 'fuerza', tier: 3 }]);
+  seen = { fuerza: 3 };
+  assert.deepEqual(Cat.guardianEvolutions(lv({ fuerza: 12 }), seen), []);   // recargar: nada
+  assert.deepEqual(Cat.guardianEvolutions(lv({ fuerza: 8 }), seen), []);    // deshacer y bajar: nada
+  assert.deepEqual(Cat.guardianEvolutions(lv({ fuerza: 20 }), seen), [{ stat: 'fuerza', tier: 4 }]);
+  // al abrir la app con progreso viejo, se marca todo como visto
+  const synced = Cat.syncGuardianSeen({}, lv({ fuerza: 22, intelecto: 6 }));
+  assert.equal(synced.fuerza, 4); assert.equal(synced.intelecto, 2); assert.equal(synced.hogar, 1);
+  assert.deepEqual(Cat.guardianEvolutions(lv({ fuerza: 22, intelecto: 6 }), synced), []);
+});
+
+test('guardianas: guardianSeen sobrevive a exportar/importar', () => {
+  const s = L.defaultState();
+  s.guardianSeen = { fuerza: 3 };
+  const back = L.validateImport(JSON.parse(JSON.stringify(L.exportPayload(s))));
+  assert.deepEqual(back.guardianSeen, { fuerza: 3 });
+  const old = JSON.parse(JSON.stringify(L.exportPayload(s)));
+  delete old.data.guardianSeen;
+  assert.deepEqual(L.validateImport(old).guardianSeen, {});
+});

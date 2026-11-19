@@ -7,9 +7,9 @@ import { embers, sparks } from './fx.js';
 import { makeCard, shareCard } from './share.js';
 import * as Profiles from './profiles.js';
 import * as Gear from './gear.js';
-import { art, CHARACTERS, characterById, characterImg, guardianFor, WORLDS, worldById, DEFAULT_WORLD, DEFAULT_PET, PET_SPECIES, speciesById } from './catalog.js';
+import { art, CHARACTERS, characterById, characterImg, guardianFor, guardianEvolutions, syncGuardianSeen, GUARDIANS, WORLDS, worldById, DEFAULT_WORLD, DEFAULT_PET, PET_SPECIES, speciesById } from './catalog.js';
 
-export const APP_VERSION = '1.6.0';
+export const APP_VERSION = '1.7.0';
 const BACKUP_REMINDER_DAYS = 7;
 
 const $ = sel => document.querySelector(sel);
@@ -94,17 +94,48 @@ function celebrateAdventure(before, after) {
   if (after.pet.stage > before.pet.stage) {
     // Se espera un momento: si este mismo registro sube de nivel, la animación
     // de nivel aparece primero y el nombre se pide al cerrarla.
-    if (G.shouldAskPetName(state, before.pet.stage, after.pet.stage)) setTimeout(askPetNameOnHatch, 900);
+    if (G.shouldAskPetName(state, before.pet.stage, after.pet.stage)) queueModal(askPetNameOnHatch);
     else toast(`🐣 ¡${esc(petName())} evolucionó a <b>${after.pet.stageName}</b>!`, { kind: 'ach', duration: 5000 });
   }
 }
 
+// ---------------------------------------------------------------------
+// Cola de celebraciones (eclosión, evolución de guardianas): se muestran
+// de a una, después de la animación de nivel y sin tapar otra ventana.
+// ---------------------------------------------------------------------
+const modalQueue = [];
+let modalBusy = false;
+function queueModal(fn) {
+  modalQueue.push(fn);
+  setTimeout(runModals, 900); // da tiempo a que aparezca la animación de nivel si la hay
+}
+async function runModals() {
+  if (modalBusy || levelUpOpen || !$('#sheetBackdrop').hidden || !modalQueue.length) return;
+  modalBusy = true;
+  try { await modalQueue.shift()(); } finally { modalBusy = false; }
+  if (modalQueue.length) setTimeout(runModals, 450);
+}
+
+/** Aviso de evolución: retrato de la nueva forma, nombre y frase. */
+async function showGuardianEvolution(statId, tier) {
+  const s = G.statById(statId);
+  const g = guardianFor(statId, guardianLevelFor(tier));
+  const name = g.name || `Guardiana de ${s.name}`;
+  const res = await openSheet(`
+    <div class="evo" style="--c:${s.color}">
+      <div class="evo-kicker">¡Evolución!</div>
+      <div class="evo-art">${artImg(art.guardian(statId, tier), { alt: esc(name), fb: tier > 1 ? art.guardian(statId, 1) : null })}<span class="soon">Próximamente</span></div>
+      <h3>${esc(name)}</h3>
+      <div class="evo-form">Forma ${tier} de 5 · ${s.name}</div>
+      ${GUARDIANS[statId]?.phrase ? `<blockquote class="evo-quote">«${esc(GUARDIANS[statId].phrase)}»</blockquote>` : ''}
+    </div>
+    <div class="btn-row"><button class="btn" data-close="see">Ver guardianas</button><button class="btn btn-primary" data-close="ok">Continuar</button></div>`);
+  if (res === 'see') { showView('achievements'); showView('guardians'); }
+}
+const guardianLevelFor = tier => [1, 5, 10, 20, 35][tier - 1] || 1;
+
 /** Al eclosionar: "Ponle nombre a tu compañero" (se puede omitir). */
-let hatchPending = false;
 async function askPetNameOnHatch() {
-  // Si está la animación de subir de nivel, espera a que se cierre.
-  if (levelUpOpen || !$('#sheetBackdrop').hidden) { hatchPending = true; return; }
-  hatchPending = false;
   const sp = speciesById(state.pet.species);
   const p = openSheet(`
     <h3>¡Tu huevo eclosionó!</h3>
@@ -144,8 +175,23 @@ function celebrateChanges(before, after) {
       setTimeout(() => toast(`${a.icon} Logro: <b>${esc(a.name)}</b>`, { kind: 'ach', duration: 4000 }), 300 + i * 500);
     });
   }
+  // Guardianas que cambiaron de forma (solo la forma más alta; nunca se repite)
+  const evos = guardianEvolutions(after.stats, state.guardianSeen);
+  if (evos.length) {
+    for (const { stat, tier } of evos) {
+      state.guardianSeen = { ...state.guardianSeen, [stat]: tier };
+      queueModal(() => showGuardianEvolution(stat, tier));
+    }
+    save();
+  }
   // Nivel general
   if (after.level > before.level) showLevelUp(after);
+}
+
+/** Lo ya conseguido al abrir, cambiar de perfil o importar no se vuelve a anunciar. */
+function syncSeen() {
+  state.seenAchievements = [...new Set([...state.seenAchievements, ...G.unlockedAchievements(state)])];
+  state.guardianSeen = syncGuardianSeen(state.guardianSeen, G.deriveProfile(state).stats);
 }
 
 // ---------------------------------------------------------------------
@@ -832,6 +878,7 @@ function closeSheet(value = null) {
   $('#sheet').innerHTML = '';
   const r = sheetResolve; sheetResolve = null;
   r?.(value);
+  setTimeout(runModals, 450);
 }
 $('#sheetBackdrop').addEventListener('click', e => { if (e.target.id === 'sheetBackdrop') closeSheet(null); });
 
@@ -1200,7 +1247,7 @@ function useProfile(id, { silent = false } = {}) {
   state = Profiles.switchProfile(id);
   profileId = id;
   lastLevelShown = null;
-  state.seenAchievements = [...new Set([...state.seenAchievements, ...G.unlockedAchievements(state)])];
+  syncSeen();
   checkShields();
   save();
   renderAll();
@@ -1295,7 +1342,7 @@ function showLevelUp(p) {
     stopSparks?.(); stopSparks = null;
     levelUpOpen = false;
     pendingToasts.splice(0).forEach(([h, o], i) => setTimeout(() => toast(h, o), i * 250));
-    if (hatchPending) setTimeout(askPetNameOnHatch, 400);
+    setTimeout(runModals, 400);
   };
 }
 
@@ -1338,6 +1385,7 @@ async function importBackup(file) {
     if (!ok) return;
     data.lastBackup = Date.now();
     data.seenAchievements = G.unlockedAchievements(data);
+    data.guardianSeen = syncGuardianSeen(data.guardianSeen, G.deriveProfile(data).stats);
     state = data;
     save(); renderAll();
     toast('✅ Respaldo importado');
@@ -1526,7 +1574,8 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) { ch
 // Inicio
 // ---------------------------------------------------------------------
 // Lo ya desbloqueado al abrir no se vuelve a anunciar.
-state.seenAchievements = [...new Set([...state.seenAchievements, ...G.unlockedAchievements(state)])];
+syncSeen();
+save();
 checkShields();
 renderAll();
 
@@ -1535,4 +1584,4 @@ if ('serviceWorker' in navigator && location.protocol !== 'file:') {
 }
 
 // Exponer para pruebas manuales desde la consola
-window.__kaisen = { get state() { return state; }, G };
+window.__kaisen = { get state() { return state; }, G, save };

@@ -43,17 +43,44 @@ export const characterImg = id => art.char(characterById(id).id);
 // `name: null` = todavía sin nombre (se muestra "Guardián de …").
 // ---------------------------------------------------------------------
 export const GUARDIAN_TIERS = [1, 5, 10, 20, 35]; // nivel de stat para cada evolución
+// phrase: lo que dice al evolucionar (entrega T-03 de GPT).
 export const GUARDIANS = {
-  fuerza:      { name: 'Astrid' },
-  resistencia: { name: 'Skadi' },
-  intelecto:   { name: 'Runa' },
-  sabiduria:   { name: 'Véra' },
-  vinculo:     { name: 'Eira' },
-  hogar:       { name: 'Liv' },
+  fuerza:      { name: 'Astrid', phrase: 'Hoy puedo con lo que ayer me pesaba.' },
+  resistencia: { name: 'Skadi',  phrase: 'Mirá cuánto camino hicimos, paso a paso.' },
+  intelecto:   { name: 'Runa',   phrase: 'Una pregunta más, y se abrió otra puerta.' },
+  sabiduria:   { name: 'Véra',   phrase: 'Aprendí a hacer una pausa antes de responder.' },
+  vinculo:     { name: 'Eira',   phrase: 'Cada vez que nos buscamos, el lazo se hace más fuerte.' },
+  hogar:       { name: 'Liv',    phrase: 'Poco a poco, este lugar se siente nuestro.' },
 };
-export function guardianFor(statId, statLevel) {
+
+/** Forma (1–5) que corresponde a un nivel de stat. */
+export function guardianTier(statLevel) {
   let tier = 1;
   GUARDIAN_TIERS.forEach((min, i) => { if (statLevel >= min) tier = i + 1; });
+  return tier;
+}
+
+/**
+ * Guardianas que alcanzaron una forma que aún no se anunció.
+ * stats: { fuerza: { level }, ... } · seen: { fuerza: 3, ... } (forma más alta ya anunciada)
+ * Devuelve [{ stat, tier }] con la forma MÁS ALTA de cada una (si un registro
+ * salta varias formas, solo se anuncia la última).
+ */
+export function guardianEvolutions(stats, seen = {}) {
+  return Object.keys(GUARDIANS)
+    .map(stat => ({ stat, tier: guardianTier(stats[stat]?.level || 1) }))
+    .filter(({ stat, tier }) => tier > 1 && tier > (seen[stat] || 1));
+}
+
+/** Marca como anunciadas las formas actuales (al abrir la app, cambiar de perfil o importar). */
+export function syncGuardianSeen(seen = {}, stats) {
+  const out = { ...seen };
+  for (const stat of Object.keys(GUARDIANS)) out[stat] = Math.max(out[stat] || 1, guardianTier(stats[stat]?.level || 1));
+  return out;
+}
+
+export function guardianFor(statId, statLevel) {
+  const tier = guardianTier(statLevel);
   const next = GUARDIAN_TIERS[tier] ?? null;
   return { ...GUARDIANS[statId], tier, nextAt: next, img: art.guardian(statId, tier), fallback: art.guardian(statId, 1) };
 }
