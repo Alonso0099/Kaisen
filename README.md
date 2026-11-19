@@ -79,6 +79,7 @@ js/fx.js               Efectos en <canvas>: brasas de energía y chispas de subi
 js/share.js            Genera las tarjetas ilustradas para compartir (sin datos personales)
 js/profiles.js         Perfiles locales: varios jugadores en un mismo teléfono
 js/catalog.js          Catálogo de arte: personajes, guardianes, jefes, mascotas, mundos
+js/gear.js             Equipo e inventario: piezas, espacios y bonus de XP
 art/                   Ilustraciones por categoría (ver ARTE.md)
 fonts/                 Tipografías Bangers y Nunito (licencia libre OFL), incluidas para funcionar offline
 sw.js                  Service worker: caché para funcionar offline
@@ -124,6 +125,15 @@ tests/logic.test.js    Pruebas automáticas de la lógica
 ```
 
 ---
+
+## 🎒 Equipo
+
+Inicio → **🎒 Equipo** abre la pantalla de equipo: tu personaje con 8 espacios, el resumen de bonus y el inventario.
+
+- Cada pieza da **XP extra** en una stat (o en todas), con un tope de +30 % por stat.
+- Las comunes (+5 %) y raras (+10 %) se compran en la **Tienda**. Cada **jefe** suelta su pieza épica (+15 %) al reclamar el premio.
+- El extra se calcula al registrar y queda guardado en el registro (`gearXp`): cambiarte el equipo no altera lo ya ganado, y deshacer quita exactamente lo que se sumó.
+- La lógica está en `js/gear.js` y no depende de la pantalla.
 
 ## 🔮 Ideas a futuro
 - Dos perfiles sincronizados (cada quien en su teléfono) con jefe cooperativo. Requiere servidor y cuentas.

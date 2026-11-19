@@ -36,7 +36,7 @@ Si GPT te da otro tamaño, no pasa nada: pídeme "normaliza este arte" y lo reco
 | **Mundos** | `art/worlds/<id>.webp` | 6 (o más) | 1200×1600 vertical | Paisaje sin personas; el centro-abajo queda despejado para el personaje. |
 | **Insignias de logros** | `art/badges/<id-logro>.webp` | 18 | 512×512 | Si falta una, se muestra el emoji. |
 | **Emblemas de stats** | `art/stats/<stat>.webp` | 6 | 512×512 | Circulares. |
-| **Objetos** (inventario) | `art/items/<id>.webp` | libre | 512×512 | Pociones, gemas, libros (próxima fase). |
+| **Piezas de equipo** | `art/items/<id>.webp` | 19 | 512×512 | Ícono de la pieza sola, centrada, fondo transparente. Si falta, se muestra un emoji. Lista abajo. |
 
 ### Ids que ya usa la app
 
@@ -62,11 +62,35 @@ Cada stat tiene un guardián con 5 formas. La forma cambia con el nivel de esa s
 
 Si falta la imagen de una evolución, se muestra la primera forma.
 
-## Equipamiento (para más adelante)
+## Equipo
 
-Para que el casco, la armadura o el arma se vean **puestos sobre el personaje**, cada pieza debe dibujarse sobre **el mismo cuerpo base, en la misma pose y el mismo lienzo de 720×1000**, como capas transparentes que encajan exactamente. Es difícil de lograr con generadores de imágenes.
+El equipo se muestra **como íconos** en sus espacios (casco, armadura, guantes, botas, arma, capa y dos accesorios), no dibujado sobre el personaje. Los accesorios dibujados en cada personaje son parte de su ilustración.
 
-El plan es empezar con el equipo **como íconos** (512×512, fondo transparente) en sus espacios: `casco`, `armadura`, `guantes`, `arma`, `botas`, `capa`, `accesorio-1`, `accesorio-2`.
+Íconos de 512×512, fondo transparente, la pieza sola y centrada, sin texto. Conviene que la rareza se note: comunes en cuero y hierro, raras con detalles azules o plateados, épicas con brillo morado o dorado.
+
+| Id | Pieza | Rareza |
+|---|---|---|
+| `casco-cuero` | Casco de cuero | Común |
+| `jubon` | Jubón acolchado | Común |
+| `guantes-herrero` | Guantes de faena | Común |
+| `botas-viaje` | Botas de viaje | Común |
+| `espada-practica` | Espada de práctica | Común |
+| `capa-caminante` | Capa del caminante | Común |
+| `amuleto-hogar` | Amuleto del hogar | Común |
+| `marcapaginas` | Marcapáginas de plata | Común |
+| `diadema-sabio` | Diadema del sabio | Rara |
+| `guanteletes` | Guanteletes de hierro | Rara |
+| `baculo-runas` | Báculo de runas | Rara |
+| `botas-aladas` | Botas aladas | Rara |
+| `anillo-vinculo` | Anillo del vínculo | Rara |
+| `cota-constancia` | Cota de la Constancia (botín de Pereza) | Épica |
+| `reloj-cronos` | Reloj de Cronos (botín de Cronos) | Épica |
+| `guantes-orden` | Guantes del Orden (botín del Gólem del Desorden) | Épica |
+| `yelmo-calma` | Yelmo de la Calma (botín de Ira) | Épica |
+| `ojo-enfoque` | Ojo del Enfoque (botín de Scrollax) | Épica |
+| `capa-lazo` | Capa del Lazo (botín de la Sombra de la Soledad) | Épica |
+
+Los nombres, la rareza y el bonus de cada pieza se editan en `js/gear.js`.
 
 ## Plantilla para pedirle a GPT
 
