@@ -700,3 +700,47 @@ test('jefes: una etapa nueva desde un mes futuro no altera los meses anteriores'
   assert.equal(L.bossForMonth('2027-03', eras).id, 'multitarea');
   assert.equal(L.bossForMonth('2027-12', eras).id, 'pereza');   // 10 meses después vuelve a empezar
 });
+
+// ---------------- Bienvenida (versión general) ----------------
+
+test('bienvenida: perfil nuevo la ve; quien ya jugaba no', () => {
+  assert.equal(L.defaultState().onboarded, false);
+  const s = L.defaultState();
+  L.logActivity(s, 'def-gym');
+  const old = JSON.parse(JSON.stringify(L.exportPayload(s)));
+  delete old.data.onboarded;                                    // respaldo de antes de la bienvenida
+  assert.equal(L.validateImport(old).onboarded, true);
+  const fresh = JSON.parse(JSON.stringify(L.exportPayload(L.defaultState())));
+  assert.equal(L.validateImport(fresh).onboarded, false);       // perfil nuevo exportado sin terminar
+  fresh.data.log = s.log;
+  assert.equal(L.validateImport(fresh).onboarded, true);        // si ya registró, no se le pregunta
+});
+
+test('bienvenida: deja solo los hábitos elegidos, conserva retos y fija 3', () => {
+  const s = L.defaultState();
+  const resistBefore = s.activities.filter(a => a.resist).length;
+  L.applyOnboarding(s, { name: '  Kai  ', character: 'duelista', habitIds: ['tpl-correr', 'def-leer', 'tpl-meditar', 'tpl-finanzas', 'no-existe'] });
+  assert.equal(s.profile.name, 'Kai');
+  assert.equal(s.profile.character, 'duelista');
+  assert.deepEqual(s.activities.filter(a => !a.resist).map(a => a.id), ['tpl-correr', 'def-leer', 'tpl-meditar', 'tpl-finanzas']);
+  assert.equal(s.activities.filter(a => a.resist).length, resistBefore);
+  assert.deepEqual(s.pinned, ['tpl-correr', 'def-leer', 'tpl-meditar']);
+  assert.deepEqual(L.quickActivities(s).map(a => a.id), ['tpl-correr', 'def-leer', 'tpl-meditar']);
+  assert.equal(s.onboarded, true);
+  const e = L.logActivity(s, 'tpl-correr');
+  assert.equal(e.stat, 'resistencia');
+  // cada stat tiene al menos 4 opciones y todas las plantillas son válidas
+  for (const st of L.STAT_IDS) assert.ok(L.HABIT_TEMPLATES.filter(t => t.stat === st).length >= 4, st);
+  assert.equal(new Set(L.HABIT_TEMPLATES.map(t => t.id)).size, L.HABIT_TEMPLATES.length);
+});
+
+test('bienvenida: saltar conserva las sugeridas; agregar hábitos después no duplica', () => {
+  const s = L.defaultState();
+  const before = s.activities.map(a => a.id);
+  L.applyOnboarding(s, { name: '', habitIds: [] });
+  assert.equal(s.profile.name, 'Héroe');
+  assert.deepEqual(s.activities.map(a => a.id), before);
+  assert.equal(L.addHabits(s, ['tpl-agua', 'def-gym', 'tpl-agua']), 1);
+  const ids = s.activities.map(a => a.id);
+  assert.ok(ids.indexOf('tpl-agua') < ids.findIndex(id => s.activities.find(a => a.id === id).resist)); // antes de los retos
+});

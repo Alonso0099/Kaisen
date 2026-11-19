@@ -194,7 +194,10 @@
       </div>
 
       <h2 class="section-title">Actividades</h2>
-      <button class="btn btn-primary btn-block" id="addActivityBtn">＋ Nueva actividad</button>
+      <div class="btn-row" style="margin-bottom:12px">
+        <button class="btn btn-primary" id="addActivityBtn">＋ Crear</button>
+        <button class="btn" id="addHabitsBtn">Elegir de la lista</button>
+      </div>
       <div id="activityList" class="list"></div>
 
       <h2 class="section-title">Instalar la app</h2>
@@ -255,6 +258,11 @@
       <div><button class="btn btn-yellow" id="levelupShare">Compartir</button></div>
       <div class="levelup-tap">Toca para continuar</div>
     </div>
+  </div>
+
+  <!-- Bienvenida (perfil nuevo): nombre, personaje y hábitos -->
+  <div class="welcome" id="welcome" hidden>
+    <div class="welcome-inner" id="welcomeInner"></div>
   </div>
 
   <div class="toasts" id="toasts" aria-live="polite"></div>

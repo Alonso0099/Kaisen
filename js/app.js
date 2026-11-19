@@ -10,7 +10,7 @@ import * as Gear from './gear.js';
 import { installInfo, isStandalone } from './install.js';
 import { art, CHARACTERS, characterById, characterImg, guardianFor, guardianEvolutions, syncGuardianSeen, GUARDIANS, WORLDS, worldById, DEFAULT_WORLD, DEFAULT_PET, PET_SPECIES, speciesById } from './catalog.js';
 
-export const APP_VERSION = '2.1.0';
+export const APP_VERSION = '2.2.0';
 const BACKUP_REMINDER_DAYS = 7;
 
 const $ = sel => document.querySelector(sel);
@@ -1312,28 +1312,143 @@ function useProfile(id, { silent = false } = {}) {
   save();
   renderAll();
   noticeSkyRefund();
-  if (!silent) toast(`Hola, ${esc(state.profile.name)} 👋`);
+  maybeWelcome();
+  if (!silent && state.onboarded) toast(`Hola, ${esc(state.profile.name)} 👋`);
 }
 
 async function newProfileFlow() {
-  let chosen = CHARACTERS[0].id;
-  const p = openSheet(`
-    <h3>Nuevo perfil</h3>
-    <p>Cada perfil tiene su propio progreso, personaje y misiones en este teléfono.</p>
-    <label class="field"><span>Nombre de héroe</span><input type="text" id="npName" maxlength="16" placeholder="Ej. Kai" autocomplete="off"></label>
-    <div class="field"><span>Elige tu personaje</span><div class="char-grid" id="npChars">${characterCards(chosen)}</div></div>
-    <div class="btn-row"><button class="btn" data-close="cancel">Cancelar</button><button class="btn btn-primary" id="npSave">Crear</button></div>`);
-  $('#npChars').onclick = e => {
-    const c = e.target.closest('[data-char]'); if (!c) return;
-    chosen = c.dataset.char;
-    $('#npChars').innerHTML = characterCards(chosen);
-  };
-  $('#npSave').onclick = () => closeSheet({ name: $('#npName').value.trim() || 'Héroe', character: chosen });
-  const res = await p;
-  if (!res || res === 'cancel') return;
+  const ok = await confirmSheet('¿Crear otro perfil?', 'Cada perfil tiene su propio progreso, personaje y hábitos en este teléfono. Podrás volver a este cuando quieras desde Ajustes.', 'Crear perfil');
+  if (!ok) return;
   save(); // guarda el perfil actual antes de cambiar
-  const { id } = Profiles.createProfile(res);
-  useProfile(id);
+  const { id } = Profiles.createProfile({ name: 'Héroe', character: CHARACTERS[0].id });
+  useProfile(id, { silent: true });   // la bienvenida se abre sola
+}
+
+// ---------------------------------------------------------------------
+// Bienvenida: 3 pasos para empezar (nombre y personaje → hábitos → listo)
+// ---------------------------------------------------------------------
+const welcomeDraft = { step: 1, name: '', character: CHARACTERS[0].id, habits: [] };
+
+function maybeWelcome() {
+  if (state.onboarded) { $('#welcome').hidden = true; return; }
+  Object.assign(welcomeDraft, { step: 1, name: state.profile.name === 'Héroe' ? '' : state.profile.name, character: state.profile.character, habits: [] });
+  $('#welcome').hidden = false;
+  renderWelcome();
+}
+
+function renderWelcome() {
+  const d = welcomeDraft;
+  const dots = [1, 2, 3].map(i => `<i class="${i === d.step ? 'on' : i < d.step ? 'done' : ''}"></i>`).join('');
+  let body = '';
+  if (d.step === 1) {
+    body = `
+      <div class="w-brand">KAI<span>SEN</span></div>
+      <h2>Tu vida es la aventura</h2>
+      <p>Cada cosa buena que haces en la vida real le da experiencia a tu héroe. Empecemos por conocerte.</p>
+      <label class="field"><span>¿Cómo se llama tu héroe?</span>
+        <input type="text" id="wName" maxlength="16" placeholder="Héroe" value="${esc(d.name)}" autocomplete="off"></label>
+      <div class="field"><span>Elige tu personaje</span><div class="char-grid w-chars" id="wChars">${characterCards(d.character)}</div></div>
+      <button class="btn btn-primary btn-block" data-w="next">Siguiente</button>`;
+  } else if (d.step === 2) {
+    const groups = G.STATS.map(st => `
+      <div class="w-group">
+        <div class="w-group-title" style="--c:${st.color}"><img src="${statIcon(st.id)}" alt="">${st.name}</div>
+        <div class="w-habits">${G.HABIT_TEMPLATES.filter(t => t.stat === st.id).map(t => `
+          <button class="w-habit ${d.habits.includes(t.id) ? 'on' : ''}" data-habit="${t.id}" style="--c:${st.color}">${esc(t.name)}</button>`).join('')}
+        </div>
+      </div>`).join('');
+    body = `
+      <h2>¿Qué quieres hacer más seguido?</h2>
+      <p>Elige de ${G.ONBOARD_MIN} a ${G.ONBOARD_MAX} hábitos. Las primeras tres serán tus accesos rápidos. Puedes cambiarlos cuando quieras.</p>
+      ${groups}
+      <div class="w-foot">
+        <span class="w-count">${d.habits.length === 1 ? '1 elegido' : `${d.habits.length} elegidos`}</span>
+        <div class="btn-row">
+          <button class="btn" data-w="back">Atrás</button>
+          <button class="btn btn-primary" data-w="next" ${d.habits.length < G.ONBOARD_MIN ? 'disabled' : ''}>Siguiente</button>
+        </div>
+        <button class="w-skip" data-w="skip">Saltar y usar los hábitos sugeridos</button>
+      </div>`;
+  } else {
+    const first = G.HABIT_TEMPLATES.find(t => t.id === d.habits[0]);
+    body = `
+      <div class="w-hero"><img src="${characterImg(d.character)}" alt=""></div>
+      <h2>¡Listo, ${esc(d.name || 'Héroe')}!</h2>
+      <ul class="w-rules">
+        <li><b>Registra</b> lo que hiciste con un toque. Si te equivocas, toca <b>Deshacer</b>.</li>
+        <li>Cada día que registras algo, tu <b>huevo</b> se calienta. En 2 días nace tu mascota.</li>
+        <li>Lo demás (jefes, guardianas, tienda) lo irás descubriendo.</li>
+      </ul>
+      <button class="btn btn-primary btn-block" data-w="finish">${first ? `Empezar: registrar «${esc(first.name)}»` : 'Empezar'}</button>
+      <button class="w-skip" data-w="finish-only">Entrar sin registrar todavía</button>`;
+  }
+  $('#welcomeInner').innerHTML = `<div class="w-dots">${dots}</div>${body}`;
+  $('#welcomeInner').scrollTop = 0;
+}
+
+function finishWelcome({ habits = welcomeDraft.habits, logFirst = false } = {}) {
+  const d = welcomeDraft;
+  G.applyOnboarding(state, { name: d.name, character: d.character, habitIds: habits });
+  save();
+  $('#welcome').hidden = true;
+  lastLevelShown = null;
+  renderAll();
+  showView('home');
+  if (logFirst && habits[0]) setTimeout(() => {
+    const btn = document.querySelector(`#quickLog [data-act="${CSS.escape(habits[0])}"]`);
+    if (btn) onActivityTap(btn);
+  }, 350);
+  else toast(`¡Bienvenido, ${esc(state.profile.name)}! Registra algo cuando lo hagas.`);
+}
+
+$('#welcome').addEventListener('input', e => { if (e.target.id === 'wName') welcomeDraft.name = e.target.value; });
+$('#welcome').addEventListener('click', e => {
+  const d = welcomeDraft;
+  const ch = e.target.closest('[data-char]');
+  if (ch) { d.character = ch.dataset.char; $('#wChars').innerHTML = characterCards(d.character); return; }
+  const h = e.target.closest('[data-habit]');
+  if (h) {
+    const id = h.dataset.habit;
+    if (d.habits.includes(id)) d.habits = d.habits.filter(x => x !== id);
+    else if (d.habits.length < G.ONBOARD_MAX) d.habits.push(id);
+    else return toast(`Puedes elegir hasta ${G.ONBOARD_MAX}. Después podrás agregar más.`);
+    const y = $('#welcomeInner').scrollTop; renderWelcome(); $('#welcomeInner').scrollTop = y;
+    return;
+  }
+  const a = e.target.closest('[data-w]'); if (!a || a.disabled) return;
+  const act = a.dataset.w;
+  if (act === 'next') { d.step = Math.min(3, d.step + 1); renderWelcome(); }
+  if (act === 'back') { d.step = Math.max(1, d.step - 1); renderWelcome(); }
+  if (act === 'skip') finishWelcome({ habits: [] });
+  if (act === 'finish') finishWelcome({ logFirst: true });
+  if (act === 'finish-only') finishWelcome();
+});
+
+/** Ajustes: agregar más hábitos de la lista. */
+async function openHabitPicker() {
+  const have = new Set(state.activities.map(a => a.id));
+  let pick = [];
+  const list = () => G.STATS.map(st => {
+    const opts = G.HABIT_TEMPLATES.filter(t => t.stat === st.id && !have.has(t.id));
+    return opts.length ? `<div class="w-group"><div class="w-group-title" style="--c:${st.color}"><img src="${statIcon(st.id)}" alt="">${st.name}</div>
+      <div class="w-habits">${opts.map(t => `<button class="w-habit ${pick.includes(t.id) ? 'on' : ''}" data-habit="${t.id}" style="--c:${st.color}">${esc(t.name)}</button>`).join('')}</div></div>` : '';
+  }).join('') || '<p>Ya tienes todos los hábitos de la lista. Puedes crear uno propio.</p>';
+  const p = openSheet(`
+    <h3>Elegir de la lista</h3>
+    <div id="hpList">${list()}</div>
+    <div class="btn-row"><button class="btn" data-close="cancel">Cancelar</button><button class="btn btn-primary" id="hpAdd">Agregar</button></div>`);
+  $('#hpList').addEventListener('click', e => {
+    const h = e.target.closest('[data-habit]'); if (!h) return;
+    const id = h.dataset.habit;
+    pick = pick.includes(id) ? pick.filter(x => x !== id) : [...pick, id];
+    $('#hpList').innerHTML = list();
+  });
+  $('#hpAdd').onclick = () => closeSheet({ ids: pick });
+  const res = await p;
+  if (!res || !res.ids?.length) return;
+  let n = 0;
+  commit(s => { n = G.addHabits(s, res.ids); }, { celebrate: false });
+  toast(n === 1 ? 'Hábito agregado' : `${n} hábitos agregados`);
 }
 
 /** Detalle de una stat: nivel, progreso, actividades y su guardián. */
@@ -1579,6 +1694,7 @@ $('#historyList').addEventListener('click', e => {
 });
 
 $('#addActivityBtn').onclick = () => editActivity(null);
+$('#addHabitsBtn').onclick = openHabitPicker;
 $('#activityList').addEventListener('click', e => {
   const ed = e.target.closest('[data-act-edit]');
   if (ed) return editActivity(ed.dataset.actEdit);
@@ -1627,7 +1743,7 @@ $('#resetBtn').onclick = async () => {
   state = G.defaultState();
   state.profile = { ...state.profile, ...keep };
   save(); lastLevelShown = null; renderAll();
-  toast('Nueva aventura iniciada');
+  maybeWelcome();
 };
 
 // Al volver a la app (p. ej. al día siguiente) se recalcula racha y "hoy".
@@ -1642,6 +1758,7 @@ save();
 checkShields();
 renderAll();
 noticeSkyRefund();
+maybeWelcome();
 
 /** Una sola vez: avisa que se devolvieron las monedas de los Ambientes retirados. */
 function noticeSkyRefund() {

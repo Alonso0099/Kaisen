@@ -266,6 +266,7 @@ export function defaultState() {
     shieldDays: [],                                  // días salvados por un escudo de racha
     equipped: { title: null, world: 'atardecer', gear: {} },
     pinned: [],          // actividades fijadas como acceso rápido en Inicio (máx. 3)
+    onboarded: false,    // ya pasó por la bienvenida (elegir nombre, personaje y hábitos)
     notices: {},         // avisos únicos ya mostrados (p. ej. devolución de Ambientes)
     quests: [],
     questHistory: [],
@@ -370,6 +371,8 @@ export function validateImport(obj) {
     shieldDays: Array.isArray(data.shieldDays) ? data.shieldDays : [],
     equipped: (({ sky, ...rest }) => rest)({ ...base.equipped, ...(data.equipped || {}), gear: { ...((data.equipped || {}).gear || {}) } }),
     pinned: Array.isArray(data.pinned) ? data.pinned.filter(x => typeof x === 'string').slice(0, 3) : [],
+    // Quien ya tenía progreso (o venía de antes de la bienvenida) no la vuelve a ver.
+    onboarded: typeof data.onboarded === 'boolean' ? data.onboarded || data.log.length > 0 : true,
     notices: data.notices && typeof data.notices === 'object' ? { ...data.notices } : {},
     quests: Array.isArray(data.quests) ? data.quests.filter(okAct) : [],
     questHistory: Array.isArray(data.questHistory) ? data.questHistory : [],
@@ -837,4 +840,77 @@ export function togglePin(state, id) {
   if (p.length === (state.pinned || []).length) { p.push(id); while (p.length > QUICK_MAX) p.shift(); }
   state.pinned = p;
   return p.includes(id);
+}
+
+// =====================================================================
+// Bienvenida: lista de hábitos para elegir al empezar
+// Los ids "def-…" coinciden con las actividades sugeridas de siempre, así
+// el historial y las misiones siguen reconociéndolas.
+// =====================================================================
+export const HABIT_TEMPLATES = [
+  { id: 'def-gym',            name: 'Entrenar en el gym',          stat: 'fuerza',      xp: 30 },
+  { id: 'def-entreno-casa',   name: 'Entreno corto en casa',       stat: 'fuerza',      xp: 15 },
+  { id: 'tpl-yoga',           name: 'Yoga o estiramientos',        stat: 'fuerza',      xp: 15 },
+  { id: 'tpl-deporte',        name: 'Jugar un deporte',            stat: 'fuerza',      xp: 30 },
+  { id: 'def-hike',           name: 'Caminata',                    stat: 'resistencia', xp: 25 },
+  { id: 'tpl-correr',         name: 'Correr',                      stat: 'resistencia', xp: 30 },
+  { id: 'def-mtb',            name: 'Bicicleta',                   stat: 'resistencia', xp: 35, bonus: { label: 'Ruta larga', xp: 15 } },
+  { id: 'tpl-nadar',          name: 'Nadar',                       stat: 'resistencia', xp: 30 },
+  { id: 'tpl-dormir',         name: 'Dormir 7 horas o más',        stat: 'resistencia', xp: 15 },
+  { id: 'tpl-agua',           name: 'Tomar suficiente agua',       stat: 'resistencia', xp: 10 },
+  { id: 'def-estudio',        name: 'Estudiar',                    stat: 'intelecto',   xp: 25 },
+  { id: 'def-tarea',          name: 'Entregar una tarea',          stat: 'intelecto',   xp: 40 },
+  { id: 'def-programar',      name: 'Avanzar un proyecto propio',  stat: 'intelecto',   xp: 25 },
+  { id: 'tpl-idioma',         name: 'Practicar un idioma',         stat: 'intelecto',   xp: 20 },
+  { id: 'tpl-curso',          name: 'Avanzar un curso',            stat: 'intelecto',   xp: 25 },
+  { id: 'def-leer',           name: 'Leer 20+ min',                stat: 'sabiduria',   xp: 15 },
+  { id: 'def-terminar-libro', name: 'Terminar un libro',           stat: 'sabiduria',   xp: 100 },
+  { id: 'tpl-meditar',        name: 'Meditar 10 min',              stat: 'sabiduria',   xp: 15 },
+  { id: 'tpl-diario',         name: 'Escribir en un diario',       stat: 'sabiduria',   xp: 15 },
+  { id: 'tpl-reflexion',      name: 'Orar o reflexionar',          stat: 'sabiduria',   xp: 15 },
+  { id: 'def-tiempo',         name: 'Tiempo de calidad juntos',    stat: 'vinculo',     xp: 30 },
+  { id: 'def-familia',        name: 'Salida con familia o amigos', stat: 'vinculo',     xp: 30 },
+  { id: 'tpl-llamar',         name: 'Llamar a alguien querido',    stat: 'vinculo',     xp: 15 },
+  { id: 'tpl-ayudar',         name: 'Ayudar a alguien',            stat: 'vinculo',     xp: 20 },
+  { id: 'tpl-voluntariado',   name: 'Voluntariado',                stat: 'vinculo',     xp: 30 },
+  { id: 'def-proyecto-casa',  name: 'Proyecto de la casa',         stat: 'hogar',       xp: 30 },
+  { id: 'def-cocinar',        name: 'Cocinar en casa',             stat: 'hogar',       xp: 10 },
+  { id: 'tpl-limpiar',        name: 'Limpiar u ordenar',           stat: 'hogar',       xp: 15 },
+  { id: 'tpl-finanzas',       name: 'Revisar mis finanzas',        stat: 'hogar',       xp: 20 },
+  { id: 'tpl-plantas',        name: 'Cuidar plantas o mascotas',   stat: 'hogar',       xp: 10 },
+];
+export const ONBOARD_MIN = 1;
+export const ONBOARD_MAX = 10;
+
+/**
+ * Termina la bienvenida: guarda nombre y personaje, deja como actividades
+ * SOLO los hábitos elegidos (los retos de resistencia se conservan) y fija
+ * los 3 primeros como accesos rápidos de Inicio.
+ * Si no se eligió ninguno, se quedan las actividades sugeridas.
+ */
+export function applyOnboarding(state, { name, character, habitIds = [] } = {}) {
+  if (name !== undefined) state.profile.name = String(name).trim().slice(0, 16) || 'Héroe';
+  if (character) state.profile.character = character;
+  const chosen = habitIds.map(id => HABIT_TEMPLATES.find(t => t.id === id)).filter(Boolean).slice(0, ONBOARD_MAX);
+  if (chosen.length) {
+    const resist = state.activities.filter(a => a.resist);
+    state.activities = [...chosen.map(t => ({ ...t, bonus: t.bonus ? { ...t.bonus } : null })), ...resist];
+    state.pinned = chosen.slice(0, QUICK_MAX).map(t => t.id);
+  }
+  state.onboarded = true;
+  return state;
+}
+
+/** Agrega hábitos de la lista a un perfil existente (sin duplicar). Devuelve cuántos agregó. */
+export function addHabits(state, habitIds = []) {
+  let n = 0;
+  for (const id of habitIds) {
+    const t = HABIT_TEMPLATES.find(x => x.id === id);
+    if (!t || state.activities.some(a => a.id === id)) continue;
+    const firstResist = state.activities.findIndex(a => a.resist);
+    const act = { ...t, bonus: t.bonus ? { ...t.bonus } : null };
+    if (firstResist < 0) state.activities.push(act); else state.activities.splice(firstResist, 0, act);
+    n++;
+  }
+  return n;
 }

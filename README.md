@@ -43,6 +43,10 @@ npm test                        # pruebas de la lógica de XP, niveles, rachas y
 
 ---
 
+## 👋 Bienvenida
+
+Un perfil nuevo empieza con una bienvenida de tres pasos: nombre y personaje, **elegir de 1 a 10 hábitos** de una lista de 30 (5 por stat) y un resumen de lo básico. Las tres primeras elegidas quedan como accesos rápidos en Inicio, y se puede terminar registrando la primera. También se puede saltar y usar los hábitos sugeridos. Quien ya tenía progreso no la ve. Más tarde, en **Ajustes → Actividades → Elegir de la lista**, se agregan más hábitos. La lista está en `HABIT_TEMPLATES` (`js/logic.js`).
+
 ## 🎮 Cómo se juega
 
 - **Inicio**: tu personaje en su mundo, rango, nivel y XP; el botón **Registrar actividad** (abre el catálogo completo), hasta **3 accesos rápidos** (las que fijes con ★ y luego las que más usas), un aviso con tu **próximo hito** («Registra un día más para que nazca tu mascota») y las tarjetas del **jefe** (con su reto del día) y la **mascota**. Mantén presionado un acceso para editar esa actividad.
