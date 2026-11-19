@@ -346,14 +346,14 @@ test('migración: respaldos anteriores reciben retos, tienda y escudos', () => {
   old.data.activities = old.data.activities.filter(a => !a.resist);
   delete old.data.rewards; delete old.data.purchases; delete old.data.shieldDays; delete old.data.equipped;
   const back = L.validateImport(old);
-  assert.equal(back.activities.filter(a => a.resist).length, 6);
+  assert.equal(back.activities.filter(a => a.resist).length, 10);
   assert.equal(back.rewards.length, 4);
   assert.deepEqual(back.purchases, []);
   assert.equal(back.equipped.sky, 'sky-default');
   // Una vez migrado, si borras un reto no vuelve a aparecer
   back.activities = back.activities.filter(a => a.id !== 'res-alarma');
   const again = L.validateImport(JSON.parse(JSON.stringify(L.exportPayload(back))));
-  assert.equal(again.activities.filter(a => a.resist).length, 5);
+  assert.equal(again.activities.filter(a => a.resist).length, 9);
 });
 
 test('monedas: se ganan con registros, cofre, premios y logros', () => {
@@ -538,7 +538,8 @@ test('equipo: tipo de espacio, accesorios dobles y tope de bonus', () => {
 test('equipo: los jefes sueltan su pieza; si deshaces el premio, la pieza se va', () => {
   const s = L.defaultState();
   assert.equal(L.bossDrop('estres').id, 'yelmo-calma');
-  assert.ok(Gear.ITEMS.filter(i => i.boss).length === 6);
+  assert.equal(Gear.ITEMS.filter(i => i.boss).length, 10);
+  assert.ok(L.BOSSES.every(b => L.bossDrop(b.id)), 'cada jefe tiene botín');
   const e = { id: 'b', ts: Date.now(), type: 'boss', refId: '2026-11:estres', name: 'x', stat: 'resistencia', xp: 150 };
   s.log.push(e);
   assert.ok(Gear.ownsItem(s, 'yelmo-calma'));
@@ -613,7 +614,7 @@ test('guardianas: guardianSeen sobrevive a exportar/importar', () => {
 test('jefes: la rotación de los 6 originales no cambia', () => {
   // misma fórmula de siempre: (año*12 + mes-1) % 6
   const order = ['pereza', 'procrastinacion', 'desorden', 'estres', 'distraccion', 'soledad'];
-  for (let i = 0; i < 24; i++) {
+  for (let i = 0; i < 11; i++) {          // enero a noviembre de 2026 (antes de la etapa nueva)
     const d = new Date(2026, i, 15);
     const mk = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     assert.equal(L.bossForMonth(mk).id, order[(d.getFullYear() * 12 + d.getMonth()) % 6]);
@@ -621,17 +622,32 @@ test('jefes: la rotación de los 6 originales no cambia', () => {
   assert.equal(L.bossForMonth('2026-11').id, 'distraccion');
 });
 
-test('jefes: los 4 de T-01 existen con sus textos pero no rotan todavía', () => {
+test('jefes: los 10 rotan desde diciembre de 2026, uno distinto cada mes', () => {
   const nuevos = ['multitarea', 'perfeccionismo', 'inercia', 'desvelo'];
   for (const id of nuevos) {
     const b = L.BOSSES.find(x => x.id === id);
     assert.ok(b && b.taunt && b.fear && b.challenge && L.STAT_IDS.includes(b.weak), id);
-    assert.equal(b.ready, false);
+    assert.ok(L.DEFAULT_RESIST.some(r => r.resist === id), `reto de ${id}`);
   }
-  assert.equal(L.activeBosses().length, 6);
-  const seen = new Set();
-  for (let i = 0; i < 60; i++) { const d = new Date(2026, i, 1); seen.add(L.bossForMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`).id); }
-  assert.ok(nuevos.every(id => !seen.has(id)));
+  assert.equal(L.activeBosses().length, 10);
+  assert.equal(L.bossForMonth('2026-11').id, 'distraccion');   // el mes en curso no cambia
+  assert.equal(L.bossForMonth('2026-12').id, 'multitarea');
+  const year = [];
+  for (let i = 0; i < 10; i++) { const d = new Date(2026, 11 + i, 1); year.push(L.bossForMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`).id); }
+  assert.equal(new Set(year).size, 10);
+  for (let i = 1; i < year.length; i++) assert.notEqual(year[i], year[i - 1]);
+});
+
+test('migración v5: perfiles existentes reciben los 4 retos nuevos una sola vez', () => {
+  const s = L.defaultState();
+  const old = JSON.parse(JSON.stringify(L.exportPayload(s)));
+  old.data.schema = 4;
+  old.data.activities = old.data.activities.filter(a => !L.RESIST_V5.includes(a.id));
+  let back = L.validateImport(old);
+  assert.equal(back.activities.filter(a => L.RESIST_V5.includes(a.id)).length, 4);
+  back.activities = back.activities.filter(a => a.id !== 'res-dormir');   // el jugador lo borra
+  back = L.validateImport(JSON.parse(JSON.stringify(L.exportPayload(back))));
+  assert.ok(!back.activities.some(a => a.id === 'res-dormir'));
 });
 
 test('jefes: una etapa nueva desde un mes futuro no altera los meses anteriores', () => {

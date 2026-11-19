@@ -58,6 +58,11 @@ export const ITEMS = [
   { id: 'yelmo-calma',      name: 'Yelmo de la Calma',       type: 'casco',     rarity: 'epico', stat: 'resistencia', pct: 15, boss: 'estres',          icon: '🪖' },
   { id: 'ojo-enfoque',      name: 'Ojo del Enfoque',         type: 'accesorio', rarity: 'epico', stat: 'sabiduria',   pct: 15, boss: 'distraccion',     icon: '🧿' },
   { id: 'capa-lazo',        name: 'Capa del Lazo',           type: 'capa',      rarity: 'epico', stat: 'vinculo',     pct: 15, boss: 'soledad',         icon: '🧥' },
+  // --- Botín de los jefes de T-01 (A-13)
+  { id: 'guantes-prioridad',    name: 'Guantes de la Prioridad',    type: 'guantes',  rarity: 'epico', stat: 'intelecto',   pct: 15, boss: 'multitarea',     icon: '🧤' },
+  { id: 'coraza-grieta-dorada', name: 'Coraza de la Grieta Dorada', type: 'armadura', rarity: 'epico', stat: 'sabiduria',   pct: 15, boss: 'perfeccionismo', icon: '🛡️' },
+  { id: 'botas-deshielo',       name: 'Botas del Deshielo',         type: 'botas',    rarity: 'epico', stat: 'fuerza',      pct: 15, boss: 'inercia',        icon: '🥾' },
+  { id: 'capa-ultimo-ocaso',    name: 'Capa del Último Ocaso',      type: 'capa',     rarity: 'epico', stat: 'resistencia', pct: 15, boss: 'desvelo',        icon: '🧥' },
 ];
 export const itemById = id => ITEMS.find(i => i.id === id);
 export const bossDrop = bossId => ITEMS.find(i => i.boss === bossId) || null;

@@ -234,9 +234,15 @@ export const DEFAULT_RESIST = [
   { id: 'res-orden',      name: 'Dejé todo en su lugar',               stat: 'hogar',       xp: 10, resist: 'desorden' },
   { id: 'res-pausa',      name: 'Pausa para respirar y desconectar',   stat: 'resistencia', xp: 10, resist: 'estres' },
   { id: 'res-contacto',   name: 'Le escribí o llamé a alguien querido', stat: 'vinculo',    xp: 15, resist: 'soledad' },
+  // Retos de los jefes de T-01 (agregados en el esquema 5)
+  { id: 'res-una-tarea',  name: '15 minutos en una sola tarea',        stat: 'intelecto',   xp: 15, resist: 'multitarea' },
+  { id: 'res-suficiente', name: 'Lo di por terminado: era suficiente',  stat: 'sabiduria',   xp: 15, resist: 'perfeccionismo' },
+  { id: 'res-primer-paso', name: '2 minutos del primer paso pendiente', stat: 'fuerza',      xp: 10, resist: 'inercia' },
+  { id: 'res-dormir',     name: 'Empecé mi rutina de dormir a tiempo', stat: 'resistencia', xp: 15, resist: 'desvelo' },
 ];
+export const RESIST_V5 = ['res-una-tarea', 'res-suficiente', 'res-primer-paso', 'res-dormir'];
 
-export const SCHEMA_VERSION = 4;
+export const SCHEMA_VERSION = 5;
 
 /** Recompensas de la vida real que se compran con monedas (editables). */
 export const DEFAULT_REWARDS = [
@@ -343,7 +349,11 @@ export function validateImport(obj) {
   const activities = data.activities.filter(okAct);
   // Migración: los datos anteriores a la v3 no traían retos de resistencia.
   if ((data.schema || 1) < 3) {
-    for (const r of DEFAULT_RESIST) if (!activities.some(a => a.id === r.id)) activities.push({ ...r, bonus: null });
+    for (const r of DEFAULT_RESIST) if (!RESIST_V5.includes(r.id) && !activities.some(a => a.id === r.id)) activities.push({ ...r, bonus: null });
+  }
+  // Esquema 5: retos de los cuatro jefes nuevos (una sola vez; si los borras no vuelven).
+  if ((data.schema || 1) < 5) {
+    for (const r of DEFAULT_RESIST) if (RESIST_V5.includes(r.id) && !activities.some(a => a.id === r.id)) activities.push({ ...r, bonus: null });
   }
   return {
     ...base,
@@ -487,20 +497,19 @@ export const BOSSES = [
   { id: 'estres',          name: 'Ira, el Ogro del Estrés',        weak: 'resistencia', taunt: '"¡No tienes tiempo para nada!"' },
   { id: 'distraccion',     name: 'Scrollax, el de Mil Pantallas',  weak: 'sabiduria',   taunt: '"Solo un video más…"' },
   { id: 'soledad',         name: 'Sombra de la Soledad',           weak: 'vinculo',     taunt: '"Mejor quédate solo."' },
-  // T-01 (GPT): todavía sin ilustración. Entran en la rotación cuando llegue
-  // su arte, agregando una etapa nueva en BOSS_ERAS (ver abajo).
+  // T-01 / A-12 (GPT): entran en la rotación desde diciembre de 2026.
   { id: 'multitarea',     name: 'Multyra, la Hidra de los Pendientes',   weak: 'intelecto',   taunt: '"¿Ya vas a terminar? Abramos tres cosas más."',
     fear: 'Abrir tareas por impulso y dejar que se acumulen sin elegir una prioridad.',
-    challenge: 'Elegí una sola tarea y le dediqué 15 minutos sin saltar a otra', ready: false },
+    challenge: 'Elegí una sola tarea y le dediqué 15 minutos sin saltar a otra' },
   { id: 'perfeccionismo', name: 'Perfectus, el Caballero de Porcelana',  weak: 'sabiduria',   taunt: '"Si tiene una grieta, tíralo entero."',
     fear: 'El miedo a entregar algo imperfecto y el pensamiento de todo o nada.',
-    challenge: 'Definí qué era suficiente y lo di por terminado', ready: false },
+    challenge: 'Definí qué era suficiente y lo di por terminado' },
   { id: 'inercia',        name: 'Glacior, el Dragón de la Inercia',      weak: 'fuerza',      taunt: '"El primer paso pesa más que toda la montaña."',
     fear: 'El bloqueo ante el primer movimiento, incluso cuando ya elegiste qué hacer.',
-    challenge: 'Hice 2 minutos del primer paso de algo pendiente', ready: false },
+    challenge: 'Hice 2 minutos del primer paso de algo pendiente' },
   { id: 'desvelo',        name: 'Noxveil, el Cuervo del Desvelo',        weak: 'resistencia', taunt: '"Dame otros veinte minutos. Mañana vemos."',
     fear: 'El hábito de alargar la noche con actividades que desplazan el descanso.',
-    challenge: 'Cerré lo que me desvelaba y empecé mi rutina de dormir a tiempo', ready: false },
+    challenge: 'Cerré lo que me desvelaba y empecé mi rutina de dormir a tiempo' },
 ];
 export const BOSS_REWARD_XP = 150;
 export const activeBosses = () => BOSSES.filter(b => b.ready !== false);
@@ -513,9 +522,10 @@ export const activeBosses = () => BOSSES.filter(b => b.ready !== false);
  */
 export const BOSS_ERAS = [
   { from: null, ids: ['pereza', 'procrastinacion', 'desorden', 'estres', 'distraccion', 'soledad'] },
-  // Cuando lleguen las ilustraciones de T-01, por ejemplo:
-  // { from: '2027-02', ids: ['pereza', 'multitarea', 'procrastinacion', 'perfeccionismo', 'desorden',
-  //                         'inercia', 'estres', 'desvelo', 'distraccion', 'soledad'] },
+  // Desde diciembre de 2026: los 10 jefes, intercalando nuevos y conocidos.
+  // Empieza con uno nuevo; Scrollax (noviembre) queda lo más lejos posible.
+  { from: '2026-12', ids: ['multitarea', 'pereza', 'perfeccionismo', 'procrastinacion', 'inercia',
+                           'desorden', 'desvelo', 'estres', 'soledad', 'distraccion'] },
 ];
 
 const monthIndex = mk => { const [y, m] = mk.split('-').map(Number); return y * 12 + (m - 1); };

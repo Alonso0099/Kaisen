@@ -35,8 +35,8 @@ Prioridad de arriba hacia abajo. Tamaños y nombres según ARTE.md.
 | T-02 | Nombres de guardianes (Skadi, Runa, Véra, Eira, Liv) y especies (Céfiro, Marea, Pedernal, Trueno, Nival, Alba, Umbra) | texto | ✅ |
 | T-03 | Una frase corta de cada guardián al evolucionar | texto | ✅ |
 | A-11 | 19 íconos de piezas de equipo (lista con ids en ARTE.md → Equipo) | `art/items/<id>.webp` | ✅ |
-| A-12 | Ilustraciones de los 4 jefes de T-01 (mismo estilo y tamaño que A-04). Al llegar entran en la rotación desde el mes siguiente | `art/bosses/{multitarea,perfeccionismo,inercia,desvelo}.webp` | ⏳ |
-| A-13 | (opcional) 4 piezas épicas de botín para esos jefes: nombre, espacio, stat e ícono 512×512 | `art/items/<id>.webp` + texto | ⏳ |
+| A-12 | Ilustraciones de los 4 jefes de T-01 (mismo estilo y tamaño que A-04). Al llegar entran en la rotación desde el mes siguiente | `art/bosses/{multitarea,perfeccionismo,inercia,desvelo}.webp` | ✅ |
+| A-13 | (opcional) 4 piezas épicas de botín para esos jefes: nombre, espacio, stat e ícono 512×512 | `art/items/<id>.webp` + texto | ✅ |
 
 **Reglas que hacen que todo encaje:** fondo transparente (salvo los mundos), lienzo 720×1000 con los pies en el borde inferior para las figuras de pie, mismo estilo en toda la serie (adjuntar una imagen anterior como referencia) y sin texto dentro de las imágenes.
 
@@ -70,4 +70,5 @@ Prioridad de arriba hacia abajo. Tamaños y nombres según ARTE.md.
 | — | Ícono aprobado: flecha dorada de fuego | 2026-11-19 |
 | A-10 | 8 huevos y 42 etapas de las siete especies nuevas | 2026-11-19 |
 | A-11 | 19 íconos de equipo | 2026-11-19 |
-| T-01 | Textos de Multyra, Perfectus, Glacior y Noxveil (fuera de rotación hasta A-12) | 2026-11-19 |
+| T-01 | Textos de Multyra, Perfectus, Glacior y Noxveil | 2026-11-19 |
+| A-12, A-13 | Ilustraciones de los 4 jefes nuevos y sus 4 piezas de botín (rotan desde diciembre 2026) | 2026-11-19 |

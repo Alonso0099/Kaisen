@@ -9,7 +9,7 @@ import * as Profiles from './profiles.js';
 import * as Gear from './gear.js';
 import { art, CHARACTERS, characterById, characterImg, guardianFor, guardianEvolutions, syncGuardianSeen, GUARDIANS, WORLDS, worldById, DEFAULT_WORLD, DEFAULT_PET, PET_SPECIES, speciesById } from './catalog.js';
 
-export const APP_VERSION = '1.9.0';
+export const APP_VERSION = '1.10.0';
 const BACKUP_REMINDER_DAYS = 7;
 
 const $ = sel => document.querySelector(sel);

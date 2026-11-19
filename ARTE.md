@@ -41,7 +41,7 @@ Si GPT te da otro tamaño, no pasa nada: pídeme "normaliza este arte" y lo reco
 ### Ids que ya usa la app
 
 - **Stats:** `fuerza`, `resistencia`, `intelecto`, `sabiduria`, `vinculo`, `hogar`
-- **Jefes:** `pereza`, `procrastinacion`, `desorden`, `estres`, `distraccion`, `soledad` · sin arte todavía: `multitarea`, `perfeccionismo`, `inercia`, `desvelo`
+- **Jefes:** `pereza`, `procrastinacion`, `desorden`, `estres`, `distraccion`, `soledad`, `multitarea`, `perfeccionismo`, `inercia`, `desvelo`
 - **Especies de mascota:** `chispa` (fuego), `brisa` (viento), `marea` (agua), `roca` (tierra), `rayo` (trueno), `escarcha` (hielo), `luz`, `sombra`
 - **Mundos** (rango que lo desbloquea): `atardecer` (E), `bosque` (D), `montana` (C), `islas` (B), `ciudadela` (S), `cosmos` (SS)
 - **Logros:** `first-log`, `level-2`, `level-5`, `level-10`, `streak-3`, `streak-7`, `streak-30`, `book`, `quest-1`, `all-stats`, `stat-5`, `big-day`, `logs-100`, `weekly-1`, `weekly-all`, `boss-1`, `boss-6`, `pet-adult`
@@ -89,6 +89,10 @@ El equipo se muestra **como íconos** en sus espacios (casco, armadura, guantes,
 | `yelmo-calma` | Yelmo de la Calma (botín de Ira) | Épica |
 | `ojo-enfoque` | Ojo del Enfoque (botín de Scrollax) | Épica |
 | `capa-lazo` | Capa del Lazo (botín de la Sombra de la Soledad) | Épica |
+| `guantes-prioridad` | Guantes de la Prioridad (botín de Multyra) | Épica |
+| `coraza-grieta-dorada` | Coraza de la Grieta Dorada (botín de Perfectus) | Épica |
+| `botas-deshielo` | Botas del Deshielo (botín de Glacior) | Épica |
+| `capa-ultimo-ocaso` | Capa del Último Ocaso (botín de Noxveil) | Épica |
 
 Los nombres, la rareza y el bonus de cada pieza se editan en `js/gear.js`.
 
