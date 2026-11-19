@@ -28,7 +28,7 @@ Si GPT te da otro tamaño, no pasa nada: pídeme "normaliza este arte" y lo reco
 
 | Categoría | Carpeta y nombre | Cantidad | Tamaño | Notas |
 |---|---|---|---|---|
-| **Personajes jugables** | `art/chars/<id>.webp` | los que quieras | 720×1000 | Agregar una línea en `CHARACTERS` de `js/catalog.js`. |
+| **Personajes jugables** | `art/chars/<id>.webp` | 12 (A-14) | 720×1000 | 6 arquetipos × 2 looks: `titan`, `relampago`, `estratega`, `sabio`, `guardian`, `implacable` con `-m` o `-f`. Brief en COORDINACION.md → A-14. |
 | **Guardianes** | `art/guardians/<stat>-<1..5>.webp` | 6 stats × 5 = 30 | 720×1000 | Ej.: `fuerza-1.webp` es Astrid en su primera forma. |
 | **Jefes** | `art/bosses/<id>.webp` | 10 | 720×1000 o cuadrado 1000×1000 | Hoy hay 6 ids (abajo). Para los 4 nuevos, pásame nombre, debilidad y reto. |
 | **Mascotas** | `art/pets/<especie>-<0..5>.webp` | 8 × 6 = 48 | 600×600 | Etapa 0 = huevo; 5 = forma final. |

@@ -132,3 +132,9 @@ test('instalación: qué se muestra según el dispositivo', async () => {
   assert.equal(I.isStandalone({ matchMedia: () => ({ matches: false }), navigator: { standalone: true } }), true);
   assert.equal(I.isStandalone({ matchMedia: () => ({ matches: false }), navigator: {} }), false);
 });
+
+test('héroes: cada uno tiene nombre, cualidad y descripción, y los ids no cambian', async () => {
+  const C = await import('../js/catalog.js');
+  for (const c of C.CHARACTERS) assert.ok(c.name && c.title && c.blurb.length > 30, c.id);
+  assert.deepEqual(C.CHARACTERS.map(c => c.id), ['guardabosques', 'exploradora', 'forjador', 'cartografo', 'tejedora', 'duelista']);
+});

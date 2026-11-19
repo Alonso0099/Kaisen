@@ -43,9 +43,15 @@ npm test                        # pruebas de la lógica de XP, niveles, rachas y
 
 ---
 
+## 🌱 Lo básico
+
+Dormir, tomar agua, comer fruta o verdura, salir a tomar aire, tender la cama… Para mucha gente lo básico es el reto. Estos hábitos se marcan **una vez al día** desde la fila **«Lo básico de hoy»** en Inicio (un toque) y dan poco XP pero constante. No ocupan los accesos rápidos.
+
+**Hogar y finanzas:** la stat Hogar incluye ahora hábitos de dinero (ahorrar algo hoy, un día sin compras impulsivas, revisar gastos).
+
 ## 👋 Bienvenida
 
-Un perfil nuevo empieza con una bienvenida de tres pasos: nombre y personaje, **elegir de 1 a 10 hábitos** de una lista de 30 (5 por stat) y un resumen de lo básico. Las tres primeras elegidas quedan como accesos rápidos en Inicio, y se puede terminar registrando la primera. También se puede saltar y usar los hábitos sugeridos. Quien ya tenía progreso no la ve. Más tarde, en **Ajustes → Actividades → Elegir de la lista**, se agregan más hábitos. La lista está en `HABIT_TEMPLATES` (`js/logic.js`).
+Un perfil nuevo empieza con una bienvenida de cuatro pasos: nombre y héroe; **elegir de 1 a 12 hábitos** de una lista organizada por áreas (Lo básico, Moverme, Mente y calma, Dinero y hogar, Personas, Crecer); **elegir recompensas** (opcional, con ideas gratis, pequeños gustos, experiencias e inversión en ti); y un resumen. Las tres primeras elegidas quedan como accesos rápidos en Inicio, y se puede terminar registrando la primera. También se puede saltar y usar los hábitos sugeridos. Quien ya tenía progreso no la ve. Más tarde, en **Ajustes → Actividades → Elegir de la lista**, se agregan más hábitos. La lista está en `HABIT_TEMPLATES` (`js/logic.js`).
 
 ## 🎮 Cómo se juega
 
@@ -56,7 +62,7 @@ Un perfil nuevo empieza con una bienvenida de tres pasos: nombre y personaje, **
 - **Mascota**: nace de un huevo y evoluciona según tus días activos (2, 7, 21, 45 y 90). Nunca retrocede ni se pone triste: si no registraste hoy "te espera", y el día que vuelves está feliz de verte. Tócala en Inicio para verla y cambiarle el nombre.
 - **Retos de resistencia**: cosas que te cuestan o que evitas. Cada uno cuenta una vez al día y le da **golpe crítico ×3** a su jefe. El reto del jefe del mes está en su tarjeta de Inicio; todos están en el catálogo.
 - **Monedas y tienda**: además de XP ganas monedas (por cada registro, logro, misión semanal y jefe, más un **cofre diario** con premio variable en el primer registro del día). Se gastan en la Tienda sin tocar tu XP ni tu nivel:
-  - **Recompensas reales** que tú defines (un antojo, noche de película…). Al canjear recibes un cupón que puedes compartir y marcar como usado.
+  - **Recompensas reales** que tú defines, o elegidas de **Ideas** (gratis, pequeños gustos, experiencias, inversión en ti). Las gratis cuestan menos para que premiarte no deshaga tus metas. Al canjear recibes un cupón.
   - **Escudo de racha**: si un día no registras, se usa solo y la racha sigue viva (máximo 2 guardados).
   - **Títulos** para tu héroe. (Los "Ambientes" se retiraron en la versión 2.0: a quien los había comprado se le devolvieron las monedas.)
 - **Compartir**: tarjetas ilustradas (progreso, subida de nivel, jefe derrotado, cupón) que se generan en tu teléfono y se mandan por la hoja de compartir.

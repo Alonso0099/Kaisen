@@ -10,7 +10,7 @@ import * as Gear from './gear.js';
 import { installInfo, isStandalone } from './install.js';
 import { art, CHARACTERS, characterById, characterImg, guardianFor, guardianEvolutions, syncGuardianSeen, GUARDIANS, WORLDS, worldById, DEFAULT_WORLD, DEFAULT_PET, PET_SPECIES, speciesById } from './catalog.js';
 
-export const APP_VERSION = '2.2.0';
+export const APP_VERSION = '2.3.0';
 const BACKUP_REMINDER_DAYS = 7;
 
 const $ = sel => document.querySelector(sel);
@@ -349,7 +349,26 @@ function actBtn(a) {
 }
 
 /** Hasta 3 accesos: fijados y luego los más usados. Perfil nuevo: invitación al catálogo. */
+/** "Lo básico de hoy": un toque marca el reto diario; se ve cuántos van. */
+function renderBasics() {
+  const basics = state.activities.filter(a => a.basic);
+  const row = $('#basicsRow');
+  row.hidden = !basics.length;
+  if (!basics.length) return;
+  const today = G.dayKey(Date.now());
+  const done = new Set(state.log.filter(e => G.dayKey(e.ts) === today).map(e => e.refId));
+  const n = basics.filter(a => done.has(a.id)).length;
+  row.innerHTML = `
+    <div class="basics-head"><b>Lo básico de hoy</b><span class="${n === basics.length ? 'all' : ''}">${n} de ${basics.length}${n === basics.length ? ' ✓' : ''}</span></div>
+    <div class="basics-list">${basics.map(a => {
+      const st = G.statById(a.stat); const ok = done.has(a.id);
+      return `<button class="basic-chip act-btn ${ok ? 'done' : ''}" data-act="${esc(a.id)}" style="--c:${st.color}" ${ok ? 'disabled' : ''}>
+        <i>${ok ? '✓' : '+'}</i><span>${esc(a.name)}</span></button>`;
+    }).join('')}</div>`;
+}
+
 function renderQuick() {
+  renderBasics();
   const quick = G.quickActivities(state);
   $('#quickLog').innerHTML = quick.length
     ? quick.map(actBtn).join('')
@@ -364,19 +383,20 @@ async function openCatalog() {
   const boss = G.bossStatus(state);
   const row = a => {
     const st = G.statById(a.stat);
-    const done = a.resist && state.log.some(e => e.refId === a.id && G.dayKey(e.ts) === today);
+    const done = (a.resist || a.basic) && state.log.some(e => e.refId === a.id && G.dayKey(e.ts) === today);
     const extra = Gear.gearExtra(state, a.stat, a.xp);
     return `<div class="cat-row ${done ? 'done' : ''}" style="--c:${st.color}">
       <button class="cat-main" data-pick="${esc(a.id)}" ${done ? 'disabled' : ''}>
         <img src="${a.resist ? art.boss(a.resist) : statIcon(st.id)}" alt="">
         <span><b>${done ? '✔ ' : ''}${esc(a.name)}</b><small>+${a.xp + extra} XP${a.bonus ? ` · ★ ${esc(a.bonus.label)}` : ''}${a.resist === boss.id ? ' · ⚡ ×3 al jefe' : ''}</small></span>
       </button>
-      ${a.resist ? '' : `<button class="cat-pin ${G.isPinned(state, a.id) ? 'on' : ''}" data-pin="${esc(a.id)}" aria-label="Fijar en Inicio">★</button>`}
+      ${a.resist || a.basic ? '' : `<button class="cat-pin ${G.isPinned(state, a.id) ? 'on' : ''}" data-pin="${esc(a.id)}" aria-label="Fijar en Inicio">★</button>`}
       <button class="cat-edit" data-edit="${esc(a.id)}" aria-label="Editar">✎</button>
     </div>`;
   };
-  const body = () => G.STATS.map(st => {
-    const acts = state.activities.filter(a => a.stat === st.id && !a.resist);
+  const basics = state.activities.filter(a => a.basic);
+  const body = () => (basics.length ? `<div class="cat-group"><div class="cat-title">Lo básico · una vez al día</div>${basics.map(row).join('')}</div>` : '') + G.STATS.map(st => {
+    const acts = state.activities.filter(a => a.stat === st.id && !a.resist && !a.basic);
     return acts.length ? `<div class="cat-group"><div class="cat-title" style="--c:${st.color}">${st.name}</div>${acts.map(row).join('')}</div>` : '';
   }).join('') + (state.activities.some(a => a.resist)
     ? `<div class="cat-group"><div class="cat-title">Retos de resistencia</div><p class="small">Una vez al día cada uno. El del jefe del mes hace ×3.</p>${state.activities.filter(a => a.resist).map(row).join('')}</div>` : '');
@@ -564,7 +584,7 @@ function renderShop() {
   }).join('');
 
   $('#rewardList').innerHTML = state.rewards.length
-    ? state.rewards.map(r => `
+    ? [...state.rewards].sort((a, b) => a.cost - b.cost).map(r => `
       <div class="row shop-row" style="--c:#ffd23f">
         <div class="row-main">
           <div class="row-title">${esc(r.name)}</div>
@@ -1242,6 +1262,33 @@ async function buyRewardFlow(id) {
   if (tryPay(s => G.buyReward(s, id), `🎟️ ¡Cupón conseguido: ${esc(r.name)}!`)) heroReact();
 }
 
+/** Ideas de recompensas por tipo, para agregar a la Tienda. */
+async function openRewardIdeas() {
+  const have = new Set(state.rewards.map(r => r.id));
+  let pick = [];
+  const list = () => G.REWARD_TYPES.map(ty => {
+    const opts = G.REWARD_TEMPLATES.filter(r => r.type === ty.id && !have.has(r.id));
+    return opts.length ? `<div class="w-group"><div class="w-group-title">${esc(ty.name)}</div><div class="w-habits">${opts.map(r =>
+      `<button class="w-habit w-reward ${pick.includes(r.id) ? 'on' : ''}" data-reward="${r.id}">${esc(r.name)} <small>${r.cost} 🪙</small></button>`).join('')}</div></div>` : '';
+  }).join('') || '<p>Ya tienes todas las ideas. Crea una propia.</p>';
+  const p = openSheet(`
+    <h3>Ideas de recompensas</h3>
+    <p class="small">Los premios gratis cuestan menos: así premiarte no deshace tus metas.</p>
+    <div id="riList">${list()}</div>
+    <div class="btn-row"><button class="btn" data-close="cancel">Cancelar</button><button class="btn btn-primary" id="riAdd">Agregar</button></div>`);
+  $('#riList').addEventListener('click', e => {
+    const r = e.target.closest('[data-reward]'); if (!r) return;
+    pick = pick.includes(r.dataset.reward) ? pick.filter(x => x !== r.dataset.reward) : [...pick, r.dataset.reward];
+    $('#riList').innerHTML = list();
+  });
+  $('#riAdd').onclick = () => closeSheet({ ids: pick });
+  const res = await p;
+  if (!res?.ids?.length) return;
+  let n = 0;
+  commit(s => { n = G.addRewards(s, res.ids); }, { celebrate: false });
+  toast(n === 1 ? 'Recompensa agregada' : `${n} recompensas agregadas`);
+}
+
 async function editReward(id) {
   const r = id ? state.rewards.find(x => x.id === id) : null;
   const cost = r?.cost || 150;
@@ -1299,7 +1346,7 @@ function characterCards(selected) {
     <button class="char-card ${c.id === selected ? 'on' : ''}" data-char="${c.id}" style="--c:${c.accent}">
       ${c.id === selected ? '<span class="char-check">✓</span>' : ''}
       <img class="char-fig" src="${characterImg(c.id)}" alt="">
-      <b>${esc(c.name)}</b><small>${esc(c.blurb)}</small>
+      <b>${esc(c.name)}</b>${c.title ? `<em>${esc(c.title)}</em>` : ''}<small>${esc(c.blurb)}</small>
     </button>`).join('');
 }
 
@@ -1327,18 +1374,28 @@ async function newProfileFlow() {
 // ---------------------------------------------------------------------
 // Bienvenida: 3 pasos para empezar (nombre y personaje → hábitos → listo)
 // ---------------------------------------------------------------------
-const welcomeDraft = { step: 1, name: '', character: CHARACTERS[0].id, habits: [] };
+const welcomeDraft = { step: 1, name: '', character: CHARACTERS[0].id, habits: [], rewards: [] };
+const W_STEPS = 4;
+const habitChips = (ids, selected) => ids.map(t => {
+  const st = G.statById(t.stat);
+  return `<button class="w-habit ${selected.includes(t.id) ? 'on' : ''}" data-habit="${t.id}" style="--c:${st.color}">${esc(t.name)}</button>`;
+}).join('');
+const areaGroups = (selected, filter = () => true) => G.HABIT_AREAS.map(ar => {
+  const opts = G.HABIT_TEMPLATES.filter(t => t.area === ar.id && filter(t));
+  return opts.length ? `<div class="w-group"><div class="w-group-title ${ar.id === 'basico' ? 'basic' : ''}">${esc(ar.name)}</div>
+    ${ar.hint ? `<p class="w-hint">${esc(ar.hint)}</p>` : ''}<div class="w-habits">${habitChips(opts, selected)}</div></div>` : '';
+}).join('');
 
 function maybeWelcome() {
   if (state.onboarded) { $('#welcome').hidden = true; return; }
-  Object.assign(welcomeDraft, { step: 1, name: state.profile.name === 'Héroe' ? '' : state.profile.name, character: state.profile.character, habits: [] });
+  Object.assign(welcomeDraft, { step: 1, name: state.profile.name === 'Héroe' ? '' : state.profile.name, character: state.profile.character, habits: [], rewards: [] });
   $('#welcome').hidden = false;
   renderWelcome();
 }
 
 function renderWelcome() {
   const d = welcomeDraft;
-  const dots = [1, 2, 3].map(i => `<i class="${i === d.step ? 'on' : i < d.step ? 'done' : ''}"></i>`).join('');
+  const dots = Array.from({ length: W_STEPS }, (_, k) => k + 1).map(i => `<i class="${i === d.step ? 'on' : i < d.step ? 'done' : ''}"></i>`).join('');
   let body = '';
   if (d.step === 1) {
     body = `
@@ -1350,17 +1407,10 @@ function renderWelcome() {
       <div class="field"><span>Elige tu personaje</span><div class="char-grid w-chars" id="wChars">${characterCards(d.character)}</div></div>
       <button class="btn btn-primary btn-block" data-w="next">Siguiente</button>`;
   } else if (d.step === 2) {
-    const groups = G.STATS.map(st => `
-      <div class="w-group">
-        <div class="w-group-title" style="--c:${st.color}"><img src="${statIcon(st.id)}" alt="">${st.name}</div>
-        <div class="w-habits">${G.HABIT_TEMPLATES.filter(t => t.stat === st.id).map(t => `
-          <button class="w-habit ${d.habits.includes(t.id) ? 'on' : ''}" data-habit="${t.id}" style="--c:${st.color}">${esc(t.name)}</button>`).join('')}
-        </div>
-      </div>`).join('');
     body = `
       <h2>¿Qué quieres hacer más seguido?</h2>
-      <p>Elige de ${G.ONBOARD_MIN} a ${G.ONBOARD_MAX} hábitos. Las primeras tres serán tus accesos rápidos. Puedes cambiarlos cuando quieras.</p>
-      ${groups}
+      <p>Empieza por lo básico (dormir, agua, comer): son retos de todos los días. Luego elige lo que quieres construir. De ${G.ONBOARD_MIN} a ${G.ONBOARD_MAX} en total.</p>
+      ${areaGroups(d.habits)}
       <div class="w-foot">
         <span class="w-count">${d.habits.length === 1 ? '1 elegido' : `${d.habits.length} elegidos`}</span>
         <div class="btn-row">
@@ -1369,6 +1419,20 @@ function renderWelcome() {
         </div>
         <button class="w-skip" data-w="skip">Saltar y usar los hábitos sugeridos</button>
       </div>`;
+  } else if (d.step === 3) {
+    const groups = G.REWARD_TYPES.map(ty => `
+      <div class="w-group"><div class="w-group-title">${esc(ty.name)}</div>
+        <div class="w-habits">${G.REWARD_TEMPLATES.filter(r => r.type === ty.id).map(r => `
+          <button class="w-habit w-reward ${d.rewards.includes(r.id) ? 'on' : ''}" data-reward="${r.id}">${esc(r.name)} <small>${r.cost} 🪙</small></button>`).join('')}</div>
+      </div>`).join('');
+    body = `
+      <h2>¿Con qué te vas a premiar?</h2>
+      <p>Con lo que hagas ganas monedas para canjear premios reales. Los gratis son los más baratos: un premio no debería deshacer tu meta. Opcional, hasta ${G.REWARD_PICK_MAX}.</p>
+      ${groups}
+      <div class="w-foot">
+        <span class="w-count">${d.rewards.length ? `${d.rewards.length} de ${G.REWARD_PICK_MAX}` : 'Si no eliges, te dejamos algunas para empezar'}</span>
+        <div class="btn-row"><button class="btn" data-w="back">Atrás</button><button class="btn btn-primary" data-w="next">Siguiente</button></div>
+      </div>`;
   } else {
     const first = G.HABIT_TEMPLATES.find(t => t.id === d.habits[0]);
     body = `
@@ -1376,6 +1440,7 @@ function renderWelcome() {
       <h2>¡Listo, ${esc(d.name || 'Héroe')}!</h2>
       <ul class="w-rules">
         <li><b>Registra</b> lo que hiciste con un toque. Si te equivocas, toca <b>Deshacer</b>.</li>
+        <li><b>Lo básico</b> se marca una vez al día desde Inicio.</li>
         <li>Cada día que registras algo, tu <b>huevo</b> se calienta. En 2 días nace tu mascota.</li>
         <li>Lo demás (jefes, guardianas, tienda) lo irás descubriendo.</li>
       </ul>
@@ -1388,14 +1453,14 @@ function renderWelcome() {
 
 function finishWelcome({ habits = welcomeDraft.habits, logFirst = false } = {}) {
   const d = welcomeDraft;
-  G.applyOnboarding(state, { name: d.name, character: d.character, habitIds: habits });
+  G.applyOnboarding(state, { name: d.name, character: d.character, habitIds: habits, rewardIds: d.rewards });
   save();
   $('#welcome').hidden = true;
   lastLevelShown = null;
   renderAll();
   showView('home');
   if (logFirst && habits[0]) setTimeout(() => {
-    const btn = document.querySelector(`#quickLog [data-act="${CSS.escape(habits[0])}"]`);
+    const btn = document.querySelector(`#quickLog [data-act="${CSS.escape(habits[0])}"], #basicsRow [data-act="${CSS.escape(habits[0])}"]`);
     if (btn) onActivityTap(btn);
   }, 350);
   else toast(`¡Bienvenido, ${esc(state.profile.name)}! Registra algo cuando lo hagas.`);
@@ -1406,6 +1471,15 @@ $('#welcome').addEventListener('click', e => {
   const d = welcomeDraft;
   const ch = e.target.closest('[data-char]');
   if (ch) { d.character = ch.dataset.char; $('#wChars').innerHTML = characterCards(d.character); return; }
+  const rw = e.target.closest('[data-reward]');
+  if (rw) {
+    const id = rw.dataset.reward;
+    if (d.rewards.includes(id)) d.rewards = d.rewards.filter(x => x !== id);
+    else if (d.rewards.length < G.REWARD_PICK_MAX) d.rewards.push(id);
+    else return toast(`Hasta ${G.REWARD_PICK_MAX}. Después puedes agregar más en la Tienda.`);
+    const y = $('#welcomeInner').scrollTop; renderWelcome(); $('#welcomeInner').scrollTop = y;
+    return;
+  }
   const h = e.target.closest('[data-habit]');
   if (h) {
     const id = h.dataset.habit;
@@ -1417,7 +1491,7 @@ $('#welcome').addEventListener('click', e => {
   }
   const a = e.target.closest('[data-w]'); if (!a || a.disabled) return;
   const act = a.dataset.w;
-  if (act === 'next') { d.step = Math.min(3, d.step + 1); renderWelcome(); }
+  if (act === 'next') { d.step = Math.min(W_STEPS, d.step + 1); renderWelcome(); }
   if (act === 'back') { d.step = Math.max(1, d.step - 1); renderWelcome(); }
   if (act === 'skip') finishWelcome({ habits: [] });
   if (act === 'finish') finishWelcome({ logFirst: true });
@@ -1428,11 +1502,7 @@ $('#welcome').addEventListener('click', e => {
 async function openHabitPicker() {
   const have = new Set(state.activities.map(a => a.id));
   let pick = [];
-  const list = () => G.STATS.map(st => {
-    const opts = G.HABIT_TEMPLATES.filter(t => t.stat === st.id && !have.has(t.id));
-    return opts.length ? `<div class="w-group"><div class="w-group-title" style="--c:${st.color}"><img src="${statIcon(st.id)}" alt="">${st.name}</div>
-      <div class="w-habits">${opts.map(t => `<button class="w-habit ${pick.includes(t.id) ? 'on' : ''}" data-habit="${t.id}" style="--c:${st.color}">${esc(t.name)}</button>`).join('')}</div></div>` : '';
-  }).join('') || '<p>Ya tienes todos los hábitos de la lista. Puedes crear uno propio.</p>';
+  const list = () => areaGroups(pick, t => !have.has(t.id)) || '<p>Ya tienes todos los hábitos de la lista. Puedes crear uno propio.</p>';
   const p = openSheet(`
     <h3>Elegir de la lista</h3>
     <div id="hpList">${list()}</div>
@@ -1595,6 +1665,7 @@ $('#shareProgressBtn').onclick = shareProgress;
 
 // Tienda
 $('#addRewardBtn').onclick = () => editReward(null);
+$('#rewardIdeasBtn').onclick = openRewardIdeas;
 $('#rewardList').addEventListener('click', e => {
   const buy = e.target.closest('[data-reward-buy]');
   if (buy) return buyRewardFlow(buy.dataset.rewardBuy);

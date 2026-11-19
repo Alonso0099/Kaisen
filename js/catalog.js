@@ -25,13 +25,16 @@ export const art = {
 // ---------------------------------------------------------------------
 // Personajes jugables
 // ---------------------------------------------------------------------
+// Cada héroe representa una cualidad que la gente quiere tener. Los ids se
+// conservan (las elecciones guardadas no cambian); el arte definitivo de cada
+// arquetipo es el encargo A-14 de COORDINACION.md.
 export const CHARACTERS = [
-  { id: 'guardabosques', name: 'Guardabosques', blurb: 'Paciente y constante, conoce cada sendero.', accent: '#7fae4a' },
-  { id: 'exploradora',   name: 'Exploradora',   blurb: 'Curiosa e imparable, siempre busca el siguiente reto.', accent: '#2aa3a0' },
-  { id: 'forjador', name: 'Forjador', blurb: 'Conoce el temple del hierro y el valor de la paciencia.', accent: '#cf713e' },
-  { id: 'cartografo', name: 'Cartógrafo', blurb: 'Traza rutas hasta donde el mapa se queda en blanco.', accent: '#c75649' },
-  { id: 'tejedora', name: 'Tejedora', blurb: 'Anuda historias en cada puntada.', accent: '#ac77ce' },
-  { id: 'duelista', name: 'Duelista', blurb: 'Mantiene la calma y sabe cuándo dar el primer paso.', accent: '#37896a' },
+  { id: 'guardabosques', name: 'Guardián',    title: 'Corazón leal',      blurb: 'Su fuerza viene de los suyos. Protege, acompaña y nunca deja a nadie atrás.', accent: '#7fae4a' },
+  { id: 'exploradora',   name: 'Relámpago',   title: 'Rápida y ágil',     blurb: 'Arranca antes de pensarlo dos veces. Para ella, empezar ya es medio camino.', accent: '#2aa3a0' },
+  { id: 'forjador',      name: 'Titán',       title: 'Fuerza imparable',  blurb: 'No espera tener ganas: se pone en marcha y cada día es un poco más fuerte.', accent: '#cf713e' },
+  { id: 'cartografo',    name: 'Estratega',   title: 'Mente afilada',     blurb: 'Planea, aprende y va un paso adelante. Cada tarea es una jugada ganada.', accent: '#c75649' },
+  { id: 'tejedora',      name: 'Sabia',       title: 'Calma y enfoque',   blurb: 'Cuando todo es ruido, ella respira y elige con claridad. Nada la saca de su centro.', accent: '#ac77ce' },
+  { id: 'duelista',      name: 'Implacable',  title: 'Disciplina de acero', blurb: 'Hace lo que dijo que haría, aunque nadie lo vea. La constancia es su arma.', accent: '#37896a' },
 ];
 export const DEFAULT_CHARACTER = CHARACTERS[0].id;
 export const characterById = id => CHARACTERS.find(c => c.id === id) || CHARACTERS[0];

@@ -37,8 +37,36 @@ Prioridad de arriba hacia abajo. Tamaños y nombres según ARTE.md.
 | A-11 | 19 íconos de piezas de equipo (lista con ids en ARTE.md → Equipo) | `art/items/<id>.webp` | ✅ |
 | A-12 | Ilustraciones de los 4 jefes de T-01 (mismo estilo y tamaño que A-04). Al llegar entran en la rotación desde el mes siguiente | `art/bosses/{multitarea,perfeccionismo,inercia,desvelo}.webp` | ✅ |
 | A-13 | (opcional) 4 piezas épicas de botín para esos jefes: nombre, espacio, stat e ícono 512×512 | `art/items/<id>.webp` + texto | ✅ |
+| A-14 | 12 héroes nuevos: 6 arquetipos × 2 looks (ver sección A-14 abajo) | `art/chars/<arquetipo>-{m,f}.webp` | ⏳ |
 
 **Reglas que hacen que todo encaje:** fondo transparente (salvo los mundos), lienzo 720×1000 con los pies en el borde inferior para las figuras de pie, mismo estilo en toda la serie (adjuntar una imagen anterior como referencia) y sin texto dentro de las imágenes.
+
+## A-14 · Héroes que enganchen (encargo para GPT)
+
+**Problema:** los personajes actuales tienen oficios (cartógrafo, tejedora…) que no dicen nada sobre la persona que los elige. La gente quiere verse **disciplinada, fuerte, rápida, enfocada**. Cada héroe tiene que representar una **cualidad que el jugador quiere tener**, y verse "qué chiva" sin exagerar.
+
+**Seis arquetipos, dos looks cada uno (hombre y mujer) = 12 sprites.** Los nombres y frases ya están en la app (provisionales sobre el arte actual); GPT puede proponer mejoras.
+
+| Id del archivo | Héroe | Cualidad | Frase en la app | Idea visual (un rasgo que lo identifique) |
+|---|---|---|---|---|
+| `titan-m`, `titan-f` | Titán | Fuerza imparable | «No espera tener ganas: se pone en marcha y cada día es un poco más fuerte.» | Complexión fuerte, guantes o vendas de entrenamiento, hombreras sencillas. Naranja cobre. |
+| `relampago-m`, `relampago-f` | Relámpago | Rápida y ágil | «Arranca antes de pensarlo dos veces. Para ella, empezar ya es medio camino.» | Ropa ligera y técnica, bufanda o cinta que se mueve, detalles en zigzag. Turquesa eléctrico. |
+| `estratega-m`, `estratega-f` | Estratega | Mente afilada | «Planea, aprende y va un paso adelante. Cada tarea es una jugada ganada.» | Capa corta, libreta o tablilla con runas, mirada aguda. Rojo vino y dorado. |
+| `sabio-m`, `sabio-f` | Sabia / Sabio | Calma y enfoque | «Cuando todo es ruido, respira y elige con claridad. Nada la saca de su centro.» | Ropa sencilla y fluida, colgante o cuentas, postura serena. Lavanda. |
+| `guardian-m`, `guardian-f` | Guardián / Guardiana | Corazón leal | «Su fuerza viene de los suyos. Protege, acompaña y nunca deja a nadie atrás.» | Escudo pequeño a la espalda, capa, gesto protector. Verde bosque. |
+| `implacable-m`, `implacable-f` | Implacable | Disciplina de acero | «Hace lo que dijo que haría, aunque nadie lo vea. La constancia es su arma.» | Postura firme, ropa ajustada y ordenada, cinturón y vendas, cero adornos. Verde oscuro y acero. |
+
+**Que se vean "qué chiva" pero no exagerado:**
+- **Fantasía moderna:** ropa que alguien podría usar hoy (chaqueta técnica, botas o tenis, capucha) con toques de fantasía (runas, capa, metal). Así la gente se identifica.
+- **Silueta clara** que se reconozca a 240 px de alto (el tamaño en Inicio): un color principal fuerte, un acento y **un solo objeto emblema** por arquetipo.
+- **Pose segura** de pie, de frente o tres cuartos, con una expresión de determinación o una sonrisa leve.
+- **Evitar:** armaduras enormes, armas gigantes, brillos o auras dibujados (la app los agrega), demasiados detalles y ropa sexualizada.
+- **Diversidad** de tonos de piel, peinados y complexiones en el conjunto.
+- **Mismo estilo** que Astrid y las guardianas, que ya funcionan bien.
+
+**Especificaciones:** WebP transparente de 720 × 1000 px, cuerpo completo, pies tocando el borde inferior (ver ARTE.md → "Personas de pie"). Archivos en `art/chars/<id>.webp`.
+
+**Al recibirlos, Claude:** cambia el selector a "elige tu héroe y luego su look", y pasa a quien ya eligió un personaje al arquetipo equivalente (guardabosques → Guardián, exploradora → Relámpago, forjador → Titán, cartógrafo → Estratega, tejedora → Sabia, duelista → Implacable), así nadie pierde su elección.
 
 ## GPT necesita de Claude
 

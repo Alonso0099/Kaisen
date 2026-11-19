@@ -377,18 +377,18 @@ test('monedas: se ganan con registros, cofre, premios y logros', () => {
 test('tienda: comprar no baja la XP y no deja gastar de más', () => {
   const s = L.defaultState();
   const t = noon(2026, 11, 2);
-  assert.throws(() => L.buyReward(s, 'rw-antojo', t), /alcanzan/);
+  assert.throws(() => L.buyReward(s, 'rw-cafe', t), /alcanzan/);
   for (let d = 0; d < 10; d++) for (const id of ['def-gym', 'def-tarea', 'def-tiempo']) L.logActivity(s, id, { now: t + d * DAY });
   const now = t + 9 * DAY;
   const xp = L.deriveProfile(s, now).totalXp, bal = L.wallet(s, now).balance;
   assert.ok(bal >= 250, `saldo ${bal}`);
-  const c = L.buyReward(s, 'rw-antojo', now);
-  assert.equal(L.wallet(s, now).balance, bal - 100);
+  const c = L.buyReward(s, 'rw-cafe', now);
+  assert.equal(L.wallet(s, now).balance, bal - 120);
   assert.equal(L.deriveProfile(s, now).totalXp, xp);
   assert.equal(c.used, false);
   L.useCoupon(s, c.id, now);
   assert.equal(s.purchases[0].used, true);
-  assert.equal(L.wallet(s, now).balance, bal - 100); // usar el cupón no cobra otra vez
+  assert.equal(L.wallet(s, now).balance, bal - 120); // usar el cupón no cobra otra vez
 });
 
 test('tienda: títulos se compran una vez y se equipan', () => {
@@ -731,6 +731,7 @@ test('bienvenida: deja solo los hábitos elegidos, conserva retos y fija 3', () 
   assert.equal(e.stat, 'resistencia');
   // cada stat tiene al menos 4 opciones y todas las plantillas son válidas
   for (const st of L.STAT_IDS) assert.ok(L.HABIT_TEMPLATES.filter(t => t.stat === st).length >= 4, st);
+  for (const ar of L.HABIT_AREAS) assert.ok(L.HABIT_TEMPLATES.filter(t => t.area === ar.id).length >= 5, ar.id);
   assert.equal(new Set(L.HABIT_TEMPLATES.map(t => t.id)).size, L.HABIT_TEMPLATES.length);
 });
 
@@ -743,4 +744,46 @@ test('bienvenida: saltar conserva las sugeridas; agregar hábitos después no du
   assert.equal(L.addHabits(s, ['tpl-agua', 'def-gym', 'tpl-agua']), 1);
   const ids = s.activities.map(a => a.id);
   assert.ok(ids.indexOf('tpl-agua') < ids.findIndex(id => s.activities.find(a => a.id === id).resist)); // antes de los retos
+});
+
+// ---------------- Lo básico y recompensas sugeridas ----------------
+
+test('lo básico: una vez al día, no entra en accesos rápidos y migra en perfiles viejos', () => {
+  const s = L.defaultState();
+  L.applyOnboarding(s, { habitIds: ['tpl-agua', 'bas-cama', 'def-hike', 'tpl-meditar'] });
+  assert.deepEqual(s.pinned, ['def-hike', 'tpl-meditar']);   // los básicos tienen su propia fila
+  const t = noon(2026, 11, 2);
+  const e = L.logActivity(s, 'tpl-agua', { now: t });
+  assert.equal(e.xp, 5);
+  assert.throws(() => L.logActivity(s, 'tpl-agua', { now: t + 3600e3 }), /Ya lo marcaste hoy/);
+  L.logActivity(s, 'tpl-agua', { now: t + DAY });            // al día siguiente sí
+  for (let i = 0; i < 9; i++) L.logActivity(s, 'bas-cama', { now: t + i * DAY });
+  assert.ok(!L.quickActivities(s, t + 9 * DAY).some(a => a.basic));
+  // un perfil que eligió "Tomar suficiente agua" antes de esta versión: queda como básico
+  const old = L.defaultState();
+  old.activities.push({ id: 'tpl-agua', name: 'Tomar suficiente agua', stat: 'resistencia', xp: 10, bonus: null });
+  const back = L.validateImport(JSON.parse(JSON.stringify(L.exportPayload(old))));
+  assert.equal(back.activities.find(a => a.id === 'tpl-agua').basic, true);
+  assert.equal(back.activities.find(a => a.id === 'tpl-agua').name, 'Tomar suficiente agua'); // conserva su nombre
+});
+
+test('recompensas: sugeridas por tipo, gratis más baratas, sin duplicar', () => {
+  const ids = L.REWARD_TEMPLATES.map(r => r.id);
+  assert.equal(new Set(ids).size, ids.length);
+  for (const ty of L.REWARD_TYPES) assert.ok(L.REWARD_TEMPLATES.some(r => r.type === ty.id), ty.id);
+  const max = ty => Math.max(...L.REWARD_TEMPLATES.filter(r => r.type === ty).map(r => r.cost));
+  const min = ty => Math.min(...L.REWARD_TEMPLATES.filter(r => r.type === ty).map(r => r.cost));
+  assert.ok(min('gratis') < min('experiencia') && max('gratis') <= min('experiencia'));
+  assert.ok(L.defaultState().rewards[0].type === 'gratis');
+  const s = L.defaultState();
+  L.applyOnboarding(s, { rewardIds: ['rw-siesta', 'rw-libro', 'no-existe'] });
+  assert.deepEqual(s.rewards.map(r => r.id), ['rw-siesta', 'rw-libro']);
+  assert.equal(L.addRewards(s, ['rw-siesta', 'rw-cafe']), 1);
+  const keep = L.defaultState();                               // sin elegir: quedan las de siempre
+  L.applyOnboarding(keep, {});
+  assert.equal(keep.rewards.length, 4);
+});
+
+test('stat hogar se llama "Hogar y finanzas"', () => {
+  assert.equal(L.statById('hogar').name, 'Hogar y finanzas');
 });

@@ -12,7 +12,7 @@ export const STATS = [
   { id: 'intelecto',   name: 'Intelecto',   short: 'INT', icon: '🧠', color: '#1f6feb' },
   { id: 'sabiduria',   name: 'Sabiduría',   short: 'SAB', icon: '📖', color: '#8e44ad' },
   { id: 'vinculo',     name: 'Vínculo',     short: 'VÍN', icon: '❤️', color: '#e84393' },
-  { id: 'hogar',       name: 'Hogar',       short: 'HOG', icon: '🏠', color: '#2a9d4b' },
+  { id: 'hogar',       name: 'Hogar y finanzas', short: 'HOG', icon: '🏠', color: '#2a9d4b' },
 ];
 export const STAT_IDS = STATS.map(s => s.id);
 export const statById = id => STATS.find(s => s.id === id);
@@ -246,10 +246,10 @@ export const SCHEMA_VERSION = 5;
 
 /** Recompensas de la vida real que se compran con monedas (editables). */
 export const DEFAULT_REWARDS = [
-  { id: 'rw-antojo',      name: 'Un antojo',               cost: 100 },
-  { id: 'rw-pelicula',    name: 'Noche de película',       cost: 200 },
-  { id: 'rw-restaurante', name: 'Elegir el restaurante',   cost: 250 },
-  { id: 'rw-tarde',       name: 'Tarde libre sin culpa',   cost: 400 },
+  { id: 'rw-episodio',    name: 'Un episodio de mi serie',  cost: 60,  type: 'gratis' },
+  { id: 'rw-juego',       name: 'Una hora de videojuegos',  cost: 80,  type: 'gratis' },
+  { id: 'rw-cafe',        name: 'Un café o bebida especial', cost: 120, type: 'gusto' },
+  { id: 'rw-pelicula',    name: 'Noche de película',        cost: 250, type: 'experiencia' },
 ];
 
 export function defaultState() {
@@ -290,8 +290,8 @@ export function clampXp(xp, max = XP_MAX) {
 export function logActivity(state, activityId, { bonus = false, now = Date.now() } = {}) {
   const a = state.activities.find(x => x.id === activityId);
   if (!a) throw new Error('Actividad no encontrada');
-  if (a.resist && state.log.some(e => e.refId === a.id && dayKey(e.ts) === dayKey(now))) {
-    throw new Error('Este reto ya lo hiciste hoy');
+  if ((a.resist || a.basic) && state.log.some(e => e.refId === a.id && dayKey(e.ts) === dayKey(now))) {
+    throw new Error(a.basic ? 'Ya lo marcaste hoy' : 'Este reto ya lo hiciste hoy');
   }
   const extra = bonus && a.bonus ? a.bonus.xp : 0;
   // El equipo da un % extra sobre la XP de la actividad (con bono incluido).
@@ -358,6 +358,7 @@ export function validateImport(obj) {
   if ((data.schema || 1) < 5) {
     for (const r of DEFAULT_RESIST) if (RESIST_V5.includes(r.id) && !activities.some(a => a.id === r.id)) activities.push({ ...r, bonus: null });
   }
+  for (const a of activities) if (a.basic === undefined && BASIC_IDS.has(a.id)) a.basic = true;
   return {
     ...base,
     ...data,
@@ -828,7 +829,7 @@ export function quickActivities(state, now = Date.now(), n = QUICK_MAX) {
   const freq = Object.entries(stats)
     .sort(([, a], [, b]) => b.count - a.count || b.last - a.last)
     .map(([id]) => exists(id))
-    .filter(a => a && !a.resist && !out.includes(a));
+    .filter(a => a && !a.resist && !a.basic && !out.includes(a));
   return [...out, ...freq].slice(0, n);
 }
 
@@ -847,40 +848,104 @@ export function togglePin(state, id) {
 // Los ids "def-…" coinciden con las actividades sugeridas de siempre, así
 // el historial y las misiones siguen reconociéndolas.
 // =====================================================================
-export const HABIT_TEMPLATES = [
-  { id: 'def-gym',            name: 'Entrenar en el gym',          stat: 'fuerza',      xp: 30 },
-  { id: 'def-entreno-casa',   name: 'Entreno corto en casa',       stat: 'fuerza',      xp: 15 },
-  { id: 'tpl-yoga',           name: 'Yoga o estiramientos',        stat: 'fuerza',      xp: 15 },
-  { id: 'tpl-deporte',        name: 'Jugar un deporte',            stat: 'fuerza',      xp: 30 },
-  { id: 'def-hike',           name: 'Caminata',                    stat: 'resistencia', xp: 25 },
-  { id: 'tpl-correr',         name: 'Correr',                      stat: 'resistencia', xp: 30 },
-  { id: 'def-mtb',            name: 'Bicicleta',                   stat: 'resistencia', xp: 35, bonus: { label: 'Ruta larga', xp: 15 } },
-  { id: 'tpl-nadar',          name: 'Nadar',                       stat: 'resistencia', xp: 30 },
-  { id: 'tpl-dormir',         name: 'Dormir 7 horas o más',        stat: 'resistencia', xp: 15 },
-  { id: 'tpl-agua',           name: 'Tomar suficiente agua',       stat: 'resistencia', xp: 10 },
-  { id: 'def-estudio',        name: 'Estudiar',                    stat: 'intelecto',   xp: 25 },
-  { id: 'def-tarea',          name: 'Entregar una tarea',          stat: 'intelecto',   xp: 40 },
-  { id: 'def-programar',      name: 'Avanzar un proyecto propio',  stat: 'intelecto',   xp: 25 },
-  { id: 'tpl-idioma',         name: 'Practicar un idioma',         stat: 'intelecto',   xp: 20 },
-  { id: 'tpl-curso',          name: 'Avanzar un curso',            stat: 'intelecto',   xp: 25 },
-  { id: 'def-leer',           name: 'Leer 20+ min',                stat: 'sabiduria',   xp: 15 },
-  { id: 'def-terminar-libro', name: 'Terminar un libro',           stat: 'sabiduria',   xp: 100 },
-  { id: 'tpl-meditar',        name: 'Meditar 10 min',              stat: 'sabiduria',   xp: 15 },
-  { id: 'tpl-diario',         name: 'Escribir en un diario',       stat: 'sabiduria',   xp: 15 },
-  { id: 'tpl-reflexion',      name: 'Orar o reflexionar',          stat: 'sabiduria',   xp: 15 },
-  { id: 'def-tiempo',         name: 'Tiempo de calidad juntos',    stat: 'vinculo',     xp: 30 },
-  { id: 'def-familia',        name: 'Salida con familia o amigos', stat: 'vinculo',     xp: 30 },
-  { id: 'tpl-llamar',         name: 'Llamar a alguien querido',    stat: 'vinculo',     xp: 15 },
-  { id: 'tpl-ayudar',         name: 'Ayudar a alguien',            stat: 'vinculo',     xp: 20 },
-  { id: 'tpl-voluntariado',   name: 'Voluntariado',                stat: 'vinculo',     xp: 30 },
-  { id: 'def-proyecto-casa',  name: 'Proyecto de la casa',         stat: 'hogar',       xp: 30 },
-  { id: 'def-cocinar',        name: 'Cocinar en casa',             stat: 'hogar',       xp: 10 },
-  { id: 'tpl-limpiar',        name: 'Limpiar u ordenar',           stat: 'hogar',       xp: 15 },
-  { id: 'tpl-finanzas',       name: 'Revisar mis finanzas',        stat: 'hogar',       xp: 20 },
-  { id: 'tpl-plantas',        name: 'Cuidar plantas o mascotas',   stat: 'hogar',       xp: 10 },
+// area: grupo en la bienvenida. basic: true = "Lo básico", cuenta una vez al día.
+export const HABIT_AREAS = [
+  { id: 'basico',   name: 'Lo básico',       hint: 'Retos de todos los días. Uno por día cada uno, poco XP pero constante.' },
+  { id: 'mover',    name: 'Moverme' },
+  { id: 'mente',    name: 'Mente y calma' },
+  { id: 'dinero',   name: 'Dinero y hogar' },
+  { id: 'personas', name: 'Personas' },
+  { id: 'crecer',   name: 'Crecer' },
 ];
+export const HABIT_TEMPLATES = [
+  // Lo básico (una vez al día)
+  { id: 'tpl-dormir',         name: 'Dormir 7 horas o más',          stat: 'resistencia', xp: 10, area: 'basico', basic: true },
+  { id: 'tpl-agua',           name: 'Tomar mis vasos de agua',       stat: 'resistencia', xp: 5,  area: 'basico', basic: true },
+  { id: 'bas-fruta',          name: 'Comer fruta o verdura',         stat: 'fuerza',      xp: 5,  area: 'basico', basic: true },
+  { id: 'bas-desayuno',       name: 'Desayunar bien',                stat: 'fuerza',      xp: 5,  area: 'basico', basic: true },
+  { id: 'bas-aire',           name: 'Salir a tomar aire o sol',      stat: 'sabiduria',   xp: 5,  area: 'basico', basic: true },
+  { id: 'bas-cama',           name: 'Tender la cama',                stat: 'hogar',       xp: 5,  area: 'basico', basic: true },
+  { id: 'bas-cuidado',        name: 'Ducharme y arreglarme',         stat: 'resistencia', xp: 5,  area: 'basico', basic: true },
+  // Moverme
+  { id: 'def-hike',           name: 'Caminata',                      stat: 'resistencia', xp: 25, area: 'mover' },
+  { id: 'def-gym',            name: 'Entrenar en el gym',            stat: 'fuerza',      xp: 30, area: 'mover' },
+  { id: 'def-entreno-casa',   name: 'Entreno corto en casa',         stat: 'fuerza',      xp: 15, area: 'mover' },
+  { id: 'tpl-correr',         name: 'Correr',                        stat: 'resistencia', xp: 30, area: 'mover' },
+  { id: 'def-mtb',            name: 'Bicicleta',                     stat: 'resistencia', xp: 35, area: 'mover', bonus: { label: 'Ruta larga', xp: 15 } },
+  { id: 'tpl-yoga',           name: 'Yoga o estiramientos',          stat: 'fuerza',      xp: 15, area: 'mover' },
+  { id: 'tpl-nadar',          name: 'Nadar',                         stat: 'resistencia', xp: 30, area: 'mover' },
+  { id: 'tpl-deporte',        name: 'Jugar un deporte',              stat: 'fuerza',      xp: 30, area: 'mover' },
+  // Mente y calma
+  { id: 'tpl-meditar',        name: 'Meditar o respirar 5 min',      stat: 'sabiduria',   xp: 15, area: 'mente' },
+  { id: 'tpl-diario',         name: 'Escribir 3 cosas buenas del día', stat: 'sabiduria', xp: 15, area: 'mente' },
+  { id: 'tpl-pausa-redes',    name: 'Una hora sin redes',            stat: 'sabiduria',   xp: 15, area: 'mente' },
+  { id: 'def-leer',           name: 'Leer 20+ min',                  stat: 'sabiduria',   xp: 15, area: 'mente' },
+  { id: 'def-terminar-libro', name: 'Terminar un libro',             stat: 'sabiduria',   xp: 100, area: 'mente' },
+  { id: 'tpl-reflexion',      name: 'Orar o reflexionar',            stat: 'sabiduria',   xp: 15, area: 'mente' },
+  // Dinero y hogar
+  { id: 'tpl-ahorro',         name: 'Ahorrar algo hoy',              stat: 'hogar',       xp: 15, area: 'dinero' },
+  { id: 'tpl-sin-gastos',     name: 'Un día sin compras impulsivas', stat: 'hogar',       xp: 15, area: 'dinero' },
+  { id: 'def-cocinar',        name: 'Cocinar en vez de pedir',       stat: 'hogar',       xp: 10, area: 'dinero' },
+  { id: 'tpl-finanzas',       name: 'Revisar mis gastos',            stat: 'hogar',       xp: 20, area: 'dinero' },
+  { id: 'def-proyecto-casa',  name: 'Proyecto de la casa',           stat: 'hogar',       xp: 30, area: 'dinero' },
+  { id: 'tpl-limpiar',        name: 'Limpiar u ordenar',             stat: 'hogar',       xp: 15, area: 'dinero' },
+  { id: 'tpl-plantas',        name: 'Cuidar plantas o mascotas',     stat: 'hogar',       xp: 10, area: 'dinero' },
+  // Personas
+  { id: 'tpl-llamar',         name: 'Llamar a alguien querido',      stat: 'vinculo',     xp: 15, area: 'personas' },
+  { id: 'def-tiempo',         name: 'Tiempo de calidad juntos',      stat: 'vinculo',     xp: 30, area: 'personas' },
+  { id: 'def-familia',        name: 'Salida con familia o amigos',   stat: 'vinculo',     xp: 30, area: 'personas' },
+  { id: 'tpl-ayudar',         name: 'Ayudar a alguien',              stat: 'vinculo',     xp: 20, area: 'personas' },
+  { id: 'tpl-voluntariado',   name: 'Voluntariado',                  stat: 'vinculo',     xp: 30, area: 'personas' },
+  // Crecer
+  { id: 'def-estudio',        name: 'Estudiar',                      stat: 'intelecto',   xp: 25, area: 'crecer' },
+  { id: 'tpl-idioma',         name: 'Practicar un idioma',           stat: 'intelecto',   xp: 20, area: 'crecer' },
+  { id: 'def-programar',      name: 'Avanzar un proyecto propio',    stat: 'intelecto',   xp: 25, area: 'crecer' },
+  { id: 'tpl-curso',          name: 'Avanzar un curso',              stat: 'intelecto',   xp: 25, area: 'crecer' },
+  { id: 'def-tarea',          name: 'Entregar una tarea',            stat: 'intelecto',   xp: 40, area: 'crecer' },
+];
+export const BASIC_IDS = new Set(HABIT_TEMPLATES.filter(t => t.basic).map(t => t.id));
+
+// Ideas de recompensas, por tipo. Las gratis cuestan menos y salen primero:
+// un premio no debería deshacer la meta (p. ej. gastar cuando quieres ahorrar).
+export const REWARD_TYPES = [
+  { id: 'gratis',      name: 'Gratis' },
+  { id: 'gusto',       name: 'Pequeño gusto' },
+  { id: 'experiencia', name: 'Experiencia' },
+  { id: 'inversion',   name: 'Inversión en mí' },
+];
+export const REWARD_TEMPLATES = [
+  { id: 'rw-episodio',    name: 'Un episodio de mi serie',      cost: 60,  type: 'gratis' },
+  { id: 'rw-juego',       name: 'Una hora de videojuegos',      cost: 80,  type: 'gratis' },
+  { id: 'rw-siesta',      name: 'Una siesta sin culpa',         cost: 80,  type: 'gratis' },
+  { id: 'rw-hobby',       name: 'Un rato para mi hobby',        cost: 80,  type: 'gratis' },
+  { id: 'rw-bano',        name: 'Un baño largo o una ducha relajada', cost: 60, type: 'gratis' },
+  { id: 'rw-sin-alarma',  name: 'Una mañana sin alarma',        cost: 150, type: 'gratis' },
+  { id: 'rw-cafe',        name: 'Un café o bebida especial',    cost: 120, type: 'gusto' },
+  { id: 'rw-postre',      name: 'Mi postre favorito',           cost: 120, type: 'gusto' },
+  { id: 'rw-snack',       name: 'Un snack que me encanta',      cost: 100, type: 'gusto' },
+  { id: 'rw-pelicula',    name: 'Noche de película',            cost: 250, type: 'experiencia' },
+  { id: 'rw-salida',      name: 'Una salida en pareja',         cost: 300, type: 'experiencia' },
+  { id: 'rw-amigos',      name: 'Comer con amigos',             cost: 300, type: 'experiencia' },
+  { id: 'rw-paseo',       name: 'Un paseo a un lugar nuevo',    cost: 250, type: 'experiencia' },
+  { id: 'rw-libro',       name: 'Un libro nuevo',               cost: 350, type: 'inversion' },
+  { id: 'rw-curso',       name: 'Un curso o taller',            cost: 500, type: 'inversion' },
+  { id: 'rw-ropa',        name: 'Ropa o equipo para entrenar',  cost: 450, type: 'inversion' },
+];
+export const REWARD_PICK_MAX = 6;
+
+/** Agrega recompensas sugeridas sin duplicar. Devuelve cuántas agregó. */
+export function addRewards(state, ids = []) {
+  let n = 0;
+  for (const id of ids) {
+    const t = REWARD_TEMPLATES.find(r => r.id === id);
+    if (!t || state.rewards.some(r => r.id === id)) continue;
+    state.rewards.push({ ...t });
+    n++;
+  }
+  return n;
+}
 export const ONBOARD_MIN = 1;
-export const ONBOARD_MAX = 10;
+export const ONBOARD_MAX = 12;
 
 /**
  * Termina la bienvenida: guarda nombre y personaje, deja como actividades
@@ -888,15 +953,17 @@ export const ONBOARD_MAX = 10;
  * los 3 primeros como accesos rápidos de Inicio.
  * Si no se eligió ninguno, se quedan las actividades sugeridas.
  */
-export function applyOnboarding(state, { name, character, habitIds = [] } = {}) {
+export function applyOnboarding(state, { name, character, habitIds = [], rewardIds = [] } = {}) {
   if (name !== undefined) state.profile.name = String(name).trim().slice(0, 16) || 'Héroe';
   if (character) state.profile.character = character;
   const chosen = habitIds.map(id => HABIT_TEMPLATES.find(t => t.id === id)).filter(Boolean).slice(0, ONBOARD_MAX);
   if (chosen.length) {
     const resist = state.activities.filter(a => a.resist);
     state.activities = [...chosen.map(t => ({ ...t, bonus: t.bonus ? { ...t.bonus } : null })), ...resist];
-    state.pinned = chosen.slice(0, QUICK_MAX).map(t => t.id);
+    state.pinned = chosen.filter(t => !t.basic).slice(0, QUICK_MAX).map(t => t.id);
   }
+  const rewards = rewardIds.map(id => REWARD_TEMPLATES.find(r => r.id === id)).filter(Boolean).slice(0, REWARD_PICK_MAX);
+  if (rewards.length) state.rewards = rewards.map(r => ({ ...r }));
   state.onboarded = true;
   return state;
 }
