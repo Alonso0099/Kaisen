@@ -10,6 +10,8 @@
 // Si una imagen todavía no existe, la app muestra "Próximamente".
 // =====================================================================
 
+import { migrateCharacter } from './logic.js';
+
 export const art = {
   char:     id => `art/chars/${id}.webp`,
   guardian: (stat, tier) => `art/guardians/${stat}-${tier}.webp`,
@@ -25,20 +27,29 @@ export const art = {
 // ---------------------------------------------------------------------
 // Personajes jugables
 // ---------------------------------------------------------------------
-// Cada héroe representa una cualidad que la gente quiere tener. Los ids se
-// conservan (las elecciones guardadas no cambian); el arte definitivo de cada
-// arquetipo es el encargo A-14 de COORDINACION.md.
+// Seis héroes (A-14), cada uno con dos looks: `-m` y `-f`. El perfil guarda
+// el id completo del avatar (p. ej. 'relampago-f'). Elegir héroe o look solo
+// cambia el avatar: la misma actividad da la misma XP con cualquiera.
+export const LOOKS = ['m', 'f'];
 export const CHARACTERS = [
-  { id: 'guardabosques', name: 'Guardián',    title: 'Corazón leal',      blurb: 'Su fuerza viene de los suyos. Protege, acompaña y nunca deja a nadie atrás.', accent: '#7fae4a' },
-  { id: 'exploradora',   name: 'Relámpago',   title: 'Rápida y ágil',     blurb: 'Arranca antes de pensarlo dos veces. Para ella, empezar ya es medio camino.', accent: '#2aa3a0' },
-  { id: 'forjador',      name: 'Titán',       title: 'Fuerza imparable',  blurb: 'No espera tener ganas: se pone en marcha y cada día es un poco más fuerte.', accent: '#cf713e' },
-  { id: 'cartografo',    name: 'Estratega',   title: 'Mente afilada',     blurb: 'Planea, aprende y va un paso adelante. Cada tarea es una jugada ganada.', accent: '#c75649' },
-  { id: 'tejedora',      name: 'Sabia',       title: 'Calma y enfoque',   blurb: 'Cuando todo es ruido, ella respira y elige con claridad. Nada la saca de su centro.', accent: '#ac77ce' },
-  { id: 'duelista',      name: 'Implacable',  title: 'Disciplina de acero', blurb: 'Hace lo que dijo que haría, aunque nadie lo vea. La constancia es su arma.', accent: '#37896a' },
+  { id: 'titan',      names: { m: 'Gladiador de Bronce', f: 'Gladiadora de Bronce' }, title: 'Fuerza y coraje',         blurb: 'Cuando algo pesa, planta los pies y da el siguiente paso.', accent: '#c8873a' },
+  { id: 'relampago',  names: { m: 'Pirata del Cielo',    f: 'Pirata del Cielo' },     title: 'Iniciativa',              blurb: 'Iza las velas antes de que amaine el viento.', accent: '#2a9d8f' },
+  { id: 'estratega',  names: { m: 'Hechicero Astral',    f: 'Hechicera Astral' },     title: 'Curiosidad y estrategia', blurb: 'Cuando se pierde, vuelve a mirar el mapa de estrellas.', accent: '#5b5fd6' },
+  { id: 'sabio',      names: { m: 'Druida de Espinas',   f: 'Druida de Espinas' },    title: 'Calma y enfoque',         blurb: 'Entre tantas ramas, sabe dónde poner la atención.', accent: '#7fae4a' },
+  { id: 'guardian',   names: { m: 'Forjador de Runas',   f: 'Forjadora de Runas' },   title: 'Lealtad y cuidado',       blurb: 'Forja lo que hace falta y repara lo que otros dan por perdido.', accent: '#d0763a' },
+  { id: 'implacable', names: { m: 'Ninja de la Luna',    f: 'Ninja de la Luna' },     title: 'Disciplina y precisión',  blurb: 'Practica el mismo movimiento hasta que le sale en silencio.', accent: '#a04a92' },
 ];
-export const DEFAULT_CHARACTER = CHARACTERS[0].id;
-export const characterById = id => CHARACTERS.find(c => c.id === id) || CHARACTERS[0];
-export const characterImg = id => art.char(characterById(id).id);
+export const DEFAULT_CHARACTER = 'titan-m';
+/** Normaliza cualquier valor guardado (incluidos los avatares anteriores a A-14). */
+export const normalizeCharacter = migrateCharacter;
+export const charHero = id => normalizeCharacter(id).split('-')[0];
+export const charLook = id => normalizeCharacter(id).split('-')[1];
+export const characterById = id => {
+  const key = normalizeCharacter(id), [hero, look] = key.split('-');
+  const c = CHARACTERS.find(x => x.id === hero);
+  return { ...c, hero, look, key, name: c.names[look] };
+};
+export const characterImg = id => art.char(normalizeCharacter(id));
 
 // ---------------------------------------------------------------------
 // Guardianes: uno por stat, con 5 evoluciones que se desbloquean al

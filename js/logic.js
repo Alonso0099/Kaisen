@@ -255,7 +255,7 @@ export const DEFAULT_REWARDS = [
 export function defaultState() {
   return {
     schema: SCHEMA_VERSION,
-    profile: { name: 'Héroe', character: 'guardabosques' },  // nombre y personaje de este perfil
+    profile: { name: 'Héroe', character: 'titan-m' },  // nombre y personaje de este perfil
     prefs: { idle: 'sway' },         // animación del personaje en reposo: 'sway' | 'static'
     // La mascota: la especie decide su arte. Los nombres se guardan por especie;
     // si no hay nombre, la app muestra el nombre de la especie.
@@ -339,6 +339,20 @@ export function undoEntry(state, entryId) {
 // Respaldo: validación de un JSON importado
 // ---------------------------------------------------------------------
 
+// A-14: los avatares anteriores pasan al héroe equivalente con el mismo look.
+const LEGACY_CHAR = { guardabosques: 'guardian-m', exploradora: 'relampago-f', forjador: 'titan-m', cartografo: 'estratega-m', tejedora: 'sabio-f', duelista: 'implacable-f' };
+const HERO_IDS = ['titan', 'relampago', 'estratega', 'sabio', 'guardian', 'implacable'];
+export function migrateCharacter(id) {
+  if (LEGACY_CHAR[id]) return LEGACY_CHAR[id];
+  const [hero, look] = String(id || '').split('-');
+  return HERO_IDS.includes(hero) ? `${hero}-${look === 'f' ? 'f' : 'm'}` : 'titan-m';
+}
+function migrateProfile(base, p) {
+  const out = { ...base, ...(p || {}) };
+  out.character = migrateCharacter(out.character);
+  return out;
+}
+
 export function validateImport(obj) {
   if (!obj || typeof obj !== 'object') throw new Error('El archivo no es un respaldo válido.');
   // Acepta respaldos de Kaisen y de su versión anterior (nano-rpg).
@@ -363,7 +377,7 @@ export function validateImport(obj) {
     ...base,
     ...data,
     schema: SCHEMA_VERSION,
-    profile: { ...base.profile, ...(data.profile || {}) },
+    profile: migrateProfile(base.profile, data.profile),
     prefs: { ...base.prefs, ...(data.prefs || {}) },
     pet: migratePet(base.pet, data.pet),
     activities,
@@ -955,7 +969,7 @@ export const ONBOARD_MAX = 12;
  */
 export function applyOnboarding(state, { name, character, habitIds = [], rewardIds = [] } = {}) {
   if (name !== undefined) state.profile.name = String(name).trim().slice(0, 16) || 'Héroe';
-  if (character) state.profile.character = character;
+  if (character) state.profile.character = migrateCharacter(character);
   const chosen = habitIds.map(id => HABIT_TEMPLATES.find(t => t.id === id)).filter(Boolean).slice(0, ONBOARD_MAX);
   if (chosen.length) {
     const resist = state.activities.filter(a => a.resist);

@@ -37,11 +37,15 @@ Prioridad de arriba hacia abajo. Tamaños y nombres según ARTE.md.
 | A-11 | 19 íconos de piezas de equipo (lista con ids en ARTE.md → Equipo) | `art/items/<id>.webp` | ✅ |
 | A-12 | Ilustraciones de los 4 jefes de T-01 (mismo estilo y tamaño que A-04). Al llegar entran en la rotación desde el mes siguiente | `art/bosses/{multitarea,perfeccionismo,inercia,desvelo}.webp` | ✅ |
 | A-13 | (opcional) 4 piezas épicas de botín para esos jefes: nombre, espacio, stat e ícono 512×512 | `art/items/<id>.webp` + texto | ✅ |
-| A-14 | 12 héroes nuevos: 6 arquetipos × 2 looks (ver sección A-14 abajo) | `art/chars/<arquetipo>-{m,f}.webp` | ⏳ |
+| A-14 | 12 héroes nuevos: 6 arquetipos × 2 looks (ver sección A-14 abajo) | `art/chars/<arquetipo>-{m,f}.webp` | ✅ |
 
 **Reglas que hacen que todo encaje:** fondo transparente (salvo los mundos), lienzo 720×1000 con los pies en el borde inferior para las figuras de pie, mismo estilo en toda la serie (adjuntar una imagen anterior como referencia) y sin texto dentro de las imágenes.
 
-## A-14 · Héroes que enganchen (encargo para GPT)
+## A-14 · Héroes que enganchen (entregado)
+
+**Integrado el 2026-11-19** con los nombres de la entrega: Gladiador/a de Bronce (`titan`), Pirata del Cielo (`relampago`), Hechicero/a Astral (`estratega`), Druida de Espinas (`sabio`), Forjador/a de Runas (`guardian`) y Ninja de la Luna (`implacable`). Selector en dos pasos («Elige tu héroe» → «Elige tu look»), misma XP con cualquier héroe y migración de los personajes anteriores. **Referencia de acabado para el arte que siga: Pirata del Cielo.**
+
+*Encargo original (histórico):*
 
 **Problema:** los personajes actuales tienen oficios (cartógrafo, tejedora…) que no dicen nada sobre la persona que los elige. La gente quiere verse **disciplinada, fuerte, rápida, enfocada**. Cada héroe tiene que representar una **cualidad que el jugador quiere tener**, y verse "qué chiva" sin exagerar.
 
@@ -100,3 +104,4 @@ Prioridad de arriba hacia abajo. Tamaños y nombres según ARTE.md.
 | A-11 | 19 íconos de equipo | 2026-11-19 |
 | T-01 | Textos de Multyra, Perfectus, Glacior y Noxveil | 2026-11-19 |
 | A-12, A-13 | Ilustraciones de los 4 jefes nuevos y sus 4 piezas de botín (rotan desde diciembre 2026) | 2026-11-19 |
+| A-14 | 12 héroes (6 × 2 looks) con selector en dos pasos; reemplazan a los personajes de A-08 | 2026-11-19 |

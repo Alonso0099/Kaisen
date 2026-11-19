@@ -64,7 +64,7 @@ export function createProfile({ name, character }) {
   const id = G.uid();
   const state = G.defaultState();
   state.profile.name = name || 'Héroe';
-  state.profile.character = character;
+  state.profile.character = G.migrateCharacter(character);
   saveProfileState(id, state);
   idx.ids.push(id);
   idx.active = id;

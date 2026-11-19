@@ -49,6 +49,10 @@ Dormir, tomar agua, comer fruta o verdura, salir a tomar aire, tender la cama…
 
 **Hogar y finanzas:** la stat Hogar incluye ahora hábitos de dinero (ahorrar algo hoy, un día sin compras impulsivas, revisar gastos).
 
+## 🦸 Héroes
+
+Seis héroes, cada uno con una cualidad y dos looks (12 avatares): **Gladiador/a de Bronce** (fuerza y coraje), **Pirata del Cielo** (iniciativa), **Hechicero/a Astral** (curiosidad y estrategia), **Druida de Espinas** (calma y enfoque), **Forjador/a de Runas** (lealtad y cuidado) y **Ninja de la Luna** (disciplina y precisión). Se eligen en dos pasos: «Elige tu héroe» y «Elige tu look». El héroe es solo tu avatar: **la misma actividad da la misma XP con cualquiera**, y cambiarlo no toca tu nivel, historial ni guardianas. Los perfiles con un personaje anterior pasan solos al héroe equivalente con el mismo look.
+
 ## 👋 Bienvenida
 
 Un perfil nuevo empieza con una bienvenida de cuatro pasos: nombre y héroe; **elegir de 1 a 12 hábitos** de una lista organizada por áreas (Lo básico, Moverme, Mente y calma, Dinero y hogar, Personas, Crecer); **elegir recompensas** (opcional, con ideas gratis, pequeños gustos, experiencias e inversión en ti); y un resumen. Las tres primeras elegidas quedan como accesos rápidos en Inicio, y se puede terminar registrando la primera. También se puede saltar y usar los hábitos sugeridos. Quien ya tenía progreso no la ve. Más tarde, en **Ajustes → Actividades → Elegir de la lista**, se agregan más hábitos. La lista está en `HABIT_TEMPLATES` (`js/logic.js`).
@@ -70,7 +74,7 @@ Un perfil nuevo empieza con una bienvenida de cuatro pasos: nombre y héroe; **e
 - **Progreso → Historial**: todo lo registrado, agrupado por día, con botón ↶ para deshacer. Deshacer una misión la devuelve a pendientes.
 - **Progreso → Stats**: el gráfico radar, el nivel de cada stat y las guardianas.
 - **Progreso → Logros**: 18 logros, cada uno da 25 monedas (primer nivel, rachas de 3/7/30 días, terminar un libro, equilibrio en las 6 stats, etc.).
-- **Ajustes**: perfiles (crear, cambiar, borrar), nombre, personaje, animación en reposo (balanceo o quieto), crear/editar/borrar actividades (XP de 5 a 50), respaldo y reinicio.
+- **Ajustes**: perfiles (crear, cambiar, borrar), nombre, héroe y look, animación en reposo (balanceo o quieto), crear/editar/borrar actividades (XP de 5 a 50), respaldo y reinicio.
 
 **Racha**: días seguidos con al menos un registro. Está completa en **Progreso → Logros** (actual, mejor y escudos). Arriba solo aparece cuando ya es de 3 días o más, y nunca se muestra como "rota".
 

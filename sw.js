@@ -1,7 +1,7 @@
 // Service worker de Kaisen: guarda la app en caché para que funcione
 // sin conexión. Al publicar cambios, sube CACHE_VERSION para que los
 // iPhones descarguen la nueva versión.
-const CACHE_VERSION = 'kaisen-v2.3.0';
+const CACHE_VERSION = 'kaisen-v2.4.0';
 // Lo esencial para funcionar offline. El arte nuevo que agregues se
 // guarda en caché automáticamente la primera vez que se muestra.
 const ASSETS = [
@@ -23,12 +23,18 @@ const ASSETS = [
   './icons/icon-192.png',
   './icons/icon-512.png',
   './icons/apple-touch-icon.png',
-  './art/chars/guardabosques.webp',
-  './art/chars/exploradora.webp',
-  './art/chars/forjador.webp',
-  './art/chars/cartografo.webp',
-  './art/chars/tejedora.webp',
-  './art/chars/duelista.webp',
+  './art/chars/titan-m.webp',
+  './art/chars/titan-f.webp',
+  './art/chars/relampago-m.webp',
+  './art/chars/relampago-f.webp',
+  './art/chars/estratega-m.webp',
+  './art/chars/estratega-f.webp',
+  './art/chars/sabio-m.webp',
+  './art/chars/sabio-f.webp',
+  './art/chars/guardian-m.webp',
+  './art/chars/guardian-f.webp',
+  './art/chars/implacable-m.webp',
+  './art/chars/implacable-f.webp',
   './art/worlds/atardecer.webp',
   './art/stats/fuerza.webp',
   './art/stats/resistencia.webp',

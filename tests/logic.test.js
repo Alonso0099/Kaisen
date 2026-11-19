@@ -151,12 +151,12 @@ test('exportar → importar conserva los datos', () => {
   const s = L.defaultState();
   L.logActivity(s, 'def-gym');
   s.profile.name = 'Kenta';
-  s.profile.character = 'exploradora';
+  s.profile.character = 'relampago-f';
   const json = JSON.parse(JSON.stringify(L.exportPayload(s)));
   const back = L.validateImport(json);
   assert.equal(back.log.length, 1);
   assert.equal(back.profile.name, 'Kenta');
-  assert.equal(back.profile.character, 'exploradora');
+  assert.equal(back.profile.character, 'relampago-f');
   assert.equal(L.deriveProfile(back).totalXp, 30);
   assert.throws(() => L.validateImport({ foo: 1 }));
   assert.throws(() => L.validateImport(null));
@@ -178,7 +178,7 @@ test('respaldos viejos (sin compañera) reciben los valores por defecto', () => 
   delete s.partner;
   s.profile = { name: 'Viejo' };
   const back = L.validateImport(JSON.parse(JSON.stringify(L.exportPayload(s))));
-  assert.equal(back.profile.character, 'guardabosques'); // personaje por defecto
+  assert.equal(back.profile.character, 'titan-m'); // personaje por defecto
   assert.equal(back.partner, undefined);
   assert.equal(back.profile.name, 'Viejo');
 });
@@ -719,9 +719,9 @@ test('bienvenida: perfil nuevo la ve; quien ya jugaba no', () => {
 test('bienvenida: deja solo los hábitos elegidos, conserva retos y fija 3', () => {
   const s = L.defaultState();
   const resistBefore = s.activities.filter(a => a.resist).length;
-  L.applyOnboarding(s, { name: '  Kai  ', character: 'duelista', habitIds: ['tpl-correr', 'def-leer', 'tpl-meditar', 'tpl-finanzas', 'no-existe'] });
+  L.applyOnboarding(s, { name: '  Kai  ', character: 'implacable-f', habitIds: ['tpl-correr', 'def-leer', 'tpl-meditar', 'tpl-finanzas', 'no-existe'] });
   assert.equal(s.profile.name, 'Kai');
-  assert.equal(s.profile.character, 'duelista');
+  assert.equal(s.profile.character, 'implacable-f');
   assert.deepEqual(s.activities.filter(a => !a.resist).map(a => a.id), ['tpl-correr', 'def-leer', 'tpl-meditar', 'tpl-finanzas']);
   assert.equal(s.activities.filter(a => a.resist).length, resistBefore);
   assert.deepEqual(s.pinned, ['tpl-correr', 'def-leer', 'tpl-meditar']);
@@ -786,4 +786,32 @@ test('recompensas: sugeridas por tipo, gratis más baratas, sin duplicar', () =>
 
 test('stat hogar se llama "Hogar y finanzas"', () => {
   assert.equal(L.statById('hogar').name, 'Hogar y finanzas');
+});
+
+test('A-14: el avatar no cambia la XP de una actividad', () => {
+  const xps = [];
+  for (const ch of ['titan-m', 'relampago-f', 'estratega-m', 'sabio-f', 'guardian-m', 'implacable-f', 'guardabosques']) {
+    const s = L.defaultState();
+    s.profile.character = ch;
+    const act = s.activities.find(a => !a.resist && !a.basic);
+    L.logActivity(s, act.id, new Date(2026, 10, 19, 10).getTime());
+    xps.push(JSON.stringify(s.log.map(e => [e.stat, e.xp])) + L.deriveProfile(s).totalXp);
+  }
+  assert.equal(new Set(xps).size, 1);
+});
+
+test('A-14: los avatares anteriores pasan al héroe equivalente con el mismo look', () => {
+  const map = { guardabosques: 'guardian-m', exploradora: 'relampago-f', forjador: 'titan-m', cartografo: 'estratega-m', tejedora: 'sabio-f', duelista: 'implacable-f' };
+  for (const [old, now] of Object.entries(map)) {
+    const s = L.defaultState();
+    s.profile.character = old;
+    s.log.push({ id: 'x', act: 'def-leer', stat: 'intelecto', xp: 40, ts: Date.now() });
+    const back = L.validateImport(JSON.parse(JSON.stringify(L.exportPayload(s))));
+    assert.equal(back.profile.character, now, old);
+    assert.equal(back.log.length, 1, 'conserva el historial');
+  }
+  // Las elecciones A-14 se conservan tal cual; lo desconocido cae al héroe por defecto.
+  for (const k of ['sabio-f', 'implacable-m']) assert.equal(L.migrateCharacter(k), k);
+  assert.equal(L.migrateCharacter('no-existe'), 'titan-m');
+  assert.equal(L.migrateCharacter('relampago'), 'relampago-m');
 });

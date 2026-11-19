@@ -7,7 +7,7 @@ Esta guía dice **qué tamaño, formato y nombre** debe tener cada imagen para q
 1. **Formato:** WebP (preferido) o PNG. Si usas PNG, cambia la extensión en `js/catalog.js` o conviértelo a WebP (en squoosh.app, calidad 85–90).
 2. **Fondo transparente** para todo lo que se pone encima de otra cosa (personajes, guardianes, jefes, mascotas, huevos, objetos, insignias). Los **mundos** sí llevan fondo completo.
 3. **Nombres en minúsculas, sin acentos ni espacios:** `fuerza-2.webp`, no `Fuerza 2.webp`.
-4. **Mismo estilo en toda la serie.** Pídele a GPT que use el mismo estilo cada vez y pégale una imagen anterior como referencia.
+4. **Mismo estilo en toda la serie.** Pídele a GPT que use el mismo estilo cada vez y pégale una imagen anterior como referencia. La referencia de acabado actual es **Pirata del Cielo** (`art/chars/relampago-f.webp`).
 5. **Peso:** idealmente menos de 200 KB por imagen (menos de 400 KB en mundos).
 6. Para reemplazar mi arte temporal, guarda tu imagen **con el mismo nombre** y súbela.
 7. Después de agregar imágenes, sube el número de `CACHE_VERSION` en `sw.js` para que los teléfonos descarguen lo nuevo.
@@ -22,13 +22,13 @@ Para que todos se vean del mismo tamaño y alineados por los pies:
 - Sin sombra en el piso ni efectos alrededor: la app agrega el brillo y la sombra.
 - Mira hacia el frente o en tres cuartos.
 
-Si GPT te da otro tamaño, no pasa nada: pídeme "normaliza este arte" y lo recorto y alineo como hice con Exploradora y Guardabosques.
+Si GPT te da otro tamaño, no pasa nada: pídeme "normaliza este arte" y lo recorto y alineo.
 
 ## Categorías
 
 | Categoría | Carpeta y nombre | Cantidad | Tamaño | Notas |
 |---|---|---|---|---|
-| **Personajes jugables** | `art/chars/<id>.webp` | 12 (A-14) | 720×1000 | 6 arquetipos × 2 looks: `titan`, `relampago`, `estratega`, `sabio`, `guardian`, `implacable` con `-m` o `-f`. Brief en COORDINACION.md → A-14. |
+| **Personajes jugables** | `art/chars/<id>.webp` | 12 (A-14) | 720×1000 | 6 héroes × 2 looks: `titan`, `relampago`, `estratega`, `sabio`, `guardian`, `implacable` con `-m` o `-f`. Nombres y cualidades en `CHARACTERS` de `js/catalog.js`. |
 | **Guardianes** | `art/guardians/<stat>-<1..5>.webp` | 6 stats × 5 = 30 | 720×1000 | Ej.: `fuerza-1.webp` es Astrid en su primera forma. |
 | **Jefes** | `art/bosses/<id>.webp` | 10 | 720×1000 o cuadrado 1000×1000 | Hoy hay 6 ids (abajo). Para los 4 nuevos, pásame nombre, debilidad y reto. |
 | **Mascotas** | `art/pets/<especie>-<0..5>.webp` | 8 × 6 = 48 | 600×600 | Etapa 0 = huevo; 5 = forma final. |

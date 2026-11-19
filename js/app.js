@@ -8,9 +8,9 @@ import { makeCard, shareCard } from './share.js';
 import * as Profiles from './profiles.js';
 import * as Gear from './gear.js';
 import { installInfo, isStandalone } from './install.js';
-import { art, CHARACTERS, characterById, characterImg, guardianFor, guardianEvolutions, syncGuardianSeen, GUARDIANS, WORLDS, worldById, DEFAULT_WORLD, DEFAULT_PET, PET_SPECIES, speciesById } from './catalog.js';
+import { art, CHARACTERS, DEFAULT_CHARACTER, charHero, characterById, characterImg, guardianFor, guardianEvolutions, syncGuardianSeen, GUARDIANS, WORLDS, worldById, DEFAULT_WORLD, DEFAULT_PET, PET_SPECIES, speciesById } from './catalog.js';
 
-export const APP_VERSION = '2.3.0';
+export const APP_VERSION = '2.4.0';
 const BACKUP_REMINDER_DAYS = 7;
 
 const $ = sel => document.querySelector(sel);
@@ -280,7 +280,7 @@ function renderHero() {
   renderWorld();
   const ch = characterById(state.profile.character);
   const img = $('#heroImg');
-  const src = characterImg(ch.id);
+  const src = characterImg(ch.key);
   if (img.getAttribute('src') !== src) img.src = src;
   img.alt = ch.name;
   const stage = $('#heroStage');
@@ -844,7 +844,7 @@ function renderSettings() {
       <img src="${characterImg(pr.character)}" alt="">${esc(pr.name)} <small>LV ${pr.level}</small>
     </button>`).join('') + `<button class="chip" id="newProfileBtn">＋ Nuevo</button>`;
   $('#deleteProfileBtn').hidden = profiles.length < 2;
-  $('#charGrid').innerHTML = characterCards(state.profile.character);
+  $('#charGrid').innerHTML = heroPicker(state.profile.character, settingsPickHero);
   document.querySelectorAll('#idleChips .chip').forEach(c => c.classList.toggle('on', c.dataset.idle === (state.prefs?.idle || 'sway')));
 
   $('#activityList').innerHTML = G.STATS.flatMap(s =>
@@ -1341,14 +1341,45 @@ function checkShields() {
 // ---------------------------------------------------------------------
 // Perfiles y personajes
 // ---------------------------------------------------------------------
-function characterCards(selected) {
-  return CHARACTERS.map(c => `
-    <button class="char-card ${c.id === selected ? 'on' : ''}" data-char="${c.id}" style="--c:${c.accent}">
-      ${c.id === selected ? '<span class="char-check">✓</span>' : ''}
-      <img class="char-fig" src="${characterImg(c.id)}" alt="">
-      <b>${esc(c.name)}</b>${c.title ? `<em>${esc(c.title)}</em>` : ''}<small>${esc(c.blurb)}</small>
-    </button>`).join('');
+/**
+ * Selector en dos pasos: «Elige tu héroe» (6 héroes con su cualidad) y
+ * «Elige tu look» (sus dos versiones, con el mismo peso visual).
+ * `pickHero` es el héroe abierto en el paso 2, o null para el paso 1.
+ */
+function heroPicker(selected, pickHero, { compact = false } = {}) {
+  const cur = characterById(selected);
+  if (!pickHero) {
+    const cards = CHARACTERS.map(c => {
+      const key = `${c.id}-${cur.look}`, on = c.id === cur.hero;
+      return `
+      <button class="char-card ${on ? 'on' : ''}" data-hero="${c.id}" style="--c:${c.accent}" aria-label="${esc(c.names[cur.look])}: ${esc(c.title)}">
+        ${on ? '<span class="char-check">✓</span>' : ''}
+        <img class="char-fig" src="${characterImg(key)}" alt="">
+        <b>${esc(c.names[cur.look])}</b><em>${esc(c.title)}</em>${compact ? '' : `<small>${esc(c.blurb)}</small>`}
+      </button>`;
+    }).join('');
+    return `
+      <div class="hp-head"><b>Elige tu héroe</b></div>
+      <p class="hp-hint">Elige un héroe que te represente o que encarne algo que quieres cultivar.</p>
+      <div class="char-grid ${compact ? 'w-chars' : ''}">${cards}</div>
+      <p class="hp-note">Todas las actividades dan la misma XP con cualquier héroe, y puedes cambiarlo cuando quieras sin perder progreso.</p>`;
+  }
+  const c = CHARACTERS.find(x => x.id === pickHero);
+  const looks = ['m', 'f'].map(lk => {
+    const key = `${c.id}-${lk}`, on = key === cur.key;
+    return `
+      <button class="char-card look-card ${on ? 'on' : ''}" data-char="${key}" style="--c:${c.accent}" aria-label="${esc(c.names[lk])}">
+        ${on ? '<span class="char-check">✓</span>' : ''}
+        <img class="char-fig" src="${characterImg(key)}" alt="">
+        <b>${esc(c.names[lk])}</b>
+      </button>`;
+  }).join('');
+  return `
+    <div class="hp-head"><button class="hp-back" data-hero-back>‹ Héroes</button><b>Elige tu look</b></div>
+    <p class="hp-hint"><em style="--c:${c.accent}">${esc(c.title)}</em> · «${esc(c.blurb)}»</p>
+    <div class="char-grid look-grid">${looks}</div>`;
 }
+let settingsPickHero = null;
 
 function useProfile(id, { silent = false } = {}) {
   state = Profiles.switchProfile(id);
@@ -1367,14 +1398,14 @@ async function newProfileFlow() {
   const ok = await confirmSheet('¿Crear otro perfil?', 'Cada perfil tiene su propio progreso, personaje y hábitos en este teléfono. Podrás volver a este cuando quieras desde Ajustes.', 'Crear perfil');
   if (!ok) return;
   save(); // guarda el perfil actual antes de cambiar
-  const { id } = Profiles.createProfile({ name: 'Héroe', character: CHARACTERS[0].id });
+  const { id } = Profiles.createProfile({ name: 'Héroe', character: DEFAULT_CHARACTER });
   useProfile(id, { silent: true });   // la bienvenida se abre sola
 }
 
 // ---------------------------------------------------------------------
 // Bienvenida: 3 pasos para empezar (nombre y personaje → hábitos → listo)
 // ---------------------------------------------------------------------
-const welcomeDraft = { step: 1, name: '', character: CHARACTERS[0].id, habits: [], rewards: [] };
+const welcomeDraft = { step: 1, name: '', character: DEFAULT_CHARACTER, pickHero: null, habits: [], rewards: [] };
 const W_STEPS = 4;
 const habitChips = (ids, selected) => ids.map(t => {
   const st = G.statById(t.stat);
@@ -1388,7 +1419,7 @@ const areaGroups = (selected, filter = () => true) => G.HABIT_AREAS.map(ar => {
 
 function maybeWelcome() {
   if (state.onboarded) { $('#welcome').hidden = true; return; }
-  Object.assign(welcomeDraft, { step: 1, name: state.profile.name === 'Héroe' ? '' : state.profile.name, character: state.profile.character, habits: [], rewards: [] });
+  Object.assign(welcomeDraft, { step: 1, name: state.profile.name === 'Héroe' ? '' : state.profile.name, character: state.profile.character, pickHero: null, habits: [], rewards: [] });
   $('#welcome').hidden = false;
   renderWelcome();
 }
@@ -1404,7 +1435,7 @@ function renderWelcome() {
       <p>Cada cosa buena que haces en la vida real le da experiencia a tu héroe. Empecemos por conocerte.</p>
       <label class="field"><span>¿Cómo se llama tu héroe?</span>
         <input type="text" id="wName" maxlength="16" placeholder="Héroe" value="${esc(d.name)}" autocomplete="off"></label>
-      <div class="field"><span>Elige tu personaje</span><div class="char-grid w-chars" id="wChars">${characterCards(d.character)}</div></div>
+      <div class="field hero-picker" id="wChars">${heroPicker(d.character, d.pickHero, { compact: true })}</div>
       <button class="btn btn-primary btn-block" data-w="next">Siguiente</button>`;
   } else if (d.step === 2) {
     body = `
@@ -1469,8 +1500,14 @@ function finishWelcome({ habits = welcomeDraft.habits, logFirst = false } = {}) 
 $('#welcome').addEventListener('input', e => { if (e.target.id === 'wName') welcomeDraft.name = e.target.value; });
 $('#welcome').addEventListener('click', e => {
   const d = welcomeDraft;
-  const ch = e.target.closest('[data-char]');
-  if (ch) { d.character = ch.dataset.char; $('#wChars').innerHTML = characterCards(d.character); return; }
+  const hp = e.target.closest('[data-hero], [data-hero-back], [data-char]');
+  if (hp) {
+    if (hp.dataset.char) d.character = hp.dataset.char;
+    d.pickHero = hp.dataset.hero || (hp.dataset.char ? charHero(hp.dataset.char) : null);
+    $('#wChars').innerHTML = heroPicker(d.character, d.pickHero, { compact: true });
+    if (hp.dataset.hero) $('#wChars').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    return;
+  }
   const rw = e.target.closest('[data-reward]');
   if (rw) {
     const id = rw.dataset.reward;
@@ -1780,7 +1817,12 @@ $('#charName').addEventListener('input', e => {
 });
 $('#charName').addEventListener('blur', () => renderSettings());
 $('#charGrid').addEventListener('click', e => {
+  const h = e.target.closest('[data-hero]');
+  if (h) { settingsPickHero = h.dataset.hero; renderSettings(); return; }
+  if (e.target.closest('[data-hero-back]')) { settingsPickHero = null; renderSettings(); return; }
   const c = e.target.closest('[data-char]'); if (!c) return;
+  settingsPickHero = null;
+  // Solo cambia el avatar: nivel, XP, historial y guardianas siguen igual.
   commit(s => { s.profile.character = c.dataset.char; }, { celebrate: false });
   toast(`Ahora juegas como ${characterById(c.dataset.char).name}`);
 });

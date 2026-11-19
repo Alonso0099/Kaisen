@@ -16,33 +16,33 @@ test('primer arranque crea un perfil por defecto', () => {
   store.clear();
   const { idx, state } = P.boot();
   assert.equal(idx.ids.length, 1);
-  assert.equal(state.profile.character, 'guardabosques');
+  assert.equal(state.profile.character, 'titan-m');
 });
 
 test('dos perfiles con personajes distintos se conservan al "recargar"', () => {
   store.clear();
   const first = P.boot();
   first.state.profile.name = 'Kai';
-  first.state.profile.character = 'guardabosques';
+  first.state.profile.character = 'guardian-m';
   P.saveProfileState(first.id, first.state);
-  const second = P.createProfile({ name: 'Rin', character: 'exploradora' });
+  const second = P.createProfile({ name: 'Rin', character: 'relampago-f' });
   G.logActivity(second.state, 'def-leer');
   P.saveProfileState(second.id, second.state);
 
   // "Recargar": volver a arrancar solo desde localStorage
   let boot = P.boot();
   assert.equal(boot.id, second.id);                       // queda activo el último elegido
-  assert.equal(boot.state.profile.character, 'exploradora');
+  assert.equal(boot.state.profile.character, 'relampago-f');
   assert.equal(boot.state.log.length, 1);
 
   P.switchProfile(first.id);
   boot = P.boot();
   assert.equal(boot.state.profile.name, 'Kai');
-  assert.equal(boot.state.profile.character, 'guardabosques');
+  assert.equal(boot.state.profile.character, 'guardian-m');
   assert.equal(boot.state.log.length, 0);                  // el progreso no se mezcla
 
   const list = P.listProfiles();
-  assert.deepEqual(list.map(p => p.character).sort(), ['exploradora', 'guardabosques']);
+  assert.deepEqual(list.map(p => p.character).sort(), ['guardian-m', 'relampago-f']);
   assert.equal(list.find(p => p.active).name, 'Kai');
 });
 
@@ -50,7 +50,7 @@ test('borrar perfil: no deja borrar el último y cambia al siguiente', () => {
   store.clear();
   const a = P.boot();
   assert.throws(() => P.deleteProfile(a.id), /al menos un perfil/);
-  const b = P.createProfile({ name: 'B', character: 'exploradora' });
+  const b = P.createProfile({ name: 'B', character: 'relampago-f' });
   assert.equal(P.deleteProfile(b.id), a.id);
   assert.equal(store.has(`kaisen-p-${b.id}`), false);
 });
@@ -64,7 +64,7 @@ test('migra el guardado de la versión anterior como primer perfil', () => {
   store.set('nano-rpg-v1', JSON.stringify(old));
   const { state } = P.boot();
   assert.equal(state.log.length, 1);
-  assert.equal(state.profile.character, 'guardabosques');
+  assert.equal(state.profile.character, 'titan-m');
   assert.equal(state.partner, undefined);
 });
 
@@ -79,7 +79,7 @@ test('especie de mascota: ids y nombres del catálogo, y se conserva por perfil'
   assert.equal(a.state.pet.species, 'chispa');             // perfiles viejos y nuevos empiezan en Chispa
   a.state.pet.species = 'marea';
   P.saveProfileState(a.id, a.state);
-  const b = P.createProfile({ name: 'B', character: 'exploradora' });
+  const b = P.createProfile({ name: 'B', character: 'relampago-f' });
   assert.equal(b.state.pet.species, 'chispa');
   P.switchProfile(a.id);
   assert.equal(P.boot().state.pet.species, 'marea');        // cada perfil conserva su elección
@@ -90,7 +90,7 @@ test('nombre de mascota por perfil: cada perfil guarda el suyo', async () => {
   const a = P.boot();
   G.setPetName(a.state, 'Brasa');
   P.saveProfileState(a.id, a.state);
-  const b = P.createProfile({ name: 'B', character: 'exploradora' });
+  const b = P.createProfile({ name: 'B', character: 'relampago-f' });
   assert.equal(G.petCustomName(b.state), '');
   G.setPetName(b.state, 'Fuego');
   P.saveProfileState(b.id, b.state);
@@ -100,11 +100,15 @@ test('nombre de mascota por perfil: cada perfil guarda el suyo', async () => {
   assert.equal(G.petCustomName(P.boot().state), 'Fuego');
 });
 
-test('personajes: los existentes conservan id y orden (Guardabosques sigue por defecto)', async () => {
+test('héroes A-14: seis héroes × dos looks, con nombre, cualidad y frase', async () => {
   const C = await import('../js/catalog.js');
-  assert.deepEqual(C.CHARACTERS.map(c => c.id), ['guardabosques', 'exploradora', 'forjador', 'cartografo', 'tejedora', 'duelista']);
-  assert.equal(C.DEFAULT_CHARACTER, 'guardabosques');
-  assert.equal(C.characterById('no-existe').id, 'guardabosques');
+  assert.deepEqual(C.CHARACTERS.map(c => c.id), ['titan', 'relampago', 'estratega', 'sabio', 'guardian', 'implacable']);
+  for (const c of C.CHARACTERS) assert.ok(c.names.m && c.names.f && c.title && c.blurb.length > 30, c.id);
+  assert.equal(C.DEFAULT_CHARACTER, 'titan-m');
+  assert.equal(C.characterById('no-existe').key, 'titan-m');
+  const h = C.characterById('estratega-f');
+  assert.equal(h.name, 'Hechicera Astral'); assert.equal(h.hero, 'estratega'); assert.equal(h.look, 'f');
+  assert.equal(C.characterImg('duelista'), 'art/chars/implacable-f.webp');
 });
 
 test('instalación: qué se muestra según el dispositivo', async () => {
@@ -133,8 +137,3 @@ test('instalación: qué se muestra según el dispositivo', async () => {
   assert.equal(I.isStandalone({ matchMedia: () => ({ matches: false }), navigator: {} }), false);
 });
 
-test('héroes: cada uno tiene nombre, cualidad y descripción, y los ids no cambian', async () => {
-  const C = await import('../js/catalog.js');
-  for (const c of C.CHARACTERS) assert.ok(c.name && c.title && c.blurb.length > 30, c.id);
-  assert.deepEqual(C.CHARACTERS.map(c => c.id), ['guardabosques', 'exploradora', 'forjador', 'cartografo', 'tejedora', 'duelista']);
-});
