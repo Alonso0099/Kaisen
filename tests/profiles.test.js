@@ -99,3 +99,10 @@ test('nombre de mascota por perfil: cada perfil guarda el suyo', async () => {
   P.switchProfile(b.id);
   assert.equal(G.petCustomName(P.boot().state), 'Fuego');
 });
+
+test('personajes: los existentes conservan id y orden (Guardabosques sigue por defecto)', async () => {
+  const C = await import('../js/catalog.js');
+  assert.deepEqual(C.CHARACTERS.map(c => c.id), ['guardabosques', 'exploradora', 'forjador', 'cartografo', 'tejedora', 'duelista']);
+  assert.equal(C.DEFAULT_CHARACTER, 'guardabosques');
+  assert.equal(C.characterById('no-existe').id, 'guardabosques');
+});

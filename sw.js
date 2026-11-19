@@ -1,7 +1,7 @@
 // Service worker de Kaisen: guarda la app en caché para que funcione
 // sin conexión. Al publicar cambios, sube CACHE_VERSION para que los
 // iPhones descarguen la nueva versión.
-const CACHE_VERSION = 'kaisen-v1.4.0';
+const CACHE_VERSION = 'kaisen-v1.5.0';
 // Lo esencial para funcionar offline. El arte nuevo que agregues se
 // guarda en caché automáticamente la primera vez que se muestra.
 const ASSETS = [
@@ -23,6 +23,10 @@ const ASSETS = [
   './icons/apple-touch-icon.png',
   './art/chars/guardabosques.webp',
   './art/chars/exploradora.webp',
+  './art/chars/forjador.webp',
+  './art/chars/cartografo.webp',
+  './art/chars/tejedora.webp',
+  './art/chars/duelista.webp',
   './art/worlds/atardecer.webp',
   './art/stats/fuerza.webp',
   './art/stats/resistencia.webp',

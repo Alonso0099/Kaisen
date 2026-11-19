@@ -28,6 +28,10 @@ export const art = {
 export const CHARACTERS = [
   { id: 'guardabosques', name: 'Guardabosques', blurb: 'Paciente y constante, conoce cada sendero.', accent: '#7fae4a' },
   { id: 'exploradora',   name: 'Exploradora',   blurb: 'Curiosa e imparable, siempre busca el siguiente reto.', accent: '#2aa3a0' },
+  { id: 'forjador', name: 'Forjador', blurb: 'Conoce el temple del hierro y el valor de la paciencia.', accent: '#cf713e' },
+  { id: 'cartografo', name: 'Cartógrafo', blurb: 'Traza rutas hasta donde el mapa se queda en blanco.', accent: '#c75649' },
+  { id: 'tejedora', name: 'Tejedora', blurb: 'Anuda historias en cada puntada.', accent: '#ac77ce' },
+  { id: 'duelista', name: 'Duelista', blurb: 'Mantiene la calma y sabe cuándo dar el primer paso.', accent: '#37896a' },
 ];
 export const DEFAULT_CHARACTER = CHARACTERS[0].id;
 export const characterById = id => CHARACTERS.find(c => c.id === id) || CHARACTERS[0];

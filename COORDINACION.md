@@ -28,7 +28,7 @@ Prioridad de arriba hacia abajo. Tamaños y nombres según ARTE.md.
 | A-05 | Mascota inicial: 6 etapas (0 = huevo … 5 = forma final) | `art/pets/chispa-{0..5}.webp` | ✅ |
 | A-06 | 6 emblemas de stats (circulares) | `art/stats/<stat>.webp` | ✅ |
 | A-07 | 18 insignias de logros | `art/badges/<id-logro>.webp` | ✅ |
-| A-08 | Más personajes jugables (las clases que quieras) | `art/chars/<id>.webp` | ⏳ |
+| A-08 | Más personajes jugables (las clases que quieras) | `art/chars/<id>.webp` | ✅ |
 | A-09 | Formas 2–5 de los guardianes | `art/guardians/<stat>-{2..5}.webp` | ⏳ |
 | A-10 | 8 huevos y las otras 7 especies de mascota | `art/eggs/…`, `art/pets/…` | ⏳ |
 | T-01 | Para cada **jefe nuevo** (hasta 4 más): nombre, a qué miedo o mal hábito representa, frase de burla, stat débil y reto de resistencia | texto | ⏳ |
@@ -61,3 +61,4 @@ Prioridad de arriba hacia abajo. Tamaños y nombres según ARTE.md.
 | T-02 | Nombres de guardianas y de las 8 especies | 2026-11-18 |
 | A-05 | Dragón de Fuego: 6 etapas (especie `chispa`) | 2026-11-18 |
 | A-06, A-07 | 6 emblemas de stats y 18 insignias de logros | 2026-11-18 |
+| A-08 | Personajes Forjador, Cartógrafo, Tejedora y Duelista | 2026-11-18 |
