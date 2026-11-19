@@ -29,7 +29,7 @@ Prioridad de arriba hacia abajo. Tamaños y nombres según ARTE.md.
 | A-06 | 6 emblemas de stats (circulares) | `art/stats/<stat>.webp` | ✅ |
 | A-07 | 18 insignias de logros | `art/badges/<id-logro>.webp` | ✅ |
 | A-08 | Más personajes jugables (las clases que quieras) | `art/chars/<id>.webp` | ✅ |
-| A-09 | Formas 2–5 de los guardianes | `art/guardians/<stat>-{2..5}.webp` | ⏳ |
+| A-09 | Formas 2–5 de los guardianes | `art/guardians/<stat>-{2..5}.webp` | ✅ |
 | A-10 | 8 huevos y las otras 7 especies de mascota | `art/eggs/…`, `art/pets/…` | ⏳ |
 | T-01 | Para cada **jefe nuevo** (hasta 4 más): nombre, a qué miedo o mal hábito representa, frase de burla, stat débil y reto de resistencia | texto | ⏳ |
 | T-02 | Nombres de guardianes (Skadi, Runa, Véra, Eira, Liv) y especies (Céfiro, Marea, Pedernal, Trueno, Nival, Alba, Umbra) | texto | ✅ |
@@ -63,3 +63,6 @@ Prioridad de arriba hacia abajo. Tamaños y nombres según ARTE.md.
 | A-05 | Dragón de Fuego: 6 etapas (especie `chispa`) | 2026-11-18 |
 | A-06, A-07 | 6 emblemas de stats y 18 insignias de logros | 2026-11-18 |
 | A-08 | Personajes Forjador, Cartógrafo, Tejedora y Duelista | 2026-11-18 |
+| T-03 | Frases de evolución de las guardianas | 2026-11-19 |
+| A-09 | Formas 2–5 de las seis guardianas (24 imágenes) | 2026-11-19 |
+| — | Ícono aprobado: flecha dorada de fuego | 2026-11-19 |
