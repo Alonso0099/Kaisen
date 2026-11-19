@@ -36,7 +36,7 @@ export const CHARACTERS = [
   { id: 'relampago',  names: { m: 'Pirata del Cielo',    f: 'Pirata del Cielo' },     title: 'Iniciativa',              blurb: 'Iza las velas antes de que amaine el viento.', accent: '#2a9d8f' },
   { id: 'estratega',  names: { m: 'Hechicero Astral',    f: 'Hechicera Astral' },     title: 'Curiosidad y estrategia', blurb: 'Cuando se pierde, vuelve a mirar el mapa de estrellas.', accent: '#5b5fd6' },
   { id: 'sabio',      names: { m: 'Druida de Espinas',   f: 'Druida de Espinas' },    title: 'Calma y enfoque',         blurb: 'Entre tantas ramas, sabe dónde poner la atención.', accent: '#7fae4a' },
-  { id: 'guardian',   names: { m: 'Forjador de Runas',   f: 'Forjadora de Runas' },   title: 'Lealtad y cuidado',       blurb: 'Forja lo que hace falta y repara lo que otros dan por perdido.', accent: '#d0763a' },
+  { id: 'guardian',   names: { m: 'Forjador de Almas',   f: 'Forjadora de Almas' },   title: 'Carácter y cuidado',      blurb: 'Lo que promete, lo cumple. Lo que se rompe, lo repara.', accent: '#d0763a' },
   { id: 'implacable', names: { m: 'Ninja de la Luna',    f: 'Ninja de la Luna' },     title: 'Disciplina y precisión',  blurb: 'Practica el mismo movimiento hasta que le sale en silencio.', accent: '#a04a92' },
 ];
 export const DEFAULT_CHARACTER = 'titan-m';

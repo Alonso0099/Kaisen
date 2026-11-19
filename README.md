@@ -51,7 +51,7 @@ Dormir, tomar agua, comer fruta o verdura, salir a tomar aire, tender la cama…
 
 ## 🦸 Héroes
 
-Seis héroes, cada uno con una cualidad y dos looks (12 avatares): **Gladiador/a de Bronce** (fuerza y coraje), **Pirata del Cielo** (iniciativa), **Hechicero/a Astral** (curiosidad y estrategia), **Druida de Espinas** (calma y enfoque), **Forjador/a de Runas** (lealtad y cuidado) y **Ninja de la Luna** (disciplina y precisión). Se eligen en dos pasos: «Elige tu héroe» y «Elige tu look». El héroe es solo tu avatar: **la misma actividad da la misma XP con cualquiera**, y cambiarlo no toca tu nivel, historial ni guardianas. Los perfiles con un personaje anterior pasan solos al héroe equivalente con el mismo look.
+Seis héroes, cada uno con una cualidad y dos looks (12 avatares): **Gladiador/a de Bronce** (fuerza y coraje), **Pirata del Cielo** (iniciativa), **Hechicero/a Astral** (curiosidad y estrategia), **Druida de Espinas** (calma y enfoque), **Forjador/a de Almas** (carácter y cuidado) y **Ninja de la Luna** (disciplina y precisión). Se eligen en dos pasos: «Elige tu héroe» y «Elige tu look». El héroe es solo tu avatar: **la misma actividad da la misma XP con cualquiera**, y cambiarlo no toca tu nivel, historial ni guardianas. Los perfiles con un personaje anterior pasan solos al héroe equivalente con el mismo look.
 
 ## 👋 Bienvenida
 

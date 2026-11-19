@@ -43,7 +43,7 @@ Prioridad de arriba hacia abajo. Tamaños y nombres según ARTE.md.
 
 ## A-14 · Héroes que enganchen (entregado)
 
-**Integrado el 2026-11-19** con los nombres de la entrega: Gladiador/a de Bronce (`titan`), Pirata del Cielo (`relampago`), Hechicero/a Astral (`estratega`), Druida de Espinas (`sabio`), Forjador/a de Runas (`guardian`) y Ninja de la Luna (`implacable`). Selector en dos pasos («Elige tu héroe» → «Elige tu look»), misma XP con cualquier héroe y migración de los personajes anteriores. **Referencia de acabado para el arte que siga: Pirata del Cielo.**
+**Integrado el 2026-11-19** con los nombres de la entrega: Gladiador/a de Bronce (`titan`), Pirata del Cielo (`relampago`), Hechicero/a Astral (`estratega`), Druida de Espinas (`sabio`), Forjador/a de Almas (`guardian`; antes «de Runas», renombrado por Alonso: cualidad «Carácter y cuidado», frase «Lo que promete, lo cumple. Lo que se rompe, lo repara.») y Ninja de la Luna (`implacable`). Selector en dos pasos («Elige tu héroe» → «Elige tu look»), misma XP con cualquier héroe y migración de los personajes anteriores. **Referencia de acabado para el arte que siga: Pirata del Cielo.**
 
 *Encargo original (histórico):*
 
