@@ -41,7 +41,7 @@ Si GPT te da otro tamaño, no pasa nada: pídeme "normaliza este arte" y lo reco
 ### Ids que ya usa la app
 
 - **Stats:** `fuerza`, `resistencia`, `intelecto`, `sabiduria`, `vinculo`, `hogar`
-- **Jefes:** `pereza`, `procrastinacion`, `desorden`, `estres`, `distraccion`, `soledad`
+- **Jefes:** `pereza`, `procrastinacion`, `desorden`, `estres`, `distraccion`, `soledad` · sin arte todavía: `multitarea`, `perfeccionismo`, `inercia`, `desvelo`
 - **Especies de mascota:** `chispa` (fuego), `brisa` (viento), `marea` (agua), `roca` (tierra), `rayo` (trueno), `escarcha` (hielo), `luz`, `sombra`
 - **Mundos** (rango que lo desbloquea): `atardecer` (E), `bosque` (D), `montana` (C), `islas` (B), `ciudadela` (S), `cosmos` (SS)
 - **Logros:** `first-log`, `level-2`, `level-5`, `level-10`, `streak-3`, `streak-7`, `streak-30`, `book`, `quest-1`, `all-stats`, `stat-5`, `big-day`, `logs-100`, `weekly-1`, `weekly-all`, `boss-1`, `boss-6`, `pet-adult`

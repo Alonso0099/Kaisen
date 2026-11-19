@@ -607,3 +607,38 @@ test('guardianas: guardianSeen sobrevive a exportar/importar', () => {
   delete old.data.guardianSeen;
   assert.deepEqual(L.validateImport(old).guardianSeen, {});
 });
+
+// ---------------- Rotación de jefes por etapas (T-01) ----------------
+
+test('jefes: la rotación de los 6 originales no cambia', () => {
+  // misma fórmula de siempre: (año*12 + mes-1) % 6
+  const order = ['pereza', 'procrastinacion', 'desorden', 'estres', 'distraccion', 'soledad'];
+  for (let i = 0; i < 24; i++) {
+    const d = new Date(2026, i, 15);
+    const mk = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    assert.equal(L.bossForMonth(mk).id, order[(d.getFullYear() * 12 + d.getMonth()) % 6]);
+  }
+  assert.equal(L.bossForMonth('2026-11').id, 'distraccion');
+});
+
+test('jefes: los 4 de T-01 existen con sus textos pero no rotan todavía', () => {
+  const nuevos = ['multitarea', 'perfeccionismo', 'inercia', 'desvelo'];
+  for (const id of nuevos) {
+    const b = L.BOSSES.find(x => x.id === id);
+    assert.ok(b && b.taunt && b.fear && b.challenge && L.STAT_IDS.includes(b.weak), id);
+    assert.equal(b.ready, false);
+  }
+  assert.equal(L.activeBosses().length, 6);
+  const seen = new Set();
+  for (let i = 0; i < 60; i++) { const d = new Date(2026, i, 1); seen.add(L.bossForMonth(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`).id); }
+  assert.ok(nuevos.every(id => !seen.has(id)));
+});
+
+test('jefes: una etapa nueva desde un mes futuro no altera los meses anteriores', () => {
+  const ten = ['pereza', 'multitarea', 'procrastinacion', 'perfeccionismo', 'desorden', 'inercia', 'estres', 'desvelo', 'distraccion', 'soledad'];
+  const eras = [...L.BOSS_ERAS, { from: '2027-02', ids: ten }];
+  for (const mk of ['2026-11', '2026-12', '2027-01']) assert.equal(L.bossForMonth(mk, eras).id, L.bossForMonth(mk).id);
+  assert.equal(L.bossForMonth('2027-02', eras).id, 'pereza');
+  assert.equal(L.bossForMonth('2027-03', eras).id, 'multitarea');
+  assert.equal(L.bossForMonth('2027-12', eras).id, 'pereza');   // 10 meses después vuelve a empezar
+});

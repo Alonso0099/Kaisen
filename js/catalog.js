@@ -94,13 +94,13 @@ export function guardianFor(statId, statLevel) {
 // nadie se quede con una mascota invisible). Cambia a true al subir su arte.
 export const PET_SPECIES = [
   { id: 'chispa',   name: 'Dragón de Fuego', element: 'Fuego', ready: true },  // nombre provisional
-  { id: 'brisa',    name: 'Céfiro',   element: 'Viento', ready: false },
-  { id: 'marea',    name: 'Marea',    element: 'Agua',   ready: false },
-  { id: 'roca',     name: 'Pedernal', element: 'Tierra', ready: false },
-  { id: 'rayo',     name: 'Trueno',   element: 'Trueno', ready: false },
-  { id: 'escarcha', name: 'Nival',    element: 'Hielo',  ready: false },
-  { id: 'luz',      name: 'Alba',     element: 'Luz',    ready: false },
-  { id: 'sombra',   name: 'Umbra',    element: 'Sombra', ready: false },
+  { id: 'brisa',    name: 'Céfiro',   element: 'Viento', ready: true },
+  { id: 'marea',    name: 'Marea',    element: 'Agua',   ready: true },
+  { id: 'roca',     name: 'Pedernal', element: 'Tierra', ready: true },
+  { id: 'rayo',     name: 'Trueno',   element: 'Trueno', ready: true },
+  { id: 'escarcha', name: 'Nival',    element: 'Hielo',  ready: true },
+  { id: 'luz',      name: 'Alba',     element: 'Luz',    ready: true },
+  { id: 'sombra',   name: 'Umbra',    element: 'Sombra', ready: true },
 ];
 export const DEFAULT_PET = 'chispa';
 export const speciesById = id => PET_SPECIES.find(s => s.id === id) || PET_SPECIES[0];

@@ -9,7 +9,7 @@ import * as Profiles from './profiles.js';
 import * as Gear from './gear.js';
 import { art, CHARACTERS, characterById, characterImg, guardianFor, guardianEvolutions, syncGuardianSeen, GUARDIANS, WORLDS, worldById, DEFAULT_WORLD, DEFAULT_PET, PET_SPECIES, speciesById } from './catalog.js';
 
-export const APP_VERSION = '1.8.0';
+export const APP_VERSION = '1.9.0';
 const BACKUP_REMINDER_DAYS = 7;
 
 const $ = sel => document.querySelector(sel);
@@ -934,7 +934,7 @@ async function editorSheet({ title, item, maxXp, allowBonus, allowDelete }) {
     <label class="field"><span>¿Es un reto de resistencia? (una vez al día, ×3 a su jefe)</span>
       <select id="edResist">
         <option value="">No, actividad normal</option>
-        ${G.BOSSES.map(b => `<option value="${b.id}" ${it.resist === b.id ? 'selected' : ''}>Sí, contra ${esc(b.name.split(',')[0])}</option>`).join('')}
+        ${G.activeBosses().map(b => `<option value="${b.id}" ${it.resist === b.id ? 'selected' : ''}>Sí, contra ${esc(b.name.split(',')[0])}</option>`).join('')}
       </select>
     </label>` : ''}
     <div class="btn-row">

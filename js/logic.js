@@ -487,8 +487,45 @@ export const BOSSES = [
   { id: 'estres',          name: 'Ira, el Ogro del Estrés',        weak: 'resistencia', taunt: '"¡No tienes tiempo para nada!"' },
   { id: 'distraccion',     name: 'Scrollax, el de Mil Pantallas',  weak: 'sabiduria',   taunt: '"Solo un video más…"' },
   { id: 'soledad',         name: 'Sombra de la Soledad',           weak: 'vinculo',     taunt: '"Mejor quédate solo."' },
+  // T-01 (GPT): todavía sin ilustración. Entran en la rotación cuando llegue
+  // su arte, agregando una etapa nueva en BOSS_ERAS (ver abajo).
+  { id: 'multitarea',     name: 'Multyra, la Hidra de los Pendientes',   weak: 'intelecto',   taunt: '"¿Ya vas a terminar? Abramos tres cosas más."',
+    fear: 'Abrir tareas por impulso y dejar que se acumulen sin elegir una prioridad.',
+    challenge: 'Elegí una sola tarea y le dediqué 15 minutos sin saltar a otra', ready: false },
+  { id: 'perfeccionismo', name: 'Perfectus, el Caballero de Porcelana',  weak: 'sabiduria',   taunt: '"Si tiene una grieta, tíralo entero."',
+    fear: 'El miedo a entregar algo imperfecto y el pensamiento de todo o nada.',
+    challenge: 'Definí qué era suficiente y lo di por terminado', ready: false },
+  { id: 'inercia',        name: 'Glacior, el Dragón de la Inercia',      weak: 'fuerza',      taunt: '"El primer paso pesa más que toda la montaña."',
+    fear: 'El bloqueo ante el primer movimiento, incluso cuando ya elegiste qué hacer.',
+    challenge: 'Hice 2 minutos del primer paso de algo pendiente', ready: false },
+  { id: 'desvelo',        name: 'Noxveil, el Cuervo del Desvelo',        weak: 'resistencia', taunt: '"Dame otros veinte minutos. Mañana vemos."',
+    fear: 'El hábito de alargar la noche con actividades que desplazan el descanso.',
+    challenge: 'Cerré lo que me desvelaba y empecé mi rutina de dormir a tiempo', ready: false },
 ];
 export const BOSS_REWARD_XP = 150;
+export const activeBosses = () => BOSSES.filter(b => b.ready !== false);
+
+/**
+ * Rotación de jefes por etapas. Cada etapa tiene un mes de inicio y su lista.
+ * Agregar una etapa con un mes FUTURO no cambia ni el mes en curso ni los
+ * pasados (trofeos, daño ya hecho). La primera etapa conserva la fórmula
+ * original para que nada de lo ya jugado cambie.
+ */
+export const BOSS_ERAS = [
+  { from: null, ids: ['pereza', 'procrastinacion', 'desorden', 'estres', 'distraccion', 'soledad'] },
+  // Cuando lleguen las ilustraciones de T-01, por ejemplo:
+  // { from: '2027-02', ids: ['pereza', 'multitarea', 'procrastinacion', 'perfeccionismo', 'desorden',
+  //                         'inercia', 'estres', 'desvelo', 'distraccion', 'soledad'] },
+];
+
+const monthIndex = mk => { const [y, m] = mk.split('-').map(Number); return y * 12 + (m - 1); };
+
+/** Jefe que corresponde a un mes ('2026-11'). */
+export function bossForMonth(mk, eras = BOSS_ERAS) {
+  const era = [...eras].reverse().find(e => !e.from || monthIndex(mk) >= monthIndex(e.from));
+  const idx = era.from ? monthIndex(mk) - monthIndex(era.from) : monthIndex(mk);
+  return BOSSES.find(b => b.id === era.ids[idx % era.ids.length]);
+}
 
 /** x3 si es el reto de resistencia de ese jefe, x2 si es su stat débil. */
 export function bossMultiplier(entry, boss) {
@@ -499,7 +536,7 @@ export function bossMultiplier(entry, boss) {
 export function bossStatus(state, now = Date.now()) {
   const mk = monthKey(now);
   const [y, m] = mk.split('-').map(Number);
-  const boss = BOSSES[(y * 12 + (m - 1)) % BOSSES.length];
+  const boss = bossForMonth(mk);
   const monthStart = new Date(y, m - 1, 1).getTime();
   const daysInMonth = new Date(y, m, 0).getDate();
   const base = state.log.filter(isBase);

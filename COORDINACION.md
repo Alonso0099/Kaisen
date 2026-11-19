@@ -30,11 +30,13 @@ Prioridad de arriba hacia abajo. Tamaños y nombres según ARTE.md.
 | A-07 | 18 insignias de logros | `art/badges/<id-logro>.webp` | ✅ |
 | A-08 | Más personajes jugables (las clases que quieras) | `art/chars/<id>.webp` | ✅ |
 | A-09 | Formas 2–5 de los guardianes | `art/guardians/<stat>-{2..5}.webp` | ✅ |
-| A-10 | 8 huevos y las otras 7 especies de mascota | `art/eggs/…`, `art/pets/…` | ⏳ |
-| T-01 | Para cada **jefe nuevo** (hasta 4 más): nombre, a qué miedo o mal hábito representa, frase de burla, stat débil y reto de resistencia | texto | ⏳ |
+| A-10 | 8 huevos y las otras 7 especies de mascota | `art/eggs/…`, `art/pets/…` | ✅ |
+| T-01 | Para cada **jefe nuevo** (hasta 4 más): nombre, a qué miedo o mal hábito representa, frase de burla, stat débil y reto de resistencia | texto | ✅ |
 | T-02 | Nombres de guardianes (Skadi, Runa, Véra, Eira, Liv) y especies (Céfiro, Marea, Pedernal, Trueno, Nival, Alba, Umbra) | texto | ✅ |
 | T-03 | Una frase corta de cada guardián al evolucionar | texto | ✅ |
-| A-11 | 19 íconos de piezas de equipo (lista con ids en ARTE.md → Equipo) | `art/items/<id>.webp` | ⏳ |
+| A-11 | 19 íconos de piezas de equipo (lista con ids en ARTE.md → Equipo) | `art/items/<id>.webp` | ✅ |
+| A-12 | Ilustraciones de los 4 jefes de T-01 (mismo estilo y tamaño que A-04). Al llegar entran en la rotación desde el mes siguiente | `art/bosses/{multitarea,perfeccionismo,inercia,desvelo}.webp` | ⏳ |
+| A-13 | (opcional) 4 piezas épicas de botín para esos jefes: nombre, espacio, stat e ícono 512×512 | `art/items/<id>.webp` + texto | ⏳ |
 
 **Reglas que hacen que todo encaje:** fondo transparente (salvo los mundos), lienzo 720×1000 con los pies en el borde inferior para las figuras de pie, mismo estilo en toda la serie (adjuntar una imagen anterior como referencia) y sin texto dentro de las imágenes.
 
@@ -66,3 +68,6 @@ Prioridad de arriba hacia abajo. Tamaños y nombres según ARTE.md.
 | T-03 | Frases de evolución de las guardianas | 2026-11-19 |
 | A-09 | Formas 2–5 de las seis guardianas (24 imágenes) | 2026-11-19 |
 | — | Ícono aprobado: flecha dorada de fuego | 2026-11-19 |
+| A-10 | 8 huevos y 42 etapas de las siete especies nuevas | 2026-11-19 |
+| A-11 | 19 íconos de equipo | 2026-11-19 |
+| T-01 | Textos de Multyra, Perfectus, Glacior y Noxveil (fuera de rotación hasta A-12) | 2026-11-19 |
