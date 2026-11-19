@@ -264,7 +264,9 @@ export function defaultState() {
     rewards: DEFAULT_REWARDS.map(r => ({ ...r })),  // recompensas reales de la tienda
     purchases: [],                                   // todo lo comprado con monedas
     shieldDays: [],                                  // días salvados por un escudo de racha
-    equipped: { sky: 'sky-default', title: null, world: 'atardecer', gear: {} },
+    equipped: { title: null, world: 'atardecer', gear: {} },
+    pinned: [],          // actividades fijadas como acceso rápido en Inicio (máx. 3)
+    notices: {},         // avisos únicos ya mostrados (p. ej. devolución de Ambientes)
     quests: [],
     questHistory: [],
     log: [],
@@ -366,7 +368,9 @@ export function validateImport(obj) {
     rewards: Array.isArray(data.rewards) ? data.rewards.filter(r => r && typeof r.name === 'string' && Number.isFinite(r.cost)) : base.rewards,
     purchases: Array.isArray(data.purchases) ? data.purchases.filter(x => x && Number.isFinite(x.cost)) : [],
     shieldDays: Array.isArray(data.shieldDays) ? data.shieldDays : [],
-    equipped: { ...base.equipped, ...(data.equipped || {}), gear: { ...((data.equipped || {}).gear || {}) } },
+    equipped: (({ sky, ...rest }) => rest)({ ...base.equipped, ...(data.equipped || {}), gear: { ...((data.equipped || {}).gear || {}) } }),
+    pinned: Array.isArray(data.pinned) ? data.pinned.filter(x => typeof x === 'string').slice(0, 3) : [],
+    notices: data.notices && typeof data.notices === 'object' ? { ...data.notices } : {},
     quests: Array.isArray(data.quests) ? data.quests.filter(okAct) : [],
     questHistory: Array.isArray(data.questHistory) ? data.questHistory : [],
     log: data.log.filter(okEntry),
@@ -621,14 +625,21 @@ export function petStatus(state, now = Date.now()) {
   const next = PET_STAGES[stage + 1] || null;
   const from = PET_STAGES[stage].min;
 
-  // Ánimo: según cuántos días llevas sin registrar.
+  // Ánimo: nunca castiga la ausencia. 'happy' si registraste hoy, 'rest' si
+  // todavía no, y 'welcome' el día que vuelves después de 2+ días sin registrar.
   let idle = 0;
+  const today = dayKey(now);
   if (activeDays) {
-    const today = dayKey(now);
     let cursor = today;
     while (!days.has(cursor) && idle < 30) { idle++; cursor = shiftDay(cursor, -1); }
   }
-  const mood = !activeDays ? 'egg' : idle === 0 ? 'happy' : idle === 1 ? 'hungry' : 'sad';
+  let gapBeforeToday = 0;
+  if (days.has(today)) {
+    let cursor = shiftDay(today, -1);
+    while (!days.has(cursor) && gapBeforeToday < 30) { gapBeforeToday++; cursor = shiftDay(cursor, -1); }
+    if (gapBeforeToday >= 30) gapBeforeToday = 0; // primer día de juego: no es "volver"
+  }
+  const mood = !activeDays ? 'egg' : idle > 0 ? 'rest' : gapBeforeToday >= 2 ? 'welcome' : 'happy';
   return {
     stage, stageName: PET_STAGES[stage].name, activeDays, mood, idleDays: idle,
     next, daysToNext: next ? next.min - activeDays : 0,
@@ -662,7 +673,9 @@ export function wallet(state, now = Date.now()) {
   const fromChests = [...days].reduce((a, d) => a + chestFor(d), 0);
   const fromAchievements = unlockedAchievements(state, deriveProfile(state, now)).length * COINS.achievement;
   const earned = fromLog + fromChests + fromAchievements;
-  const spent = (state.purchases || []).reduce((a, p) => a + p.cost, 0);
+  // Los "Ambientes" (kind 'sky') se retiraron de la tienda: no cuentan como gasto,
+  // así se devuelven solos. La compra queda en el historial.
+  const spent = (state.purchases || []).filter(p => p.kind !== 'sky').reduce((a, p) => a + p.cost, 0);
   return {
     earned, spent, balance: earned - spent,
     chestToday: days.has(dayKey(now)) ? chestFor(dayKey(now)) : null,
@@ -671,12 +684,6 @@ export function wallet(state, now = Date.now()) {
 
 export const SHOP = {
   shield: { id: 'shield', name: 'Escudo de racha', cost: 120, max: 2 },
-  skies: [
-    { id: 'sky-default', name: 'Atardecer',        cost: 0 },
-    { id: 'sky-noche',   name: 'Noche estrellada', cost: 300 },
-    { id: 'sky-aurora',  name: 'Aurora',           cost: 300 },
-    { id: 'sky-rosa',    name: 'Cielo de fresa',   cost: 300 },
-  ],
   titles: [
     { id: 't-imparable',  name: 'El Imparable',       cost: 200 },
     { id: 't-libros',     name: 'Devoralibros',       cost: 200 },
@@ -685,7 +692,7 @@ export const SHOP = {
     { id: 't-corazon',    name: 'Corazón de Oro',     cost: 200 },
   ],
 };
-const cosmetic = id => [...SHOP.skies, ...SHOP.titles].find(x => x.id === id);
+const cosmetic = id => SHOP.titles.find(x => x.id === id);
 
 export const owns = (state, id) => cosmetic(id)?.cost === 0 || (state.purchases || []).some(p => p.itemId === id);
 export const shieldsLeft = state => (state.purchases || []).filter(p => p.kind === 'shield').length - (state.shieldDays || []).length;
@@ -717,7 +724,7 @@ export function buyCosmetic(state, itemId, now = Date.now()) {
   const item = cosmetic(itemId);
   if (!item) throw new Error('Artículo no encontrado');
   if (owns(state, itemId)) throw new Error('Ya lo tienes');
-  return pay(state, { kind: itemId.startsWith('sky') ? 'sky' : 'title', itemId, name: item.name, cost: item.cost }, now);
+  return pay(state, { kind: 'title', itemId, name: item.name, cost: item.cost }, now);
 }
 export function equip(state, slot, itemId) {
   if (itemId && !owns(state, itemId)) throw new Error('Aún no lo tienes');
@@ -790,4 +797,44 @@ export function markPetNameAsked(state) {
 /** ¿Hay que ofrecer "Ponle nombre a tu compañero"? Solo al eclosionar, una vez por especie. */
 export function shouldAskPetName(state, beforeStage, afterStage) {
   return beforeStage === 0 && afterStage >= 1 && !petCustomName(state) && !state.pet?.asked?.[state.pet.species];
+}
+
+// =====================================================================
+// Claridad: accesos rápidos y devoluciones
+// =====================================================================
+export const QUICK_MAX = 3;
+
+/** Monedas devueltas por los Ambientes retirados de la tienda. */
+export const skyRefund = state => (state.purchases || []).filter(p => p.kind === 'sky').reduce((a, p) => a + p.cost, 0);
+
+/**
+ * Accesos rápidos de Inicio: primero las fijadas por el jugador y después las
+ * que más usa (últimos 60 días; empate → la más reciente). Los retos de
+ * resistencia no entran solos (el del jefe del mes ya está en su tarjeta).
+ */
+export function quickActivities(state, now = Date.now(), n = QUICK_MAX) {
+  const exists = id => state.activities.find(a => a.id === id);
+  const out = (state.pinned || []).map(exists).filter(Boolean).slice(0, n);
+  const since = now - 60 * 86400000;
+  const stats = {};
+  for (const e of state.log) {
+    if (e.type !== 'activity' || e.ts < since) continue;
+    const s = (stats[e.refId] ||= { count: 0, last: 0 });
+    s.count++; s.last = Math.max(s.last, e.ts);
+  }
+  const freq = Object.entries(stats)
+    .sort(([, a], [, b]) => b.count - a.count || b.last - a.last)
+    .map(([id]) => exists(id))
+    .filter(a => a && !a.resist && !out.includes(a));
+  return [...out, ...freq].slice(0, n);
+}
+
+export const isPinned = (state, id) => (state.pinned || []).includes(id);
+
+/** Fija o suelta una actividad. Si ya hay 3 fijadas, suelta la más antigua. */
+export function togglePin(state, id) {
+  const p = (state.pinned || []).filter(x => x !== id);
+  if (p.length === (state.pinned || []).length) { p.push(id); while (p.length > QUICK_MAX) p.shift(); }
+  state.pinned = p;
+  return p.includes(id);
 }

@@ -310,9 +310,11 @@ test('mascota: crece con los días activos y no retrocede', () => {
   assert.equal(p.stageName, 'Cachorro');
   assert.equal(p.mood, 'happy');
   assert.equal(p.daysToNext, 14);
-  assert.equal(L.petStatus(s, t + 7 * DAY).mood, 'hungry');
+  assert.equal(L.petStatus(s, t + 7 * DAY).mood, 'rest');   // nunca "hambre" ni "triste"
   p = L.petStatus(s, t + 20 * DAY);
-  assert.equal(p.mood, 'sad');
+  assert.equal(p.mood, 'rest');
+  L.logActivity(s, 'def-gym', { now: t + 20 * DAY });       // vuelve tras varios días
+  assert.equal(L.petStatus(s, t + 20 * DAY).mood, 'welcome');
   assert.equal(p.stageName, 'Cachorro'); // triste, pero no retrocede
   for (let d = 30; d < 130; d++) L.logActivity(s, 'def-gym', { now: t + d * DAY });
   p = L.petStatus(s, t + 129 * DAY);
@@ -349,7 +351,7 @@ test('migración: respaldos anteriores reciben retos, tienda y escudos', () => {
   assert.equal(back.activities.filter(a => a.resist).length, 10);
   assert.equal(back.rewards.length, 4);
   assert.deepEqual(back.purchases, []);
-  assert.equal(back.equipped.sky, 'sky-default');
+  assert.equal(back.equipped.sky, undefined);
   // Una vez migrado, si borras un reto no vuelve a aparecer
   back.activities = back.activities.filter(a => a.id !== 'res-alarma');
   const again = L.validateImport(JSON.parse(JSON.stringify(L.exportPayload(back))));
@@ -389,22 +391,62 @@ test('tienda: comprar no baja la XP y no deja gastar de más', () => {
   assert.equal(L.wallet(s, now).balance, bal - 100); // usar el cupón no cobra otra vez
 });
 
-test('tienda: cosméticos se compran una vez y se equipan', () => {
+test('tienda: títulos se compran una vez y se equipan', () => {
   const s = L.defaultState();
   const t = noon(2026, 11, 2);
-  assert.ok(L.owns(s, 'sky-default'));
-  assert.ok(!L.owns(s, 'sky-noche'));
-  assert.throws(() => L.equip(s, 'sky', 'sky-noche'));
+  assert.ok(!L.owns(s, 't-imparable'));
+  assert.throws(() => L.equip(s, 'title', 't-imparable'));
   for (let d = 0; d < 20; d++) for (const id of ['def-gym', 'def-tarea', 'def-tiempo']) L.logActivity(s, id, { now: t + d * DAY });
   const now = t + 19 * DAY;
-  L.buyCosmetic(s, 'sky-noche', now);
-  assert.throws(() => L.buyCosmetic(s, 'sky-noche', now), /Ya lo tienes/);
-  L.equip(s, 'sky', 'sky-noche');
   L.buyCosmetic(s, 't-imparable', now);
+  assert.throws(() => L.buyCosmetic(s, 't-imparable', now), /Ya lo tienes/);
   L.equip(s, 'title', 't-imparable');
   assert.equal(L.titleName(s), 'El Imparable');
   L.equip(s, 'title', null);
   assert.equal(L.titleName(s), null);
+  assert.equal(L.SHOP.skies, undefined);                     // Ambientes retirados
+});
+
+test('Ambientes retirados: las monedas gastadas se devuelven solas', () => {
+  const s = L.defaultState();
+  const t = noon(2026, 11, 2);
+  for (let d = 0; d < 20; d++) for (const id of ['def-gym', 'def-tarea', 'def-tiempo']) L.logActivity(s, id, { now: t + d * DAY });
+  const now = t + 19 * DAY;
+  const before = L.wallet(s, now).balance;
+  // compra de la versión anterior
+  s.purchases.push({ id: 'old', ts: now, kind: 'sky', itemId: 'sky-noche', name: 'Noche estrellada', cost: 300 });
+  s.equipped.sky = 'sky-noche';
+  assert.equal(L.wallet(s, now).balance, before);            // no descuenta
+  assert.equal(L.skyRefund(s), 300);
+  const back = L.validateImport(JSON.parse(JSON.stringify(L.exportPayload(s))));
+  assert.equal(back.equipped.sky, undefined);
+  assert.equal(L.wallet(back, now).balance, before);
+  assert.equal(back.purchases.length, 1);                    // la compra queda en el historial
+});
+
+test('accesos rápidos: fijadas primero, luego las más usadas, sin retos', () => {
+  const s = L.defaultState();
+  const t = noon(2026, 11, 1);
+  assert.deepEqual(L.quickActivities(s, t), []);             // perfil nuevo: nada todavía
+  for (let d = 0; d < 6; d++) L.logActivity(s, 'def-leer', { now: t + d * DAY });
+  for (let d = 0; d < 3; d++) L.logActivity(s, 'def-gym', { now: t + d * DAY });
+  for (let d = 0; d < 3; d++) L.logActivity(s, 'def-hike', { now: t + 10 * DAY + d });   // empate con gym, más reciente
+  L.logActivity(s, 'def-cocinar', { now: t });
+  for (let d = 0; d < 9; d++) L.logActivity(s, 'res-alarma', { now: t + d * DAY });       // reto: no entra solo
+  const now = t + 12 * DAY;
+  assert.deepEqual(L.quickActivities(s, now).map(a => a.id), ['def-leer', 'def-hike', 'def-gym']);
+  assert.equal(L.togglePin(s, 'def-cocinar'), true);
+  assert.deepEqual(L.quickActivities(s, now).map(a => a.id), ['def-cocinar', 'def-leer', 'def-hike']);
+  L.togglePin(s, 'def-tarea'); L.togglePin(s, 'def-byu-no-existe'); L.togglePin(s, 'def-mtb');
+  assert.equal(s.pinned.length, 3);                          // máximo 3: suelta la más antigua
+  assert.ok(!L.isPinned(s, 'def-cocinar'));
+  assert.deepEqual(L.quickActivities(s, now).map(a => a.id), ['def-tarea', 'def-mtb', 'def-leer']); // la inexistente se ignora; el hueco lo llena la más usada
+  L.togglePin(s, 'def-mtb');
+  assert.ok(!L.isPinned(s, 'def-mtb'));
+  // registros de hace más de 60 días no cuentan
+  assert.deepEqual(L.quickActivities(s, t + 200 * DAY).map(a => a.id), ['def-tarea']);
+  const back = L.validateImport(JSON.parse(JSON.stringify(L.exportPayload(s))));
+  assert.deepEqual(back.pinned, s.pinned);
 });
 
 test('escudo de racha: salva un día perdido, máximo 2 guardados', () => {

@@ -60,26 +60,14 @@
         </div>
       </div>
 
+      <button class="btn btn-primary btn-block log-main" id="logMainBtn">＋ Registrar actividad</button>
+      <div id="quickLog" class="quick-grid"></div>
+
       <button class="goal" id="goalBanner"></button>
 
-
-      <h2 class="section-title">¡Registrar!</h2>
-      <p class="hint">Un toque registra la actividad. Mantén presionado para editarla.</p>
-      <div id="quickLog"></div>
-
       <div class="minis">
-        <button class="mini boss-mini" id="bossMini" aria-label="Jefe del mes"></button>
+        <div class="mini boss-mini" id="bossMini" role="button" tabindex="0" aria-label="Jefe del mes"></div>
         <button class="mini pet-mini" id="petMini" aria-label="Mascota"></button>
-      </div>
-
-      <h2 class="section-title">Retos de resistencia</h2>
-      <p class="hint">Lo que te cuesta o lo que evitas. Uno por día cada uno, y golpe crítico <b>×3</b> a su jefe.</p>
-      <div id="resistLog"></div>
-
-      <h2 class="section-title">Stats</h2>
-      <div class="stats-panel panel">
-        <div class="radar" id="radar"></div>
-        <div class="stats-list" id="statsGrid"></div>
       </div>
     </section>
 
@@ -129,8 +117,6 @@
       <p class="hint">Se desbloquean al subir de rango.</p>
       <div id="worldList" class="sky-grid"></div>
 
-      <h2 class="section-title">Ambientes</h2>
-      <div id="skyList" class="sky-grid"></div>
 
       <h2 class="section-title">Títulos</h2>
       <div id="titleList" class="list"></div>
@@ -138,7 +124,8 @@
 
     <!-- ============ PROGRESO: LOGROS ============ -->
     <section class="view" id="view-achievements" aria-label="Logros">
-      <div class="seg seg-3"><button class="seg-btn on" data-view="achievements">Logros</button><button class="seg-btn" data-view="guardians">Guardianes</button><button class="seg-btn" data-view="history">Historial</button></div>
+      <div class="seg seg-3"><button class="seg-btn on" data-view="achievements">Logros</button><button class="seg-btn" data-view="guardians">Stats</button><button class="seg-btn" data-view="history">Historial</button></div>
+      <div class="panel streak-panel" id="streakPanel"></div>
       <button class="btn btn-yellow btn-block" id="shareProgressBtn">Compartir mi progreso</button>
       <h2 class="section-title">Logros</h2>
       <div class="ach-summary" id="achSummary"></div>
@@ -162,15 +149,20 @@
 
     <!-- ============ PROGRESO: GUARDIANES ============ -->
     <section class="view" id="view-guardians" aria-label="Guardianes">
-      <div class="seg seg-3"><button class="seg-btn" data-view="achievements">Logros</button><button class="seg-btn on" data-view="guardians">Guardianes</button><button class="seg-btn" data-view="history">Historial</button></div>
-      <h2 class="section-title">Guardianes</h2>
+      <div class="seg seg-3"><button class="seg-btn" data-view="achievements">Logros</button><button class="seg-btn on" data-view="guardians">Stats</button><button class="seg-btn" data-view="history">Historial</button></div>
+      <h2 class="section-title">Stats</h2>
+      <div class="stats-panel panel">
+        <div class="radar" id="radar"></div>
+        <div class="stats-list" id="statsGrid"></div>
+      </div>
+      <h2 class="section-title">Guardianas</h2>
       <p class="hint">Cada stat tiene una guardiana que evoluciona cuando esa stat sube de nivel. Toca una para ver su detalle.</p>
       <div id="guardianGrid" class="guardian-grid"></div>
     </section>
 
     <!-- ============ PROGRESO: HISTORIAL ============ -->
     <section class="view" id="view-history" aria-label="Historial">
-      <div class="seg seg-3"><button class="seg-btn" data-view="achievements">Logros</button><button class="seg-btn" data-view="guardians">Guardianes</button><button class="seg-btn on" data-view="history">Historial</button></div>
+      <div class="seg seg-3"><button class="seg-btn" data-view="achievements">Logros</button><button class="seg-btn" data-view="guardians">Stats</button><button class="seg-btn on" data-view="history">Historial</button></div>
       <h2 class="section-title">Historial</h2>
       <p class="hint">¿Te equivocaste? Toca ↶ para deshacer un registro.</p>
       <div id="historyList"></div>

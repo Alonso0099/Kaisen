@@ -45,23 +45,24 @@ npm test                        # pruebas de la lógica de XP, niveles, rachas y
 
 ## 🎮 Cómo se juega
 
-- **Inicio**: tu personaje en su mundo, rango (E → SSS), nivel y barra de XP, un aviso con tu meta más cercana, los botones de actividades, las tarjetas de jefe y mascota, los retos y el gráfico radar de stats. Toca una stat para ver su detalle y su guardián. **Un toque registra**. Mantén presionado un botón para editar esa actividad.
+- **Inicio**: tu personaje en su mundo, rango, nivel y XP; el botón **Registrar actividad** (abre el catálogo completo), hasta **3 accesos rápidos** (las que fijes con ★ y luego las que más usas), un aviso con tu **próximo hito** («Registra un día más para que nazca tu mascota») y las tarjetas del **jefe** (con su reto del día) y la **mascota**. Mantén presionado un acceso para editar esa actividad.
 - **Bono opcional**: si una actividad tiene bono (p. ej. *Mountain bike → Ruta larga +15*), al tocarla eliges *Normal* o *Bono*.
 - **Jefe del mes**: cada mes aparece un jefe (Pereza, Procrastinación, Desorden, Estrés, Distracción, Soledad). Cada XP que ganas le quita 1 punto de vida, y la stat a la que es débil hace **doble daño**. Si lo derrotas antes de fin de mes reclamas +150 XP y queda como trofeo.
 - **Misiones semanales**: 3 por semana, se renuevan cada lunes (enfocarte en una stat, juntar XP, y constancia o variedad). Al cumplirlas reclamas XP extra; los premios generales van a tu stat más débil.
-- **Mascota**: nace de un huevo y evoluciona según tus días activos (2, 7, 21, 45 y 90). Nunca retrocede; solo se pone triste si dejas de registrar. Tócala en Inicio para verla y cambiarle el nombre.
-- **Retos de resistencia**: cosas que te cuestan o que evitas ("Sin redes después de las 9 pm", "Hice primero lo más difícil"). Cada uno cuenta una vez al día y le da **golpe crítico ×3** a su jefe. Son editables como cualquier actividad.
+- **Mascota**: nace de un huevo y evoluciona según tus días activos (2, 7, 21, 45 y 90). Nunca retrocede ni se pone triste: si no registraste hoy "te espera", y el día que vuelves está feliz de verte. Tócala en Inicio para verla y cambiarle el nombre.
+- **Retos de resistencia**: cosas que te cuestan o que evitas. Cada uno cuenta una vez al día y le da **golpe crítico ×3** a su jefe. El reto del jefe del mes está en su tarjeta de Inicio; todos están en el catálogo.
 - **Monedas y tienda**: además de XP ganas monedas (por cada registro, logro, misión semanal y jefe, más un **cofre diario** con premio variable en el primer registro del día). Se gastan en la Tienda sin tocar tu XP ni tu nivel:
   - **Recompensas reales** que tú defines (un antojo, noche de película…). Al canjear recibes un cupón que puedes compartir y marcar como usado.
   - **Escudo de racha**: si un día no registras, se usa solo y la racha sigue viva (máximo 2 guardados).
-  - **Cielos y títulos** para personalizar la escena.
+  - **Títulos** para tu héroe. (Los "Ambientes" se retiraron en la versión 2.0: a quien los había comprado se le devolvieron las monedas.)
 - **Compartir**: tarjetas ilustradas (progreso, subida de nivel, jefe derrotado, cupón) que se generan en tu teléfono y se mandan por la hoja de compartir.
 - **Misiones únicas**: tareas de una sola vez con su propia XP (5–200). Al completarlas desaparecen y pasan a "Misiones completadas".
 - **Progreso → Historial**: todo lo registrado, agrupado por día, con botón ↶ para deshacer. Deshacer una misión la devuelve a pendientes.
+- **Progreso → Stats**: el gráfico radar, el nivel de cada stat y las guardianas.
 - **Progreso → Logros**: 18 logros, cada uno da 25 monedas (primer nivel, rachas de 3/7/30 días, terminar un libro, equilibrio en las 6 stats, etc.).
 - **Ajustes**: perfiles (crear, cambiar, borrar), nombre, personaje, animación en reposo (balanceo o quieto), crear/editar/borrar actividades (XP de 5 a 50), respaldo y reinicio.
 
-**Racha**: días seguidos con al menos un registro. Sigue viva si registraste ayer (el chip de la llama se ve gris hasta que registres hoy).
+**Racha**: días seguidos con al menos un registro. Está completa en **Progreso → Logros** (actual, mejor y escudos). Arriba solo aparece cuando ya es de 3 días o más, y nunca se muestra como "rota".
 
 **Rangos**: Novato (1) → Aprendiz (3) → Guerrero (5) → Élite (10) → Campeón (15) → Héroe (20) → Leyenda (30) → Mito (50).
 Desde nivel 5 tu personaje tiene **aura** del color de su rango, y las brasas de energía aumentan con cada nivel.
@@ -125,6 +126,10 @@ tests/logic.test.js    Pruebas automáticas de la lógica
 ```
 
 ---
+
+## ✨ Al registrar
+
+Cada registro muestra **un solo aviso**: qué registraste, el XP y las monedas, hasta dos líneas con lo que desbloqueaste (logros, stats, misión cumplida…) y **Deshacer**, que no se borra aunque lleguen otros avisos. Como máximo hay una celebración a pantalla completa por registro (subir de nivel > eclosión > evolución de guardiana); lo demás va en ese aviso.
 
 ## 🎒 Equipo
 

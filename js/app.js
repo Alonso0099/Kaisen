@@ -9,7 +9,7 @@ import * as Profiles from './profiles.js';
 import * as Gear from './gear.js';
 import { art, CHARACTERS, characterById, characterImg, guardianFor, guardianEvolutions, syncGuardianSeen, GUARDIANS, WORLDS, worldById, DEFAULT_WORLD, DEFAULT_PET, PET_SPECIES, speciesById } from './catalog.js';
 
-export const APP_VERSION = '1.10.0';
+export const APP_VERSION = '2.0.0';
 const BACKUP_REMINDER_DAYS = 7;
 
 const $ = sel => document.querySelector(sel);
@@ -67,11 +67,69 @@ function commit(mutate, { celebrate = true } = {}) {
   save();
   const after = G.deriveProfile(state);
   renderAll(after);
-  if (celebrate) {
-    celebrateAdventure(beforeAdv, adventure());
-    celebrateChanges(before, after);
-  }
+  lastNews = [];
+  if (celebrate) lastNews = collectNews(beforeAdv, adventure(), before, after);
   return result;
+}
+
+/**
+ * Junta todo lo que desbloqueó un registro en una lista de líneas para UN
+ * solo aviso, y muestra como máximo UNA celebración a pantalla completa
+ * (prioridad: subir de nivel > eclosión > evolución de guardiana).
+ */
+let lastNews = [];
+function collectNews(beforeAdv, afterAdv, before, after) {
+  const lines = [];
+  const big = [];  // [prioridad, mostrar, línea si no se muestra]
+  // Jefe
+  if (afterAdv.boss.refId === beforeAdv.boss.refId && afterAdv.boss.damage > beforeAdv.boss.damage) {
+    document.querySelectorAll('.boss-hit').forEach(el => { el.classList.remove('hit-shake'); void el.offsetWidth; el.classList.add('hit-shake'); });
+  }
+  if (afterAdv.boss.defeated && !beforeAdv.boss.defeated && afterAdv.boss.refId === beforeAdv.boss.refId) {
+    lines.push(`👹 ¡Derrotaste a ${esc(afterAdv.boss.name.split(',')[0])}! Reclámalo en Misiones`);
+  }
+  // Misiones semanales
+  afterAdv.weekly.forEach((m, i) => {
+    const b = beforeAdv.weekly[i];
+    if (m.done && b && b.refId === m.refId && !b.done) lines.push(`🗓️ Misión cumplida: ${esc(m.title)}`);
+  });
+  // Mascota
+  if (afterAdv.pet.stage > beforeAdv.pet.stage) {
+    if (G.shouldAskPetName(state, beforeAdv.pet.stage, afterAdv.pet.stage)) {
+      big.push([2, () => queueModal(askPetNameOnHatch), '🐣 ¡Tu huevo eclosionó! Ponle nombre en su ficha']);
+    } else lines.push(`🐣 ${esc(petName())} ahora es ${afterAdv.pet.stageName}`);
+  }
+  // Stats
+  const ups = G.STATS.filter(s => after.stats[s.id].level > before.stats[s.id].level);
+  if (ups.length) lines.push(ups.map(s => `${s.name} nivel ${after.stats[s.id].level}`).join(' · '));
+  // Logros
+  const fresh = G.unlockedAchievements(state, after).filter(id => !state.seenAchievements.includes(id));
+  if (fresh.length) {
+    state.seenAchievements = [...new Set([...state.seenAchievements, ...fresh])];
+    for (const id of fresh) { const a = G.ACHIEVEMENTS.find(x => x.id === id); lines.push(`${a.icon} Logro: ${esc(a.name)}`); }
+  }
+  // Guardianas
+  for (const { stat, tier } of guardianEvolutions(after.stats, state.guardianSeen)) {
+    state.guardianSeen = { ...state.guardianSeen, [stat]: tier };
+    const name = GUARDIANS[stat]?.name || G.statById(stat).name;
+    big.push([3, () => queueModal(() => showGuardianEvolution(stat, tier)), `✨ ${esc(name)} evolucionó a la forma ${tier}`]);
+  }
+  // Nivel general
+  if (after.level > before.level) big.push([1, () => showLevelUp(after), `⬆️ ¡Nivel ${after.level}!`]);
+  big.sort((a, b) => a[0] - b[0]);
+  big.forEach(([, show, line], i) => (i === 0 ? show() : lines.unshift(line)));
+  save();
+  return lines;
+}
+
+/** Aviso único de resultado: qué pasó, cuánto ganaste, qué se desbloqueó y "Deshacer". */
+function showResult(head, news, onUndo) {
+  const MAX = 2;
+  const extra = news.length > MAX ? `<span class="res-more">+${news.length - MAX} más en Progreso</span>` : '';
+  toast(`<span class="res-head">${head}</span>${news.slice(0, MAX).map(l => `<span class="res-line">${l}</span>`).join('')}${extra}`, {
+    kind: 'result', pinned: true, duration: news.length ? 7000 : 5000,
+    action: onUndo ? 'Deshacer' : null, onAction: onUndo,
+  });
 }
 
 /** Foto del estado de jefe, misiones semanales y mascota. */
@@ -79,25 +137,6 @@ function adventure() {
   return { boss: G.bossStatus(state), weekly: G.weeklyMissions(state), pet: G.petStatus(state) };
 }
 const claimables = adv => adv.weekly.filter(m => m.done && !m.claimed).length + (adv.boss.defeated && !adv.boss.claimed ? 1 : 0);
-
-function celebrateAdventure(before, after) {
-  if (after.boss.refId === before.boss.refId && after.boss.damage > before.boss.damage) {
-    document.querySelectorAll('.boss-hit').forEach(el => { el.classList.remove('hit-shake'); void el.offsetWidth; el.classList.add('hit-shake'); });
-  }
-  if (after.boss.defeated && !before.boss.defeated && after.boss.refId === before.boss.refId) {
-    toast(`👹 ¡Derrotaste a <b>${esc(after.boss.name)}</b>! Reclama tu premio en Misiones.`, { kind: 'ach', duration: 5000 });
-  }
-  after.weekly.forEach((m, i) => {
-    const b = before.weekly[i];
-    if (m.done && b && b.refId === m.refId && !b.done) toast(`🗓️ Misión semanal cumplida: <b>${esc(m.title)}</b>`, { kind: 'ach', duration: 4500 });
-  });
-  if (after.pet.stage > before.pet.stage) {
-    // Se espera un momento: si este mismo registro sube de nivel, la animación
-    // de nivel aparece primero y el nombre se pide al cerrarla.
-    if (G.shouldAskPetName(state, before.pet.stage, after.pet.stage)) queueModal(askPetNameOnHatch);
-    else toast(`🐣 ¡${esc(petName())} evolucionó a <b>${after.pet.stageName}</b>!`, { kind: 'ach', duration: 5000 });
-  }
-}
 
 // ---------------------------------------------------------------------
 // Cola de celebraciones (eclosión, evolución de guardianas): se muestran
@@ -155,39 +194,6 @@ async function askPetNameOnHatch() {
   toast(`🐣 ¡Conoce a <b>${esc(petName())}</b>!`, { kind: 'ach', duration: 4000 });
 }
 
-function celebrateChanges(before, after) {
-  // Subidas de nivel de stats
-  for (const s of G.STATS) {
-    if (after.stats[s.id].level > before.stats[s.id].level) {
-      toast(`${s.icon} ¡${s.name} sube a nivel ${after.stats[s.id].level}!`);
-      const el = document.querySelector(`.stat[data-stat="${s.id}"]`);
-      el?.classList.remove('pulse'); void el?.offsetWidth; el?.classList.add('pulse');
-    }
-  }
-  // Logros nuevos
-  const unlocked = G.unlockedAchievements(state, after);
-  const fresh = unlocked.filter(id => !state.seenAchievements.includes(id));
-  if (fresh.length) {
-    state.seenAchievements = [...new Set([...state.seenAchievements, ...fresh])];
-    save();
-    fresh.forEach((id, i) => {
-      const a = G.ACHIEVEMENTS.find(x => x.id === id);
-      setTimeout(() => toast(`${a.icon} Logro: <b>${esc(a.name)}</b>`, { kind: 'ach', duration: 4000 }), 300 + i * 500);
-    });
-  }
-  // Guardianas que cambiaron de forma (solo la forma más alta; nunca se repite)
-  const evos = guardianEvolutions(after.stats, state.guardianSeen);
-  if (evos.length) {
-    for (const { stat, tier } of evos) {
-      state.guardianSeen = { ...state.guardianSeen, [stat]: tier };
-      queueModal(() => showGuardianEvolution(stat, tier));
-    }
-    save();
-  }
-  // Nivel general
-  if (after.level > before.level) showLevelUp(after);
-}
-
 /** Lo ya conseguido al abrir, cambiar de perfil o importar no se vuelve a anunciar. */
 function syncSeen() {
   state.seenAchievements = [...new Set([...state.seenAchievements, ...G.unlockedAchievements(state)])];
@@ -214,11 +220,10 @@ function renderAll(p = G.deriveProfile(state)) {
 }
 
 function renderHeader(p, adv = adventure()) {
+  // La racha solo se muestra cuando ya es de 3+ días, y nunca como "rota".
   $('#streakNum').textContent = p.streak.current;
-  $('#streakChip').classList.toggle('cold', !p.streak.loggedToday);
-  $('#streakChip').title = p.streak.loggedToday
-    ? `Racha de ${p.streak.current} días`
-    : p.streak.current ? '¡Registra algo hoy para mantener la racha!' : 'Sin racha activa';
+  $('#streakChip').hidden = p.streak.current < 3;
+  $('#streakChip').title = `Racha de ${p.streak.current} días`;
   const qb = $('#questBadge');
   // Insignia de Misiones: premios por reclamar + misiones únicas pendientes
   const pending = claimables(adv) + state.quests.length;
@@ -231,7 +236,6 @@ function renderHeader(p, adv = adventure()) {
     const chip = $('#coinChip'); chip.classList.remove('pop'); void chip.offsetWidth; chip.classList.add('pop');
   }
   cn.textContent = coins; cn.dataset.ready = '1';
-  document.documentElement.dataset.sky = state.equipped?.sky || 'sky-default';
 }
 
 const statIcon = id => art.stat(id);
@@ -327,64 +331,111 @@ function renderHome(p) {
     </div>`;
   }).join('');
 
-  const groups = G.STATS.map(s => {
-    const acts = state.activities.filter(a => a.stat === s.id && !a.resist);
-    if (!acts.length) return '';
-    return `<div class="log-group" style="--c:${s.color}">
-      <div class="log-group-title">${s.name}</div>
-      <div class="log-btns">${acts.map(a => `
-        <button class="act-btn" data-act="${esc(a.id)}" style="--c:${s.color}">
-          <img class="act-ico" src="${statIcon(s.id)}" alt="">
-          <span class="act-text">
-            <span class="act-name">${esc(a.name)}</span>
-            ${actXp(a)}
-            ${a.bonus ? `<span class="act-bonus-tag">★ ${esc(a.bonus.label)} +${a.bonus.xp}</span>` : ''}
-          </span>
-        </button>`).join('')}
-      </div></div>`;
-  }).join('');
-  $('#quickLog').innerHTML = groups || `<div class="empty">No tienes actividades. Crea una en Ajustes.</div>`;
+  renderQuick();
+}
 
-  // Retos de resistencia: primero el del jefe de este mes
-  const boss = G.bossStatus(state);
+/** Botón de actividad (accesos rápidos de Inicio). */
+function actBtn(a) {
+  const s = G.statById(a.stat);
+  return `<button class="act-btn" data-act="${esc(a.id)}" style="--c:${s.color}">
+    <img class="act-ico" src="${statIcon(s.id)}" alt="">
+    <span class="act-text">
+      <span class="act-name">${G.isPinned(state, a.id) ? '<i class="pin-dot">★</i>' : ''}${esc(a.name)}</span>
+      ${actXp(a)}
+      ${a.bonus ? `<span class="act-bonus-tag">★ ${esc(a.bonus.label)} +${a.bonus.xp}</span>` : ''}
+    </span>
+  </button>`;
+}
+
+/** Hasta 3 accesos: fijados y luego los más usados. Perfil nuevo: invitación al catálogo. */
+function renderQuick() {
+  const quick = G.quickActivities(state);
+  $('#quickLog').innerHTML = quick.length
+    ? quick.map(actBtn).join('')
+    : `<button class="quick-empty" id="quickEmpty"><b>¿Qué hiciste hoy?</b><span>Elige una actividad y tu aventura empieza. Las que más uses aparecerán aquí.</span></button>`;
+  $('#quickLog').classList.toggle('n1', quick.length === 1);
+  $('#quickLog').classList.toggle('n2', quick.length === 2);
+}
+
+/** Catálogo completo: todas las actividades por stat, con ★ para fijar y ✎ para editar. */
+async function openCatalog() {
   const today = G.dayKey(Date.now());
-  const resist = state.activities.filter(a => a.resist).sort((a, b) => (b.resist === boss.id) - (a.resist === boss.id));
-  $('#resistLog').innerHTML = resist.length
-    ? `<div class="log-btns">${resist.map(a => {
-        const st = G.statById(a.stat);
-        const done = state.log.some(e => e.refId === a.id && G.dayKey(e.ts) === today);
-        const now = a.resist === boss.id && !boss.defeated;
-        return `<button class="act-btn resist ${now ? 'now' : ''} ${done ? 'done' : ''}" data-act="${esc(a.id)}" style="--c:${st.color}">
-          <img class="act-ico" src="${art.boss(a.resist)}" alt="">
-          <span class="act-text">
-            <span class="act-name">${done ? '✔ ' : ''}${esc(a.name)}</span>
-            ${actXp(a)}
-            ${now ? '<span class="act-crit">⚡ Crítico ×3 al jefe</span>' : ''}
-          </span>
-        </button>`;
-      }).join('')}</div>`
-    : `<div class="empty">Sin retos. Crea uno en Ajustes → Nueva actividad.</div>`;
+  const boss = G.bossStatus(state);
+  const row = a => {
+    const st = G.statById(a.stat);
+    const done = a.resist && state.log.some(e => e.refId === a.id && G.dayKey(e.ts) === today);
+    const extra = Gear.gearExtra(state, a.stat, a.xp);
+    return `<div class="cat-row ${done ? 'done' : ''}" style="--c:${st.color}">
+      <button class="cat-main" data-pick="${esc(a.id)}" ${done ? 'disabled' : ''}>
+        <img src="${a.resist ? art.boss(a.resist) : statIcon(st.id)}" alt="">
+        <span><b>${done ? '✔ ' : ''}${esc(a.name)}</b><small>+${a.xp + extra} XP${a.bonus ? ` · ★ ${esc(a.bonus.label)}` : ''}${a.resist === boss.id ? ' · ⚡ ×3 al jefe' : ''}</small></span>
+      </button>
+      ${a.resist ? '' : `<button class="cat-pin ${G.isPinned(state, a.id) ? 'on' : ''}" data-pin="${esc(a.id)}" aria-label="Fijar en Inicio">★</button>`}
+      <button class="cat-edit" data-edit="${esc(a.id)}" aria-label="Editar">✎</button>
+    </div>`;
+  };
+  const body = () => G.STATS.map(st => {
+    const acts = state.activities.filter(a => a.stat === st.id && !a.resist);
+    return acts.length ? `<div class="cat-group"><div class="cat-title" style="--c:${st.color}">${st.name}</div>${acts.map(row).join('')}</div>` : '';
+  }).join('') + (state.activities.some(a => a.resist)
+    ? `<div class="cat-group"><div class="cat-title">Retos de resistencia</div><p class="small">Una vez al día cada uno. El del jefe del mes hace ×3.</p>${state.activities.filter(a => a.resist).map(row).join('')}</div>` : '');
+  const p = openSheet(`
+    <h3>Registrar actividad</h3>
+    <p class="small">Toca una para registrarla. ★ la fija en Inicio (hasta 3).</p>
+    <div id="catBody">${body()}</div>
+    <button class="btn btn-block" data-close="new">＋ Crear actividad</button>
+    <button class="btn btn-block" data-close="cancel">Cerrar</button>`);
+  $('#catBody').addEventListener('click', e => {
+    const pin = e.target.closest('[data-pin]');
+    if (pin) { G.togglePin(state, pin.dataset.pin); save(); renderQuick(); $('#catBody').innerHTML = body(); return; }
+    const ed = e.target.closest('[data-edit]');
+    if (ed) return closeSheet('edit:' + ed.dataset.edit);
+    const pick = e.target.closest('[data-pick]');
+    if (pick && !pick.disabled) closeSheet('pick:' + pick.dataset.pick);
+  });
+  const res = await p;
+  if (!res || res === 'cancel') return;
+  if (res === 'new') return editActivity(null);
+  const [kind, id] = res.split(':');
+  if (kind === 'edit') return editActivity(id);
+  if (kind === 'pick') {
+    showView('home');
+    const btn = document.querySelector(`#quickLog [data-act="${CSS.escape(id)}"]`) || $('#logMainBtn');
+    onActivityTap({ dataset: { act: id }, getBoundingClientRect: () => btn.getBoundingClientRect(), classList: btn.classList });
+  }
 }
 
 /** Banner de "lo que tienes más cerca": empuja a dar el siguiente paso. */
 function renderGoal(p, { boss, weekly, pet }) {
   const el = $('#goalBanner');
-  let g;
-  if (!p.streak.loggedToday) {
-    g = { ico: '🎁', text: p.streak.current ? `Tu cofre del día y tu racha de ${p.streak.current} te esperan` : 'Registra algo y abre el cofre del día', pct: 0, view: null };
+  const nameP = petName();
+  const cands = [];
+  const anyLog = state.log.some(G.isBase);
+  if (!anyLog) {
+    cands.push({ ico: '🥚', text: 'Registra tu primera actividad para que tu huevo empiece a calentarse', pct: 3, view: null });
   } else {
-    const cands = [{ ico: '⬆️', text: `Te faltan ${p.needed - p.into} XP para el nivel ${p.level + 1}`, pct: p.pct, view: null }];
-    for (const m of weekly) {
-      if (m.done && !m.claimed) cands.push({ ico: '🗓️', text: `¡Reclama "${m.title}"!`, pct: 1.5, view: 'quests' });
-      else if (!m.done) cands.push({ ico: '🗓️', text: `${m.title}: te falta ${m.target - m.progress}${m.id === 'b' ? ' XP' : ''}`, pct: m.progress / m.target, view: 'quests' });
+    // Mascota: lo más tangible al empezar
+    if (pet.stage === 0) cands.push({ ico: '🐣', text: pet.daysToNext === 1 ? 'Registra un día más para que nazca tu mascota' : `Registra ${pet.daysToNext} días más para que nazca tu mascota`, pct: 1.2 + pet.pct, view: null });
+    else if (pet.next && pet.daysToNext <= 3) cands.push({ ico: '🐾', text: `${pet.daysToNext === 1 ? 'Un día activo más' : `${pet.daysToNext} días activos más`} y ${nameP} será ${pet.next.name}`, pct: 1 + pet.pct * .2, view: null });
+    // Premios por reclamar
+    if (boss.defeated && !boss.claimed) cands.push({ ico: '👹', text: '¡Derrotaste al jefe! Reclama tu premio en Misiones', pct: 2.5, view: 'quests' });
+    for (const m of weekly) if (m.done && !m.claimed) cands.push({ ico: '🗓️', text: `Misión cumplida: reclama «${m.title}»`, pct: 2.4, view: 'quests' });
+    // Guardiana a punto de evolucionar
+    for (const st of G.STATS) {
+      const s = p.stats[st.id]; const g = guardianFor(st.id, s.level);
+      if (g.nextAt && g.nextAt - s.level === 1) cands.push({ ico: '✨', text: `${st.name} está a un nivel de que ${g.name || 'su guardiana'} evolucione`, pct: .8 + s.pct * .3, view: null });
     }
-    if (boss.defeated && !boss.claimed) cands.push({ ico: '👹', text: '¡Jefe derrotado! Reclama tu premio', pct: 2, view: 'quests' });
-    else if (!boss.defeated) cands.push({ ico: '👹', text: `A ${boss.name.split(',')[0]} le quedan ${boss.hpLeft} PV`, pct: boss.pct, view: 'quests' });
-    if (pet.next) cands.push({ ico: '🐣', text: `${petName()} evoluciona en ${plural(pet.daysToNext, 'día', 'días')}`, pct: pet.pct * 0.9, view: null });
-    g = cands.sort((a, b) => b.pct - a.pct)[0];
+    // Nivel general (solo si está cerca)
+    if (p.pct >= .6) cands.push({ ico: '⬆️', text: `Te faltan ${p.needed - p.into} XP para el nivel ${p.level + 1}`, pct: .6 + p.pct * .3, view: null });
+    // Misión semanal con progreso real
+    for (const m of weekly) if (!m.done && m.progress > 0) cands.push({ ico: '🗓️', text: `${m.title}: ${m.progress} de ${m.target}`, pct: .5 + (m.progress / m.target) * .3, view: 'quests' });
+    if (!boss.defeated) cands.push({ ico: '👹', text: `A ${boss.name.split(',')[0]} le quedan ${boss.hpLeft} PV`, pct: .3 + boss.pct * .2, view: 'quests' });
   }
+  const g = cands.sort((a, b) => b.pct - a.pct)[0];
+  if (!g) { el.hidden = true; return; }
+  el.hidden = false;
   el.dataset.view = g.view || '';
-  el.innerHTML = `<span class="g-ico">${g.ico}</span><div>${esc(g.text)}${g.pct > 0 && g.pct <= 1 ? `<div class="g-bar"><i style="width:${Math.round(g.pct * 100)}%"></i></div>` : ''}</div>`;
+  el.innerHTML = `<span class="g-ico">${g.ico}</span><div>${esc(g.text)}</div>`;
 }
 
 const priceTag = n => `<span class="price"><i class="coin"></i>${n}</span>`;
@@ -559,14 +610,6 @@ function renderShop() {
     </button>`;
   }).join('');
 
-  $('#skyList').innerHTML = G.SHOP.skies.map(k => {
-    const own = G.owns(state, k.id), on = state.equipped.sky === k.id;
-    return `<button class="sky-tile ${on ? 'on' : ''}" data-sky-item="${k.id}">
-      <div class="sky-prev" data-s="${k.id}"></div>
-      <div class="sky-info"><span>${k.name}</span><small>${on ? '✔ En uso' : own ? 'Usar' : `${k.cost} 🪙`}</small></div>
-    </button>`;
-  }).join('');
-
   $('#titleList').innerHTML = G.SHOP.titles.map(t => {
     const own = G.owns(state, t.id), on = state.equipped.title === t.id;
     return `<div class="row shop-row" style="--c:#b58cff">
@@ -577,15 +620,15 @@ function renderShop() {
 }
 
 const PET_MOOD = {
-  egg: n => 'Registra algo para darle calor',
+  egg: n => 'Cada día que registras algo le das calor',
   happy: n => `¡${n} está feliz!`,
-  hungry: n => `${n} tiene hambre: registra hoy`,
-  sad: n => `${n} te extraña`,
+  rest: n => `${n} descansa y te espera`,
+  welcome: n => `¡${n} está feliz de verte de nuevo!`,
 };
 /** Nombre visible de la mascota: el que eligió el jugador o el de la especie. */
 const petName = () => G.petCustomName(state) || speciesById(state.pet.species).name;
 
-const PET_MOOD_SHORT = { egg: 'Dale calor', happy: '¡Está feliz!', hungry: 'Tiene hambre', sad: 'Te extraña' };
+const PET_MOOD_SHORT = { egg: 'Dale calor', happy: '¡Está feliz!', rest: 'Te espera', welcome: '¡Qué bueno verte!' };
 const bossImg = id => art.boss(id);
 const petImg = stage => art.pet(state.pet.species || DEFAULT_PET, stage);
 const monthName = mk => { const [y, m] = mk.split('-').map(Number); return new Date(y, m - 1, 1).toLocaleDateString('es', { month: 'long' }); };
@@ -594,6 +637,9 @@ const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 /** Tarjetas pequeñas de Inicio: jefe del mes y mascota. */
 function renderMinis({ boss, pet }) {
   const bm = $('#bossMini');
+  const today = G.dayKey(Date.now());
+  const challenge = state.activities.find(a => a.resist === boss.id);
+  const doneToday = challenge && state.log.some(e => e.refId === challenge.id && G.dayKey(e.ts) === today);
   const canClaim = boss.defeated && !boss.claimed;
   bm.classList.toggle('claim', canClaim);
   bm.innerHTML = `
@@ -605,7 +651,10 @@ function renderMinis({ boss, pet }) {
         ? `<div class="mini-sub" style="color:var(--yellow)">${boss.claimed ? '✔ Derrotado' : '¡Reclama tu premio!'}</div>`
         : `<div class="hpbar"><i style="width:${Math.round((1 - boss.pct) * 100)}%"></i></div>
            <div class="mini-sub">${boss.hpLeft} PV · ${boss.daysLeft} d</div>`}
-    </div>`;
+    </div>
+    ${challenge && !boss.defeated ? `<button class="boss-challenge act-btn ${doneToday ? 'done' : ''}" data-act="${esc(challenge.id)}" style="--c:${G.statById(challenge.stat).color}" ${doneToday ? 'disabled' : ''}>
+      <span>${doneToday ? '✔ Reto de hoy hecho' : `⚡ ${esc(challenge.name)}`}</span><b>${doneToday ? '' : `+${challenge.xp} XP · ×3`}</b>
+    </button>` : ''}`;
   const name = petName();
   $('#petMini').innerHTML = `
     <img class="pet-img ${pet.mood}" src="${petImg(pet.stage)}" alt="">
@@ -745,7 +794,16 @@ function renderGuardians(p) {
   }).join('');
 }
 
+function renderStreakPanel(p) {
+  const shields = G.shieldsLeft(state);
+  $('#streakPanel').innerHTML = `
+    <div class="sp-item"><b>${p.streak.current}</b><small>Racha actual</small></div>
+    <div class="sp-item"><b>${p.streak.best}</b><small>Mejor racha</small></div>
+    <div class="sp-item"><b>${shields}</b><small>Escudos 🛡️</small></div>`;
+}
+
 function renderAchievements(p) {
+  renderStreakPanel(p);
   const unlocked = new Set(G.unlockedAchievements(state, p));
   $('#achSummary').textContent = `${unlocked.size} de ${G.ACHIEVEMENTS.length} desbloqueados · cada logro da ${G.COINS.achievement} monedas · mejor racha: ${p.streak.best} días`;
   $('#achList').innerHTML = G.ACHIEVEMENTS.map(a => `
@@ -822,11 +880,14 @@ const pendingToasts = [];
 function toast(html, opts = {}) {
   // Durante la animación de nivel los avisos esperan, para no taparla.
   if (levelUpOpen) { pendingToasts.push([html, opts]); return; }
-  const { kind = '', action, onAction, duration = 3200 } = opts;
+  const { kind = '', action, onAction, duration = 3200, pinned = false } = opts;
   const box = $('#toasts');
-  while (box.children.length >= 2) box.firstElementChild.remove();
+  // Se muestran como mucho dos. Un aviso "fijo" (el resultado con Deshacer)
+  // solo lo reemplaza otro aviso fijo, nunca un aviso común.
+  if (pinned) box.querySelectorAll('.toast.pinned').forEach(t => t.remove());
+  while (box.children.length >= 2) (box.querySelector('.toast:not(.pinned)') || box.firstElementChild).remove();
   const el = document.createElement('div');
-  el.className = `toast ${kind}`;
+  el.className = `toast ${kind} ${pinned ? 'pinned' : ''}`;
   el.innerHTML = `<span class="toast-msg">${html}</span>${action ? `<button>${esc(action)}</button>` : ''}`;
   const close = () => { el.classList.add('out'); setTimeout(() => el.remove(), 250); };
   if (action) el.querySelector('button').onclick = () => { onAction?.(); close(); };
@@ -986,11 +1047,10 @@ function doLog(activityId, bonus, origin) {
     origin.classList.remove('flash'); void origin.offsetWidth; origin.classList.add('flash');
   }
   heroReact();
-  toast(`+${entry.xp} XP · +${G.coinsFor(entry)} 🪙 · ${esc(entry.name)}`, {
-    action: 'Deshacer',
-    onAction: () => { commit(s => G.undoEntry(s, entry.id), { celebrate: false }); toast('Registro deshecho'); },
-  });
-  if (firstToday) setTimeout(() => toast(`🎁 Cofre del día: <b>+${G.chestFor(today)} monedas</b>`, { kind: 'ach', duration: 4200 }), 500);
+  const news = [...lastNews];
+  const coins = G.coinsFor(entry) + (firstToday ? G.chestFor(today) : 0);
+  showResult(`<b>${esc(entry.name)}</b> · +${entry.xp} XP · +${coins} 🪙`, news,
+    () => { commit(s => G.undoEntry(s, entry.id), { celebrate: false }); toast('Registro deshecho'); });
 }
 
 async function onActivityTap(btn) {
@@ -1063,10 +1123,8 @@ function finishQuest(id, btn) {
   }
   heroReact();
   heroFlash();
-  toast(`📜 ¡Misión cumplida! +${entry.xp} XP`, {
-    action: 'Deshacer',
-    onAction: () => commit(s => G.undoEntry(s, entry.id), { celebrate: false }),
-  });
+  showResult(`📜 <b>${esc(entry.name)}</b> · +${entry.xp} XP`, [...lastNews],
+    () => { commit(s => G.undoEntry(s, entry.id), { celebrate: false }); toast('Misión devuelta a pendientes'); });
 }
 
 function claimReward(fn, btn, label) {
@@ -1079,12 +1137,13 @@ function claimReward(fn, btn, label) {
   }
   heroReact();
   heroFlash();
-  toast(`${label} +${entry.xp} XP para ${G.statById(entry.stat).name}`, { kind: 'ach' });
+  showResult(`${label} +${entry.xp} XP`, [...lastNews], null);
 }
 
 /** Hoja con la mascota en grande, su progreso y sus etapas. */
 async function openPetSheet() {
   const pet = G.petStatus(state);
+  if (pet.stage > 0) G.markPetNameAsked(state);  // el campo de nombre está en esta misma ficha
   const name = petName();
   const p = openSheet(`
     <h3>${esc(name)}</h3>
@@ -1211,7 +1270,7 @@ async function editReward(id) {
 }
 
 async function cosmeticFlow(slot, itemId) {
-  const item = [...G.SHOP.skies, ...G.SHOP.titles].find(x => x.id === itemId);
+  const item = G.SHOP.titles.find(x => x.id === itemId);
   if (!item) return;
   if (G.owns(state, itemId)) {
     const off = slot === 'title' && state.equipped.title === itemId;
@@ -1251,6 +1310,7 @@ function useProfile(id, { silent = false } = {}) {
   checkShields();
   save();
   renderAll();
+  noticeSkyRefund();
   if (!silent) toast(`Hola, ${esc(state.profile.name)} 👋`);
 }
 
@@ -1452,11 +1512,10 @@ $('#worldList').addEventListener('click', e => {
   if (t.querySelector('img.missing')) return toast('Ese mundo aún no tiene arte');
   commit(s => { s.equipped.world = t.dataset.world; }, { celebrate: false });
 });
-$('#skyList').addEventListener('click', e => { const t = e.target.closest('[data-sky-item]'); if (t) cosmeticFlow('sky', t.dataset.skyItem); });
 $('#titleList').addEventListener('click', e => { const t = e.target.closest('[data-title-item]'); if (t) cosmeticFlow('title', t.dataset.titleItem); });
 
 // Registro rápido: un toque registra; mantener presionado edita.
-// (#quickLog y #resistLog comparten el mismo comportamiento)
+// (accesos rápidos y el reto del jefe comparten el mismo comportamiento)
 let pressTimer = null, longPressed = false;
 const quick = $('#view-home');
 quick.addEventListener('pointerdown', e => {
@@ -1474,7 +1533,10 @@ quick.addEventListener('click', e => {
   onActivityTap(btn);
 });
 
-$('#bossMini').onclick = () => showView('quests');
+$('#bossMini').addEventListener('click', e => { if (!e.target.closest('.boss-challenge')) showView('quests'); });
+$('#bossMini').addEventListener('keydown', e => { if (e.key === 'Enter') showView('quests'); });
+$('#logMainBtn').onclick = openCatalog;
+$('#quickLog').addEventListener('click', e => { if (e.target.closest('#quickEmpty')) openCatalog(); });
 $('#petMini').onclick = openPetSheet;
 $('#bossCard').addEventListener('click', e => {
   const b = e.target.closest('#claimBossBtn');
@@ -1578,6 +1640,16 @@ syncSeen();
 save();
 checkShields();
 renderAll();
+noticeSkyRefund();
+
+/** Una sola vez: avisa que se devolvieron las monedas de los Ambientes retirados. */
+function noticeSkyRefund() {
+  const refund = G.skyRefund(state);
+  if (!refund || state.notices?.skyRefund) return;
+  state.notices = { ...state.notices, skyRefund: true };
+  save();
+  setTimeout(() => toast(`🪙 Retiramos los Ambientes de la Tienda y te devolvimos <b>${refund} monedas</b>`, { kind: 'ach', duration: 6000 }), 800);
+}
 
 if ('serviceWorker' in navigator && location.protocol !== 'file:') {
   navigator.serviceWorker.register('./sw.js').catch(err => console.warn('SW no registrado', err));
