@@ -38,7 +38,7 @@ Prioridad de arriba hacia abajo. Tamaños y nombres según ARTE.md.
 | A-12 | Ilustraciones de los 4 jefes de T-01 (mismo estilo y tamaño que A-04). Al llegar entran en la rotación desde el mes siguiente | `art/bosses/{multitarea,perfeccionismo,inercia,desvelo}.webp` | ✅ |
 | A-13 | (opcional) 4 piezas épicas de botín para esos jefes: nombre, espacio, stat e ícono 512×512 | `art/items/<id>.webp` + texto | ✅ |
 | A-14 | 12 héroes nuevos: 6 arquetipos × 2 looks (ver sección A-14 abajo) | `art/chars/<arquetipo>-{m,f}.webp` | ✅ |
-| T-04 | Frases del día (ver sección T-04 abajo) | texto | ⏳ |
+| T-04 | Frases del día (ver sección T-04 abajo) y nombres en inglés | texto | ✅ |
 
 **Reglas que hacen que todo encaje:** fondo transparente (salvo los mundos), lienzo 720×1000 con los pies en el borde inferior para las figuras de pie, mismo estilo en toda la serie (adjuntar una imagen anterior como referencia) y sin texto dentro de las imágenes.
 
@@ -73,7 +73,11 @@ Prioridad de arriba hacia abajo. Tamaños y nombres según ARTE.md.
 
 **Al recibirlos, Claude:** cambia el selector a "elige tu héroe y luego su look", y pasa a quien ya eligió un personaje al arquetipo equivalente (guardabosques → Guardián, exploradora → Relámpago, forjador → Titán, cartógrafo → Estratega, tejedora → Sabia, duelista → Implacable), así nadie pierde su elección.
 
-## T-04 · Frases del día (encargo para GPT)
+## T-04 · Frases del día (entregado)
+
+**Integrado el 2026-11-20:** frases de héroes, guardianas, burlas de jefes (alternan con su burla principal) y 3 variantes de vuelta en `js/phrases.js`; nombres en inglés en `js/names-en.js`, listos para el selector de idioma.
+
+*Encargo original (histórico):*
 
 La app ya muestra frases provisionales (en `js/phrases.js`). Pedimos la versión final, en español neutro con «tú», cortas (máximo ~90 caracteres) y sin culpa ni presión:
 
@@ -117,3 +121,4 @@ Formato: una lista por id (`titan`, `relampago`, `estratega`, `sabio`, `guardian
 | T-01 | Textos de Multyra, Perfectus, Glacior y Noxveil | 2026-11-19 |
 | A-12, A-13 | Ilustraciones de los 4 jefes nuevos y sus 4 piezas de botín (rotan desde diciembre 2026) | 2026-11-19 |
 | A-14 | 12 héroes (6 × 2 looks) con selector en dos pasos; reemplazan a los personajes de A-08 | 2026-11-19 |
+| T-04 | Frases del día (héroes, guardianas, jefes, vuelta) y nombres en inglés | 2026-11-20 |

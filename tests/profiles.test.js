@@ -137,3 +137,17 @@ test('instalación: qué se muestra según el dispositivo', async () => {
   assert.equal(I.isStandalone({ matchMedia: () => ({ matches: false }), navigator: {} }), false);
 });
 
+
+test('T-04: frases para cada héroe (7), guardiana (6), jefe (3 + su burla) y 3 de vuelta; nombres en inglés por id', async () => {
+  const P = await import('../js/phrases.js');
+  const C = await import('../js/catalog.js');
+  const L = await import('../js/logic.js');
+  const EN = await import('../js/names-en.js');
+  for (const c of C.CHARACTERS) { assert.equal(P.HERO_LINES[c.id]?.length, 7, c.id); assert.ok(EN.HEROES_EN[c.id], c.id); }
+  for (const s of L.STAT_IDS) { assert.equal(P.GUARDIAN_LINES[s]?.length, 6, s); assert.ok(EN.STATS_EN[s], s); }
+  for (const b of L.BOSSES) { assert.equal(P.BOSS_LINES[b.id]?.length, 3, b.id); assert.ok(b.taunt && EN.BOSSES_EN[b.id], b.id); }
+  for (const sp of C.PET_SPECIES) assert.ok(EN.SPECIES_EN[sp.id], sp.id);
+  for (const w of C.WORLDS) assert.ok(EN.WORLDS_EN[w.id], w.id);
+  assert.equal(P.BACK_LINES.length, 3);
+  assert.equal(P.lineOfDay(P.BACK_LINES, 'back', '2026-11-20'), P.lineOfDay(P.BACK_LINES, 'back', '2026-11-20'));
+});

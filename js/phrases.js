@@ -1,109 +1,179 @@
 // =====================================================================
 // Frases del día: el héroe te anima, cada guardiana habla de su propósito
-// y cada jefe se burla. Textos provisionales; la versión final es el
-// pedido T-04 a GPT (ver COORDINACION.md). Se elige una por día.
+// y cada jefe se burla. Textos finales de GPT (entrega T-04). Se elige
+// una por día, la misma durante todo el día.
 // =====================================================================
 
-// Del héroe, según su cualidad. Hablan en primera persona del plural:
-// el héroe y el jugador son un equipo.
+// Del héroe, según su cualidad. Hablan en plural: el héroe y el jugador son un equipo.
 export const HERO_LINES = {
   titan: [
-    'No hace falta tener ganas. Hace falta dar el primer paso.',
-    'Lo que hoy pesa, mañana lo vamos a levantar sin pensarlo.',
-    'Un poco más fuerte que ayer. Eso es todo lo que pido.',
-    'Cuando cueste, planta los pies. Ahí empieza la fuerza.',
-    'Hoy no buscamos un día perfecto. Buscamos un día con algo hecho.',
+    "Planta los pies. Hoy levantamos lo que esté a nuestro alcance.",
+    "Podemos bajar el peso y seguir entrenando.",
+    "Empecemos por el esfuerzo que sí cabe en este día.",
+    "Hagamos espacio para recuperar el aliento.",
+    "Si nos tiembla el pulso, probemos un paso más pequeño.",
+    "Ese primer intento ya nos enseñó dónde poner los pies.",
+    "Lo que hoy pide las dos manos merece su tiempo.",
   ],
   relampago: [
-    'Empieza antes de pensarlo dos veces. Ya vamos ganando.',
-    'Dos minutos de algo valen más que una hora de planear.',
-    'El viento está a favor. Iza las velas y arranca.',
-    'No esperes el momento ideal. Hagamos el momento.',
-    'Lo primero que hagas hoy marca el rumbo. Que sea bueno.',
+    "Izamos las velas con el viento que hay.",
+    "Elige un rumbo. Podemos corregirlo en el aire.",
+    "Con un minuto basta para soltar amarras.",
+    "Probemos la ruta corta. También lleva a algún lugar.",
+    "Si cambia el viento, cambiamos de rumbo.",
+    "Saquemos la brújula. ¿Qué te dan ganas de explorar?",
+    "Abramos el mapa por donde lo dejamos.",
   ],
   estratega: [
-    'Una cosa a la vez. La más importante, primero.',
-    '¿Qué aprendemos hoy? Una pregunta basta para empezar.',
-    'Si te pierdes, vuelve a mirar el mapa. Siempre hay un camino.',
-    'Pequeños pasos bien elegidos ganan cualquier partida.',
-    'Hoy no hay que saberlo todo. Solo un poco más que ayer.',
+    "Pongamos una pregunta en el centro del mapa.",
+    "Si el plan es largo, marquemos la primera casilla.",
+    "Probemos una versión pequeña y veamos qué nos enseña.",
+    "Cambiemos una sola pieza y observemos qué pasa.",
+    "Si esta puerta se atasca, busquemos otra entrada.",
+    "Anotemos lo que funcionó. Mañana nos servirá de pista.",
+    "Antes de llenar la página, elijamos la primera línea.",
   ],
   sabio: [
-    'Respira. Elige una sola cosa y dale toda tu atención.',
-    'No todo es urgente. Lo importante sí merece tu calma.',
-    'Un minuto de pausa puede cambiar el resto del día.',
-    'Hoy basta con estar presente en lo que haces.',
-    'Entre tanto ruido, escucha lo que de verdad quieres.',
+    "Tomemos aire. Hay espacio para elegir con calma.",
+    "Dejemos pasar el ruido y volvamos a lo que tenemos delante.",
+    "Busquemos un lugar tranquilo para empezar.",
+    "Si hay demasiadas ramas, sigamos una hasta el tronco.",
+    "Podemos sentir mucho y movernos despacio.",
+    "Hagamos una pausa para escuchar qué necesitamos hoy.",
+    "Demos a una sola cosa toda nuestra atención.",
   ],
   guardian: [
-    'Lo que prometiste, cúmplelo. Aunque sea en pequeño.',
-    'Cada promesa cumplida es un golpe de martillo a tu carácter.',
-    'Si algo se rompió ayer, hoy lo reparamos.',
-    'Cuidar a los tuyos empieza por cuidarte a ti.',
-    'No hace falta hacerlo todo. Hace falta no rendirse.',
+    "Busquemos una promesa que podamos cuidar hoy.",
+    "Reparemos una cosa pequeña. Empecemos por la que tienes a mano.",
+    "Si la pieza se calienta demasiado, la dejamos enfriar.",
+    "Hoy también podemos cuidarnos con el mismo esmero.",
+    "Midamos la promesa con el tiempo que de verdad tenemos.",
+    "Antes del siguiente golpe, ajustemos la pieza.",
+    "Lo que cuidamos a diario aguanta mejor el paso del tiempo.",
   ],
   implacable: [
-    'La disciplina es hacer lo que dijiste, aunque nadie mire.',
-    'Mismo movimiento, cada día. Así se vuelve silencioso.',
-    'Hoy no negociamos con la excusa. Hacemos una parte.',
-    'La constancia no hace ruido, pero lo cambia todo.',
-    'Un día más en el camino. Eso es ser imparable.',
+    "Repitamos un movimiento hasta que se sienta familiar.",
+    "Dejemos listo el primer paso para mañana.",
+    "Si cambia el día, ajustemos la práctica.",
+    "Hagamos una repetición con toda la atención.",
+    "Volvamos a la práctica que ya conocemos.",
+    "Busquemos la señal que nos recuerde empezar.",
+    "Cerremos la sesión mientras todavía nos queda aire.",
   ],
 };
 
 // De cada guardiana, sobre el propósito de su stat.
 export const GUARDIAN_LINES = {
   fuerza: [
-    'La fuerza no es no cansarse: es seguir un poco más.',
-    'Tu cuerpo recuerda cada esfuerzo. Ninguno se pierde.',
-    'Mover el cuerpo también mueve el ánimo.',
-    'Hoy, aunque sea diez minutos. Eso también cuenta.',
+    "Empuja, levanta o estira. Elige cómo mover tu cuerpo hoy.",
+    "Elige una carga que puedas mover con control.",
+    "Baja el peso con la misma atención con que lo levantaste.",
+    "Usa una versión más fácil del movimiento si hoy te sirve.",
+    "Recupera el aliento entre esfuerzos.",
+    "Fíjate en qué movimiento se siente más estable hoy.",
   ],
   resistencia: [
-    'Paso a paso se cruza cualquier montaña.',
-    'Descansar bien también es entrenar.',
-    'El ritmo constante llega más lejos que la prisa.',
-    'Cuando quieras parar, da un paso más y luego decide.',
+    "Elige un ritmo que puedas sostener un buen rato.",
+    "Un tramo corto también suma al camino.",
+    "Baja el ritmo en la subida y recupera el aliento.",
+    "Si hoy tienes menos tiempo, elige una vuelta más corta.",
+    "Mira cuánto has recorrido antes de elegir el siguiente tramo.",
+    "Descansa cuando lo necesites. El sendero sigue ahí.",
   ],
   intelecto: [
-    'Cada página te abre una puerta nueva.',
-    'Aprender un poco cada día es la forma más lenta y más segura de saber mucho.',
-    'Una buena pregunta vale más que mil respuestas.',
-    'Lo que entiendes hoy nadie te lo quita.',
+    "Lee una página y quédate con una idea.",
+    "Escribe una pregunta que quieras explorar.",
+    "Explica con tus palabras algo que aprendiste hoy.",
+    "Prueba lo que leíste en un ejemplo sencillo.",
+    "Dibuja cómo se conectan dos ideas.",
+    "Marca dónde dejaste la lectura para retomarla con facilidad.",
   ],
   sabiduria: [
-    'Antes de responder, respira. La calma también es sabiduría.',
-    'No tienes que tener todo resuelto. Solo el siguiente paso.',
-    'Escucharte es el principio de entenderte.',
-    'Elegir qué no hacer también es una decisión sabia.',
+    "Antes de responder, date una respiración.",
+    "Ponle nombre a lo que sientes. Puedes empezar por una palabra.",
+    "Elige dónde quieres poner tu atención durante este minuto.",
+    "Si una decisión puede esperar, dale un poco de espacio.",
+    "Observa qué cambia cuando haces una cosa a la vez.",
+    "Pregúntate qué necesitas antes de decidir qué sigue.",
   ],
   vinculo: [
-    'Un mensaje a tiempo puede alegrarle el día a alguien.',
-    'Los lazos se cuidan con detalles pequeños y frecuentes.',
-    'Pedir ayuda también es una forma de acercarse.',
-    'Escuchar de verdad es un regalo que pocos dan.',
+    "Un «me acordé de ti» también es una forma de estar cerca.",
+    "Pregunta cómo le fue a alguien y dale tiempo para responder.",
+    "Pide compañía si hoy te vendría bien.",
+    "Pon en palabras un detalle que valoras de alguien.",
+    "Comparte un rato sin mirar el teléfono.",
+    "A veces cuidar un vínculo empieza por decir lo que necesitas.",
   ],
   hogar: [
-    'Un espacio en orden aclara la mente.',
-    'Cada moneda que guardas hoy es tranquilidad mañana.',
-    'Cuidar tu casa es cuidarte a ti.',
-    'Cinco minutos de orden valen más que una limpieza que nunca llega.',
+    "Deja a mano lo que vas a usar mañana.",
+    "Empieza por despejar una superficie pequeña.",
+    "Dale un lugar a eso que siempre terminas buscando.",
+    "Revisa un gasto y decide si te sirvió para lo que querías.",
+    "Si te queda margen, aparta un poco para algo que te importa.",
+    "Ordena un rincón para que tu próxima tarea sea más fácil.",
   ],
 };
 
-// De cada jefe: además de su burla principal (BOSSES.taunt), un par más.
+// De cada jefe: variantes que se alternan con su burla principal (BOSSES.taunt).
 export const BOSS_LINES = {
-  pereza:          ['"El sofá te extraña."', '"Hoy no, mejor mañana empiezas en serio."'],
-  procrastinacion: ['"Todavía tienes tiempo… ¿o no?"', '"Primero revisa el teléfono, luego ya."'],
-  desorden:        ['"Una cosa más en la silla no hace daño."', '"Para qué ordenar si se va a desordenar."'],
-  estres:          ['"¡Todo es urgente!"', '"Si paras a respirar, pierdes."'],
-  distraccion:     ['"Mira, una notificación."', '"Solo cinco minutos de scroll…"'],
-  soledad:         ['"Nadie va a contestar."', '"Mejor no molestes a nadie."'],
-  multitarea:      ['"¿Y si haces las tres cosas a la vez?"', '"Abre otra pestaña, total…"'],
-  perfeccionismo:  ['"Si no es perfecto, no vale."', '"Mejor no lo entregues todavía."'],
-  inercia:         ['"Moverse cuesta demasiado."', '"Quédate quieto, es más cómodo."'],
-  desvelo:         ['"Un capítulo más."', '"Dormir es para los débiles."'],
+  pereza: [
+    "\"Mi sofá tiene un imán. Pruébalo con los dos pies arriba.\"",
+    "\"La manta y yo ya votamos. Aquí se queda todo el mundo.\"",
+    "\"Estirarse para alcanzar el control remoto cuenta, ¿verdad?\"",
+  ],
+  procrastinacion: [
+    "\"Moví el plazo a mañana. Luego hablamos de qué mañana.\"",
+    "\"Tengo un calendario entero dedicado a empezar después.\"",
+    "\"Reservé una hora para decidir cuándo vamos a empezar.\"",
+  ],
+  desorden: [
+    "\"Si el montón llega al techo, ya cuenta como estantería.\"",
+    "\"Las llaves están bajo un papel. ¿Cuál? Gran pregunta.\"",
+    "\"Te guardé un sitio en la silla. Debajo de la ropa.\"",
+  ],
+  estres: [
+    "\"Mi lista de urgencias tiene una lista de urgencias.\"",
+    "\"Le puse «urgente» hasta al vaso de agua.\"",
+    "\"¿Respirar? Dame un segundo para meterlo en la agenda.\"",
+  ],
+  distraccion: [
+    "\"Parpadea dos veces y te cargo otros diez videos.\"",
+    "\"Te traje un video sobre cómo dejar de ver videos.\"",
+    "\"Tu próxima pausa tiene sonido, subtítulos y reproducción automática.\"",
+  ],
+  soledad: [
+    "\"Ensayemos ese «hola» ocho veces más. Tengo toda la tarde.\"",
+    "\"Archivé tu saludo bajo «algún día». Ahí cabe de todo.\"",
+    "\"Puse una capa de niebla entre el «hola» y el botón de enviar.\"",
+  ],
+  multitarea: [
+    "\"Con tantas cabezas, alguien debe acordarse de qué estábamos haciendo.\"",
+    "\"Tengo tres agendas y todas dicen «a la vez».\"",
+    "\"Una pestaña por cabeza. Y otra por si acaso.\"",
+  ],
+  perfeccionismo: [
+    "\"Ya está listo. Solo falta pulir el botón de «entregar».\"",
+    "\"¿Me prestas una regla? Ese margen tiene medio milímetro de libertad.\"",
+    "\"La versión final se llama «final_final_ahora_sí». Ya voy por la décima.\"",
+  ],
+  inercia: [
+    "\"Calentemos motores mañana. Hoy hace un frío delicioso.\"",
+    "\"El primer paso está congelado. Propongo admirarlo desde aquí.\"",
+    "\"Un pie fuera de la cueva y ya empieza el deshielo. Qué imprudencia.\"",
+  ],
+  desvelo: [
+    "\"Tengo ofertas de madrugada. La primera hora perdida va por mi cuenta.\"",
+    "\"La luna todavía está despierta. Gran argumento, ¿verdad?\"",
+    "\"¿Cerrar la app? Justo iba a mostrarte algo que dura diecisiete minutos.\"",
+  ],
 };
+
+// Al volver después de faltar (cualquier contexto de regreso).
+export const BACK_LINES = [
+  "¡Qué bueno verte! Tu progreso sigue aquí.",
+  "Volviste. Puedes retomar desde donde lo dejaste.",
+  "Tu progreso sigue intacto. Elige por dónde quieres seguir hoy."
+];
 
 /** Número estable para un texto (para elegir la frase del día). */
 function hash(str) {

@@ -61,7 +61,7 @@ Seis héroes, cada uno con una cualidad y dos looks (12 avatares): **Gladiador/a
 - **Cada guardiana** habla de su propósito: en su ficha y la primera vez del día que registras algo de su stat.
 - **Cada jefe** se burla con una frase distinta cada día.
 
-Los textos están en `js/phrases.js` (provisionales; la versión final es el pedido T-04 a GPT).
+Los textos están en `js/phrases.js` (entrega T-04 de GPT). Al volver después de faltar, el mensaje alterna tres variantes.
 
 ## 🧭 Ayuda y tour
 

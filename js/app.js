@@ -9,10 +9,10 @@ import * as Profiles from './profiles.js';
 import * as Gear from './gear.js';
 import { installInfo, isStandalone } from './install.js';
 import { KAIZEN_MEANING, GUIDES, TOUR } from './guide.js';
-import { HERO_LINES, GUARDIAN_LINES, BOSS_LINES, lineOfDay } from './phrases.js';
+import { HERO_LINES, GUARDIAN_LINES, BOSS_LINES, BACK_LINES, lineOfDay } from './phrases.js';
 import { art, CHARACTERS, DEFAULT_CHARACTER, charHero, characterById, characterImg, guardianFor, guardianEvolutions, syncGuardianSeen, GUARDIANS, WORLDS, worldById, DEFAULT_WORLD, DEFAULT_PET, PET_SPECIES, speciesById } from './catalog.js';
 
-export const APP_VERSION = '2.5.0';
+export const APP_VERSION = '2.5.1';
 const BACKUP_REMINDER_DAYS = 7;
 
 const $ = sel => document.querySelector(sel);
@@ -2055,7 +2055,7 @@ function welcomeBack() {
     const ch = state.activities.find(a => a.resist === b.id);
     lines.push(`${esc(b.name.split(',')[0])} recuperó ${healedAway} PV mientras no estabas.${ch ? ` Hoy «${esc(ch.name)}» le pega ×3.` : ''}`);
   }
-  setTimeout(() => toast(`<span class="res-head">💪 ¡Volviste! Tu progreso sigue intacto.</span>${lines.map(l => `<span class="res-line">${l}</span>`).join('')}`,
+  setTimeout(() => toast(`<span class="res-head">💪 ${esc(lineOfDay(BACK_LINES, 'back', today))}</span>${lines.map(l => `<span class="res-line">${l}</span>`).join('')}`,
     { kind: 'result', duration: 8000 }), 700);
 }
 

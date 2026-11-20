@@ -122,7 +122,7 @@ Fecha: 2026-11-20. Este plan no cambia código todavía: sirve para decidir qué
 - **Progreso:** el idioma es solo cómo se muestra. El historial guarda ids y XP, así que al cambiar de idioma no cambia ningún número.
 - **Sin conexión:** los diccionarios son archivos estáticos que el service worker guarda en caché como el resto.
 - **Tarjetas para compartir:** el texto del canvas usa `t()`. Fechas y números con `Intl` según el idioma.
-- **Nombres del mundo en inglés** (héroes, jefes, guardianas, especies): pedido **T-04 a GPT**. Kaizen no se traduce.
+- **Nombres del mundo en inglés:** ya entregados (T-04) en `js/names-en.js` (héroes, stats, jefes, especies y mundos). Kaizen no se traduce.
 - **Costo:** alto. Hay unos 400 textos en la app. Fase 1 (alcance pedido): 2–3 días. Fase 2 (el resto): 2 días más.
 
 ---
