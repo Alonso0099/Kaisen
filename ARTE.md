@@ -1,4 +1,4 @@
-# 🎨 Guía de arte de Kaisen
+# 🎨 Guía de arte de Kaizen
 
 Esta guía dice **qué tamaño, formato y nombre** debe tener cada imagen para que la app la muestre sin tocar código. Mientras una imagen no exista, la app muestra "Próximamente" en su lugar, así que puedes ir agregando arte poco a poco.
 

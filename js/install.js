@@ -17,8 +17,8 @@ export const isAndroid = ua => /Android/i.test(ua || '');
  * @returns {{ kind: 'installed'|'prompt'|'ios'|'android-menu'|'other', title: string, steps?: string[], button?: string }}
  */
 export function installInfo({ standalone, hasPrompt, ua }) {
-  if (standalone) return { kind: 'installed', title: 'Kaisen está instalada en este dispositivo ✓' };
-  if (hasPrompt) return { kind: 'prompt', title: 'Instala Kaisen para abrirla como una app, a pantalla completa y sin conexión.', button: 'Instalar Kaisen' };
+  if (standalone) return { kind: 'installed', title: 'Kaizen está instalada en este dispositivo ✓' };
+  if (hasPrompt) return { kind: 'prompt', title: 'Instala Kaizen para abrirla como una app, a pantalla completa y sin conexión.', button: 'Instalar Kaizen' };
   if (isIOS(ua)) return {
     kind: 'ios',
     title: 'En iPhone se instala desde Safari:',

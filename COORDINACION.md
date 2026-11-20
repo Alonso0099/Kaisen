@@ -38,6 +38,7 @@ Prioridad de arriba hacia abajo. Tamaños y nombres según ARTE.md.
 | A-12 | Ilustraciones de los 4 jefes de T-01 (mismo estilo y tamaño que A-04). Al llegar entran en la rotación desde el mes siguiente | `art/bosses/{multitarea,perfeccionismo,inercia,desvelo}.webp` | ✅ |
 | A-13 | (opcional) 4 piezas épicas de botín para esos jefes: nombre, espacio, stat e ícono 512×512 | `art/items/<id>.webp` + texto | ✅ |
 | A-14 | 12 héroes nuevos: 6 arquetipos × 2 looks (ver sección A-14 abajo) | `art/chars/<arquetipo>-{m,f}.webp` | ✅ |
+| T-04 | Frases del día (ver sección T-04 abajo) | texto | ⏳ |
 
 **Reglas que hacen que todo encaje:** fondo transparente (salvo los mundos), lienzo 720×1000 con los pies en el borde inferior para las figuras de pie, mismo estilo en toda la serie (adjuntar una imagen anterior como referencia) y sin texto dentro de las imágenes.
 
@@ -72,6 +73,17 @@ Prioridad de arriba hacia abajo. Tamaños y nombres según ARTE.md.
 
 **Al recibirlos, Claude:** cambia el selector a "elige tu héroe y luego su look", y pasa a quien ya eligió un personaje al arquetipo equivalente (guardabosques → Guardián, exploradora → Relámpago, forjador → Titán, cartógrafo → Estratega, tejedora → Sabia, duelista → Implacable), así nadie pierde su elección.
 
+## T-04 · Frases del día (encargo para GPT)
+
+La app ya muestra frases provisionales (en `js/phrases.js`). Pedimos la versión final, en español neutro con «tú», cortas (máximo ~90 caracteres) y sin culpa ni presión:
+
+1. **Héroes:** 7 frases por héroe (6 héroes), con el tono de su cualidad. Las dice el héroe en Inicio, una por día. Ejemplo (Forjador/a de Almas, carácter y cuidado): «Si algo se rompió ayer, hoy lo reparamos.»
+2. **Guardianas:** 6 frases por guardiana sobre el **propósito de su stat** (Astrid fuerza, Skadi resistencia, Runa intelecto, Véra sabiduría, Eira vínculo, Liv hogar y finanzas). Ejemplo (Véra): «Antes de responder, respira. La calma también es sabiduría.»
+3. **Jefes:** 3 burlas más por jefe (10 jefes), en la voz del mal hábito que representan y con humor, no crueles. Ejemplo (Scrollax): «Solo cinco minutos de scroll…»
+4. **Vuelta:** 3 variantes del mensaje «¡Volviste! Tu progreso sigue intacto.»
+
+Formato: una lista por id (`titan`, `relampago`, `estratega`, `sabio`, `guardian`, `implacable`; stats; ids de jefes como en ARTE.md).
+
 ## GPT necesita de Claude
 
 *(GPT anota aquí lo que necesite: capturas de una pantalla, colores, tamaños, cómo se verá algo, etc.)*
@@ -92,7 +104,7 @@ Prioridad de arriba hacia abajo. Tamaños y nombres según ARTE.md.
 | — | Exploradora y Guardabosques (personajes jugables) | 2026-11-18 |
 | A-01, A-02 | Guardianas forma 1: Astrid, Skadi, Runa, Véra, Eira, Liv | 2026-11-18 |
 | A-03 | Seis mundos de Inicio | 2026-11-18 |
-| A-04 | Seis jefes en estilo Kaisen | 2026-11-18 |
+| A-04 | Seis jefes en estilo Kaizen | 2026-11-18 |
 | T-02 | Nombres de guardianas y de las 8 especies | 2026-11-18 |
 | A-05 | Dragón de Fuego: 6 etapas (especie `chispa`) | 2026-11-18 |
 | A-06, A-07 | 6 emblemas de stats y 18 insignias de logros | 2026-11-18 |

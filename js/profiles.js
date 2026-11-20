@@ -1,8 +1,8 @@
 // =====================================================================
-// Perfiles locales: varias personas pueden usar Kaisen en el mismo
+// Perfiles locales: varias personas pueden usar Kaizen en el mismo
 // teléfono, cada una con su propio progreso y personaje.
 //
-//   kaisen-index        → { active, ids: [...] }
+//   kaisen-index        → { active, ids: [...] }  (claves de antes del cambio a Kaizen: se conservan para no perder el progreso)
 //   kaisen-p-<id>       → el estado completo de ese perfil
 //
 // Si existe un guardado de la versión anterior (nano-rpg-v1), se

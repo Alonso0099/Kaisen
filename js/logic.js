@@ -1,5 +1,5 @@
 // =====================================================================
-// Kaisen — lógica pura del juego (sin DOM).
+// Kaizen — lógica pura del juego (sin DOM).
 // Todo lo que se puede calcular a partir del historial vive aquí, para
 // poder probarlo con Node (ver tests/logic.test.js).
 // =====================================================================
@@ -20,6 +20,13 @@ export const statById = id => STATS.find(s => s.id === id);
 export const XP_MIN = 5;
 export const XP_MAX = 50;         // límite para actividades nuevas
 export const QUEST_XP_MAX = 200;  // las misiones únicas pueden valer más
+// XP por esfuerzo al crear una actividad (en lugar de un número libre, para
+// que no se infle): Fácil, Media, Difícil.
+export const EFFORT_LEVELS = [
+  { id: 'facil',   name: 'Fácil',   xp: 10, hint: 'Menos de 10 minutos' },
+  { id: 'media',   name: 'Media',   xp: 20, hint: 'Te cuesta un poco' },
+  { id: 'dificil', name: 'Difícil', xp: 35, hint: 'Un reto de verdad' },
+];
 
 // ---------------------------------------------------------------------
 // Curvas de experiencia
@@ -109,27 +116,77 @@ export function computeStreak(log, now = Date.now(), shieldDays = []) {
   // Un día protegido por un escudo cuenta como registrado para la racha.
   const days = new Set([...real, ...shieldDays]);
   const today = dayKey(now);
+  const wkOf = k => { const [y, m, d] = k.split('-').map(Number); return weekKey(new Date(y, m - 1, d, 12).getTime()); };
+  // Día de gracia: un solo día suelto sin registrar por semana no rompe la
+  // racha (no suma, pero tampoco la corta). Así faltar un día no lo borra todo.
+  const graceWeeks = new Set();
+  const graceDays = [];
   let cursor = days.has(today) ? today : shiftDay(today, -1);
   let current = 0;
-  while (days.has(cursor)) {
-    current++;
-    cursor = shiftDay(cursor, -1);
+  for (;;) {
+    if (days.has(cursor)) { current++; cursor = shiftDay(cursor, -1); continue; }
+    const prev = shiftDay(cursor, -1);
+    if (days.has(prev) && !graceWeeks.has(wkOf(cursor))) { graceWeeks.add(wkOf(cursor)); graceDays.push(cursor); cursor = prev; continue; }
+    break;
   }
 
-  // Mejor racha histórica
+  // Mejor racha histórica (con la misma regla de gracia)
   const sorted = [...days].sort();
+  const used = new Set();
   let best = 0, run = 0, prev = null;
   for (const k of sorted) {
-    run = prev && shiftDay(prev, 1) === k ? run + 1 : 1;
+    const gapDay = prev && shiftDay(prev, 2) === k ? shiftDay(prev, 1) : null;
+    if (prev && shiftDay(prev, 1) === k) run++;
+    else if (gapDay && !used.has(wkOf(gapDay))) { used.add(wkOf(gapDay)); run++; }
+    else run = 1;
     best = Math.max(best, run);
     prev = k;
   }
-  return { current, best, loggedToday: real.has(today) };
+  best = Math.max(best, current);
+  // ¿Hoy ya usaste la gracia de esta semana? (para avisar con tiempo)
+  const graceLeftThisWeek = !graceDays.some(d => wkOf(d) === wkOf(today));
+  return { current, best, loggedToday: real.has(today), graceDays, graceLeftThisWeek };
 }
 
 // ---------------------------------------------------------------------
 // Estado derivado del historial
 // ---------------------------------------------------------------------
+
+// ---------------------------------------------------------------------
+// Guardianas y Afinidad
+// ---------------------------------------------------------------------
+export const GUARDIAN_TIERS = [1, 5, 10, 20, 35]; // nivel de stat para cada forma
+/** % extra de XP (y por lo tanto de monedas) en las actividades de la stat, por forma 1–5. */
+export const AFFINITY_PCT = [0, 5, 10, 15, 20];
+
+/** Forma (1–5) que corresponde a un nivel de stat. */
+export function guardianTier(statLevel) {
+  let tier = 1;
+  GUARDIAN_TIERS.forEach((min, i) => { if (statLevel >= min) tier = i + 1; });
+  return tier;
+}
+
+/** Afinidad actual de una stat: forma de su guardiana y % extra. */
+export function affinityFor(state, stat) {
+  const xp = computeTotals(state.log).stats[stat] || 0;
+  const tier = guardianTier(levelFromXp(xp, statXpToNext).level);
+  return { tier, pct: AFFINITY_PCT[tier - 1] };
+}
+
+/**
+ * ¿Vuelves después de faltar? Devuelve los días completos sin registrar desde
+ * tu último registro (0 si registraste ayer u hoy), para dar la bienvenida sin culpa.
+ */
+export function daysAway(state, now = Date.now()) {
+  const base = state.log.filter(isBase);
+  if (!base.length) return 0;
+  const today = dayKey(now);
+  const last = dayKey(Math.max(...base.map(e => e.ts)));
+  if (last >= today) return 0;
+  let n = 0;
+  for (let d = shiftDay(last, 1); d < today; d = shiftDay(d, 1)) n++;
+  return n;
+}
 
 export function computeTotals(log) {
   const stats = Object.fromEntries(STAT_IDS.map(id => [id, 0]));
@@ -297,12 +354,18 @@ export function logActivity(state, activityId, { bonus = false, now = Date.now()
   // El equipo da un % extra sobre la XP de la actividad (con bono incluido).
   // Se guarda en el registro: si después cambias de equipo, lo ya ganado no cambia.
   const gear = gearExtra(state, a.stat, a.xp + extra);
+  // Afinidad: la guardiana de esa stat da un % extra según su forma. Depende
+  // del nivel de la stat, nunca del héroe (regla A-14). Se guarda en el
+  // registro, igual que el equipo.
+  const { pct } = affinityFor(state, a.stat);
+  const guard = pct ? Math.round((a.xp + extra) * pct / 100) : 0;
   const entry = {
     id: uid(), ts: now, type: 'activity', refId: a.id,
     name: bonus && a.bonus ? `${a.name} · ${a.bonus.label}` : a.name,
-    stat: a.stat, xp: a.xp + extra + gear,
+    stat: a.stat, xp: a.xp + extra + gear + guard,
   };
   if (gear) entry.gearXp = gear;
+  if (guard) entry.guardXp = guard;
   if (a.resist) entry.resist = a.resist;
   state.log.push(entry);
   return entry;
@@ -355,8 +418,8 @@ function migrateProfile(base, p) {
 
 export function validateImport(obj) {
   if (!obj || typeof obj !== 'object') throw new Error('El archivo no es un respaldo válido.');
-  // Acepta respaldos de Kaisen y de su versión anterior (nano-rpg).
-  const data = (obj.app === 'kaisen' || obj.app === 'nano-rpg') && obj.data ? obj.data : obj;
+  // Acepta respaldos de Kaizen (también los de cuando se llamaba Kaisen) y de nano-rpg.
+  const data = (obj.app === 'kaizen' || obj.app === 'kaisen' || obj.app === 'nano-rpg') && obj.data ? obj.data : obj;
   if (!Array.isArray(data.log) || !Array.isArray(data.activities)) {
     throw new Error('Al respaldo le faltan datos (historial o actividades).');
   }
@@ -399,7 +462,7 @@ export function validateImport(obj) {
 }
 
 export function exportPayload(state, now = Date.now()) {
-  return { app: 'kaisen', exportedAt: new Date(now).toISOString(), data: state };
+  return { app: 'kaizen', exportedAt: new Date(now).toISOString(), data: state };
 }
 
 // =====================================================================
@@ -559,6 +622,9 @@ export function bossForMonth(mk, eras = BOSS_ERAS) {
   return BOSSES.find(b => b.id === era.ids[idx % era.ids.length]);
 }
 
+/** Recuperación del jefe: 3 % de su vida por día sin golpes en su contra, máximo 15 % al mes. */
+export const BOSS_HEAL = { perDay: 0.03, maxMonth: 0.15 };
+
 /** x3 si es el reto de resistencia de ese jefe, x2 si es su stat débil. */
 export function bossMultiplier(entry, boss) {
   if (entry.resist && entry.resist === boss.id) return 3;
@@ -584,16 +650,45 @@ export function bossStatus(state, now = Date.now()) {
   }
   hp = Math.max(200, Math.round(hp / 50) * 50);
 
-  const damage = base
-    .filter(e => monthKey(e.ts) === mk)
-    .reduce((a, e) => a + e.xp * bossMultiplier(e, boss), 0);
+  // Día por día: daño de ese día y si hubo un golpe "contra el jefe" (su stat
+  // débil o su reto). Un día completo sin golpes contra él, el jefe se recupera
+  // un poco (nunca te quita nada a ti). Cumplir su reto da Defensa: al día
+  // siguiente no puede recuperarse.
+  const month = base.filter(e => monthKey(e.ts) === mk && e.ts <= now);
+  const byDay = new Map();
+  for (const e of month) {
+    const d = byDay.get(dayKey(e.ts)) || { dmg: 0, hit: false, resist: false };
+    d.dmg += e.xp * bossMultiplier(e, boss);
+    if (e.stat === boss.weak || e.resist === boss.id) d.hit = true;
+    if (e.resist === boss.id) d.resist = true;
+    byDay.set(dayKey(e.ts), d);
+  }
+  const today = dayKey(now);
+  const startDay = dayKey(Math.max(monthStart, firstTs));
+  const healStep = Math.round(hp * BOSS_HEAL.perDay / 5) * 5;
+  const healCap = Math.round(hp * BOSS_HEAL.maxMonth);
+  let net = 0, healed = 0, healedYesterday = 0, defeated = false, prevResist = false;
+  for (let d = startDay; d <= today && !defeated; d = shiftDay(d, 1)) {
+    const day = byDay.get(d) || { dmg: 0, hit: false, resist: false };
+    net += day.dmg;
+    if (net >= hp) { defeated = true; break; }
+    // Al terminar un día ya pasado sin golpes ni Defensa, recupera vida.
+    if (d < today && !day.hit && !prevResist && net > 0 && healed < healCap) {
+      const h = Math.min(healStep, net, healCap - healed);
+      net -= h; healed += h;
+      if (d === shiftDay(today, -1)) healedYesterday = h;
+    }
+    prevResist = day.resist;
+  }
+  const damage = Math.max(0, net);
+  const defenseToday = !!byDay.get(shiftDay(today, -1))?.resist;
   const refId = `${mk}:${boss.id}`;
   return {
     ...boss, refId, monthKey: mk, hp,
     damage: Math.min(damage, hp),
-    hpLeft: Math.max(0, hp - damage),
-    pct: Math.min(1, damage / hp),
-    defeated: damage >= hp,
+    hpLeft: defeated ? 0 : Math.max(0, hp - damage),
+    pct: defeated ? 1 : Math.min(1, damage / hp),
+    defeated, healed, healedYesterday, defenseToday,
     claimed: state.log.some(e => e.type === 'boss' && e.refId === refId),
     daysLeft: daysInMonth - new Date(now).getDate() + 1,
     rewardXp: BOSS_REWARD_XP,
@@ -722,10 +817,59 @@ function pay(state, purchase, now) {
   return p;
 }
 
+// ---------------------------------------------------------------------
+// Recompensas: precio guía y retos (contra el autosabotaje)
+// ---------------------------------------------------------------------
+/** Rango de precio sugerido por tipo de recompensa. */
+export const REWARD_PRICE = { gratis: [40, 100], gusto: [120, 250], experiencia: [300, 600], inversion: [600, 1000] };
+/** ¿El precio está por debajo de la guía de su tipo? */
+export function rewardPriceHint(type, cost) {
+  const range = REWARD_PRICE[type];
+  if (!range) return null;
+  return { min: range[0], max: range[1], low: cost < range[0] };
+}
+
+/** Retos que se le pueden poner a una recompensa grande. */
+export const REWARD_LOCKS = [
+  { id: 'habit',    name: 'Cumplir un hábito varios días' },
+  { id: 'boss',     name: 'Derrotar a un jefe' },
+  { id: 'guardian', name: 'Evolucionar una guardiana' },
+];
+/**
+ * Estado del reto de una recompensa. Los retos de hábito y de jefe se cuentan
+ * desde que se puso el reto o desde el último canje de esa recompensa (cada
+ * canje pide cumplirlo de nuevo). El de guardiana queda cumplido para siempre.
+ * Devuelve null si no tiene reto.
+ */
+export function rewardLock(state, r, now = Date.now()) {
+  const lock = r?.lock;
+  if (!lock) return null;
+  const lastBuy = Math.max(0, ...state.purchases.filter(p => p.kind === 'reward' && p.itemId === r.id).map(p => p.ts || 0));
+  const since = Math.max(lock.since || 0, lastBuy);
+  let progress = 0, target = 1, label = '';
+  if (lock.kind === 'habit') {
+    const a = state.activities.find(x => x.id === lock.act);
+    target = Math.max(1, lock.n || 5);
+    progress = new Set(state.log.filter(e => isBase(e) && e.refId === lock.act && e.ts > since && e.ts <= now).map(e => dayKey(e.ts))).size;
+    label = `«${a ? a.name : 'Hábito borrado'}» ${target} días`;
+  } else if (lock.kind === 'boss') {
+    progress = state.log.some(e => e.type === 'boss' && e.ts > since && e.ts <= now) ? 1 : 0;
+    label = 'Derrota a un jefe';
+  } else if (lock.kind === 'guardian') {
+    target = Math.max(2, lock.tier || 2);
+    progress = affinityFor(state, lock.stat).tier;
+    label = `Guardiana de ${statById(lock.stat)?.name || lock.stat} en forma ${target}`;
+  }
+  progress = Math.min(progress, target);
+  return { locked: progress < target, progress, target, label };
+}
+
 /** Compra una recompensa real: genera un cupón para canjear. */
 export function buyReward(state, rewardId, now = Date.now()) {
   const r = state.rewards.find(x => x.id === rewardId);
   if (!r) throw new Error('Recompensa no encontrada');
+  const lock = rewardLock(state, r, now);
+  if (lock?.locked) throw new Error(`Primero cumple su reto: ${lock.label} (${lock.progress}/${lock.target})`);
   return pay(state, { kind: 'reward', itemId: r.id, name: r.name, cost: r.cost, used: false }, now);
 }
 export function useCoupon(state, purchaseId, now = Date.now()) {
@@ -769,9 +913,17 @@ export function applyShields(state, now = Date.now()) {
   let cursor = shiftDay(dayKey(now), -1);
   while (!days.has(cursor) && gap.length <= SHOP.shield.max) { gap.push(cursor); cursor = shiftDay(cursor, -1); }
   const hadStreak = days.has(cursor);
-  if (!gap.length || !hadStreak || gap.length > shieldsLeft(state)) return [];
-  state.shieldDays.push(...gap);
-  return gap;
+  if (!gap.length || !hadStreak) return [];
+  // Gasta los menos escudos posibles: el día de gracia de la semana puede
+  // cubrir uno de los días del hueco.
+  for (let k = 0; k <= Math.min(gap.length, shieldsLeft(state)); k++) {
+    const use = gap.slice(0, k);
+    if (computeStreak(state.log, now, [...state.shieldDays, ...use]).current > k) {   // conecta con la racha de antes
+      state.shieldDays.push(...use);
+      return use;
+    }
+  }
+  return [];
 }
 
 // =====================================================================

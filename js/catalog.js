@@ -1,5 +1,5 @@
 // =====================================================================
-// Catálogo de contenido de Kaisen: aquí se declara TODO el arte que la
+// Catálogo de contenido de Kaizen: aquí se declara TODO el arte que la
 // app sabe mostrar, con su ruta y cuándo se desbloquea.
 //
 // Para agregar arte nuevo casi nunca hay que tocar código:
@@ -10,7 +10,8 @@
 // Si una imagen todavía no existe, la app muestra "Próximamente".
 // =====================================================================
 
-import { migrateCharacter } from './logic.js';
+import { migrateCharacter, GUARDIAN_TIERS, guardianTier } from './logic.js';
+export { GUARDIAN_TIERS, guardianTier };
 
 export const art = {
   char:     id => `art/chars/${id}.webp`,
@@ -56,7 +57,6 @@ export const characterImg = id => art.char(normalizeCharacter(id));
 // subir el nivel de esa stat (6 stats × 5 = 30 diseños).
 // `name: null` = todavía sin nombre (se muestra "Guardián de …").
 // ---------------------------------------------------------------------
-export const GUARDIAN_TIERS = [1, 5, 10, 20, 35]; // nivel de stat para cada evolución
 // phrase: lo que dice al evolucionar (entrega T-03 de GPT).
 export const GUARDIANS = {
   fuerza:      { name: 'Astrid', phrase: 'Hoy puedo con lo que ayer me pesaba.' },
@@ -67,12 +67,6 @@ export const GUARDIANS = {
   hogar:       { name: 'Liv',    phrase: 'Poco a poco, este lugar se siente nuestro.' },
 };
 
-/** Forma (1–5) que corresponde a un nivel de stat. */
-export function guardianTier(statLevel) {
-  let tier = 1;
-  GUARDIAN_TIERS.forEach((min, i) => { if (statLevel >= min) tier = i + 1; });
-  return tier;
-}
 
 /**
  * Guardianas que alcanzaron una forma que aún no se anunció.

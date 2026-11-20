@@ -1,5 +1,5 @@
 // =====================================================================
-// Kaisen — interfaz. Lee/guarda el estado, dibuja las pantallas y
+// Kaizen — interfaz. Lee/guarda el estado, dibuja las pantallas y
 // conecta los botones. La lógica de juego vive en logic.js.
 // =====================================================================
 import * as G from './logic.js';
@@ -8,9 +8,11 @@ import { makeCard, shareCard } from './share.js';
 import * as Profiles from './profiles.js';
 import * as Gear from './gear.js';
 import { installInfo, isStandalone } from './install.js';
+import { KAIZEN_MEANING, GUIDES, TOUR } from './guide.js';
+import { HERO_LINES, GUARDIAN_LINES, BOSS_LINES, lineOfDay } from './phrases.js';
 import { art, CHARACTERS, DEFAULT_CHARACTER, charHero, characterById, characterImg, guardianFor, guardianEvolutions, syncGuardianSeen, GUARDIANS, WORLDS, worldById, DEFAULT_WORLD, DEFAULT_PET, PET_SPECIES, speciesById } from './catalog.js';
 
-export const APP_VERSION = '2.4.1';
+export const APP_VERSION = '2.5.0';
 const BACKUP_REMINDER_DAYS = 7;
 
 const $ = sel => document.querySelector(sel);
@@ -288,6 +290,28 @@ function renderHero() {
   stage.classList.toggle('idle-sway', state.prefs?.idle !== 'static');
   stage.classList.toggle('idle-static', state.prefs?.idle === 'static');
 }
+
+/**
+ * Frase del día del héroe, en una burbuja sobre la escena. Sale sola la
+ * primera vez que abres la app cada día; tocando al héroe se vuelve a ver.
+ */
+let saySeq = 0;
+function heroSays({ force = false } = {}) {
+  if (!state.onboarded || !$('#tour').hidden) return;
+  const today = G.dayKey(Date.now());
+  if (!force && state.notices?.saidDay === today) return;
+  if (!force) { state.notices = { ...state.notices, saidDay: today }; save(); }
+  const hero = characterById(state.profile.character);
+  const el = $('#heroSay');
+  el.innerHTML = `<b>${esc(state.profile.name || hero.name)}</b>${esc(lineOfDay(HERO_LINES[hero.hero], hero.hero, today))}`;
+  el.hidden = false;
+  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  const n = ++saySeq;
+  setTimeout(() => { if (n === saySeq) el.hidden = true; }, 9000);
+}
+// Tocar la escena (el héroe) vuelve a mostrar su frase del día.
+$('#scene').addEventListener('click', e => { if (!e.target.closest('button, .hud')) heroSays({ force: true }); });
+$('#heroSay').addEventListener('click', () => { saySeq++; $('#heroSay').hidden = true; });
 
 /** Destello breve detrás del personaje (al completar misiones). */
 let pendingFlash = false;
@@ -584,15 +608,19 @@ function renderShop() {
   }).join('');
 
   $('#rewardList').innerHTML = state.rewards.length
-    ? [...state.rewards].sort((a, b) => a.cost - b.cost).map(r => `
-      <div class="row shop-row" style="--c:#ffd23f">
+    ? [...state.rewards].sort((a, b) => a.cost - b.cost).map(r => {
+      const lock = G.rewardLock(state, r);
+      return `
+      <div class="row shop-row ${lock?.locked ? 'locked' : ''}" style="--c:#ffd23f">
         <div class="row-main">
-          <div class="row-title">${esc(r.name)}</div>
+          <div class="row-title">${lock ? (lock.locked ? '🔒 ' : '🔓 ') : ''}${esc(r.name)}</div>
           <div class="row-sub">${priceTag(r.cost)}${bal < r.cost ? ` · te faltan ${r.cost - bal}` : ''}</div>
+          ${lock ? `<div class="rw-lock"><span>Reto: ${esc(lock.label)}</span><div class="hpbar pet"><i style="width:${Math.round(lock.progress / lock.target * 100)}%"></i></div><small>${lock.progress}/${lock.target}${lock.locked ? '' : ' · ¡Cumplido!'}</small></div>` : ''}
         </div>
         <button class="icon-btn" data-reward-edit="${esc(r.id)}" aria-label="Editar">✎</button>
-        <button class="btn btn-yellow" data-reward-buy="${esc(r.id)}" ${bal < r.cost ? 'disabled' : ''}>Canjear</button>
-      </div>`).join('')
+        <button class="btn btn-yellow" data-reward-buy="${esc(r.id)}" ${bal < r.cost || lock?.locked ? 'disabled' : ''}>Canjear</button>
+      </div>`;
+    }).join('')
     : `<div class="empty">Crea tu primera recompensa.</div>`;
 
   const coupons = state.purchases.filter(x => x.kind === 'reward').sort((a, b) => (a.used - b.used) || (b.ts - a.ts));
@@ -671,7 +699,7 @@ function renderMinis({ boss, pet }) {
       ${boss.defeated
         ? `<div class="mini-sub" style="color:var(--yellow)">${boss.claimed ? '✔ Derrotado' : '¡Reclama tu premio!'}</div>`
         : `<div class="hpbar"><i style="width:${Math.round((1 - boss.pct) * 100)}%"></i></div>
-           <div class="mini-sub">${boss.hpLeft} PV · ${boss.daysLeft} d</div>`}
+           <div class="mini-sub">${boss.hpLeft} PV · ${boss.daysLeft} d${boss.defenseToday ? ' · 🛡️' : ''}</div>`}
     </div>
     ${challenge && !boss.defeated ? `<button class="boss-challenge act-btn ${doneToday ? 'done' : ''}" data-act="${esc(challenge.id)}" style="--c:${G.statById(challenge.stat).color}" ${doneToday ? 'disabled' : ''}>
       <span>${doneToday ? '✔ Reto de hoy hecho' : `⚡ ${esc(challenge.name)}`}</span><b>${doneToday ? '' : `+${challenge.xp} XP · ×3`}</b>
@@ -695,7 +723,7 @@ function renderAdventure({ boss, weekly }) {
       <img class="boss-art boss-hit" src="${bossImg(boss.id)}" alt="${esc(boss.name)}">
       ${boss.defeated ? '<div class="boss-stamp">¡Derrotado!</div>' : ''}
       <div class="boss-name">${esc(boss.name)}</div>
-      <div class="boss-taunt">${esc(boss.taunt)}</div>
+      <div class="boss-taunt">${esc(lineOfDay([boss.taunt, ...(BOSS_LINES[boss.id] || [])], boss.id, G.dayKey(Date.now())))}</div>
       <div class="hpbar"><i style="width:${Math.round((1 - boss.pct) * 100)}%"></i></div>
       <div class="boss-meta">
         <span>${boss.hpLeft} / ${boss.hp} PV</span>
@@ -706,7 +734,10 @@ function renderAdventure({ boss, weekly }) {
           ? `<p class="boss-note">Premio reclamado. Un nuevo jefe llegará el mes que viene.</p>
              <button class="btn btn-block" id="shareBossBtn">Presumir la victoria</button>`
           : `<button class="btn btn-yellow btn-block" id="claimBossBtn">Reclamar +${boss.rewardXp} XP</button>`
-        : `<p class="boss-note">Cada XP que ganas le quita 1 PV. Te ${boss.daysLeft === 1 ? 'queda 1 día' : `quedan ${boss.daysLeft} días`} para derrotarlo y ganar <b>+${boss.rewardXp} XP</b>.</p>`}
+        : `<p class="boss-note">Cada XP que ganas le quita 1 PV. Te ${boss.daysLeft === 1 ? 'queda 1 día' : `quedan ${boss.daysLeft} días`} para derrotarlo y ganar <b>+${boss.rewardXp} XP</b>.</p>
+           <p class="boss-note small">${boss.defenseToday
+             ? '🛡️ <b>Defensa activa:</b> cumpliste su reto ayer, así que hoy no puede recuperarse.'
+             : `Si pasa un día sin que registres nada de ${weak.name} ni su reto, recupera un poco de vida (nunca te quita nada a ti). Cumplir su reto te da <b>Defensa</b> para el día siguiente.`}${boss.healed ? ` Este mes ha recuperado ${boss.healed} PV.` : ''}</p>`}
       ${dropLine(boss)}
     </div>`;
 
@@ -809,7 +840,7 @@ function renderGuardians(p) {
         <b>${esc(name)}</b>
         <small>${s.name} · Forma ${g.tier}/5</small>
         <div class="g-pips">${[1, 2, 3, 4, 5].map(t => `<i class="${t <= g.tier ? 'on' : ''}"></i>`).join('')}</div>
-        <span class="g-next">${g.nextAt ? `Evoluciona en LV ${g.nextAt}` : 'Forma final'}</span>
+        <span class="g-next">${G.AFFINITY_PCT[g.tier - 1] ? `Afinidad +${G.AFFINITY_PCT[g.tier - 1]} % · ` : ''}${g.nextAt ? `Evoluciona en LV ${g.nextAt}` : 'Forma final'}</span>
       </div>
     </button>`;
   }).join('');
@@ -844,7 +875,7 @@ function renderSettings() {
       <img src="${characterImg(pr.character)}" alt="">${esc(pr.name)} <small>LV ${pr.level}</small>
     </button>`).join('') + `<button class="chip" id="newProfileBtn">＋ Nuevo</button>`;
   $('#deleteProfileBtn').hidden = profiles.length < 2;
-  $('#charGrid').innerHTML = heroPicker(state.profile.character, settingsPickHero);
+  $('#charGrid').innerHTML = heroPicker(state.profile.character);
   document.querySelectorAll('#idleChips .chip').forEach(c => c.classList.toggle('on', c.dataset.idle === (state.prefs?.idle || 'sway')));
 
   $('#activityList').innerHTML = G.STATS.flatMap(s =>
@@ -975,9 +1006,84 @@ async function confirmSheet(title, msg, okLabel = 'Sí', danger = false) {
   return (await p) === 'ok';
 }
 $('#sheet').addEventListener('click', e => {
+  const h = e.target.closest('[data-help]');
+  if (h) { closeSheet(); return h.dataset.help === 'tour' ? startTour() : showKaizen(); }
   const b = e.target.closest('[data-close]');
   if (b) closeSheet(b.dataset.close);
 });
+
+// ---------------------------------------------------------------------
+// Ayuda: guía de cada sección, significado de Kaizen y tour
+// ---------------------------------------------------------------------
+const currentView = () => document.querySelector('.view.active')?.id.replace('view-', '') || 'home';
+
+function showKaizen() {
+  openSheet(`
+    <div class="kz-kanji" lang="ja">${KAIZEN_MEANING.kanji}</div>
+    <h3>${KAIZEN_MEANING.title}</h3>
+    ${KAIZEN_MEANING.body.map(p => `<p>${p}</p>`).join('')}
+    <button class="btn btn-primary btn-block" data-close="ok">Entendido</button>`);
+}
+
+function showHelp() {
+  const g = GUIDES[currentView()] || GUIDES.home;
+  openSheet(`
+    <h3>${g.title}: qué hace cada cosa</h3>
+    <ul class="guide-list">${g.points.map(p => `<li>${p}</li>`).join('')}</ul>
+    <div class="btn-row">
+      <button class="btn" data-help="kaizen">¿Qué es Kaizen?</button>
+      <button class="btn btn-primary" data-help="tour">Ver tour</button>
+    </div>
+    <button class="w-skip" data-close="cancel">Cerrar</button>`);
+}
+
+let tourSteps = [], tourIdx = -1;
+const visible = el => el && !el.hidden && el.getClientRects().length > 0;
+function startTour() {
+  if (!$('#sheetBackdrop').hidden) closeSheet();
+  showView('home');
+  tourSteps = TOUR.filter(st => visible(document.querySelector(st.sel)));
+  tourIdx = 0;
+  $('#tour').hidden = false;
+  document.body.classList.add('touring');
+  renderTour();
+}
+function endTour() {
+  $('#tour').hidden = true;
+  document.body.classList.remove('touring');
+  tourIdx = -1;
+  commit(s => { s.notices = { ...(s.notices || {}), tourSeen: true }; }, { celebrate: false });
+}
+function renderTour() {
+  const st = tourSteps[tourIdx];
+  if (!st) return endTour();
+  const el = document.querySelector(st.sel);
+  el.scrollIntoView({ block: 'center' });
+  requestAnimationFrame(() => {
+    const r = el.getBoundingClientRect(), pad = 6;
+    Object.assign($('#tourSpot').style, { left: `${r.left - pad}px`, top: `${r.top - pad}px`, width: `${r.width + pad * 2}px`, height: `${r.height + pad * 2}px` });
+    const last = tourIdx === tourSteps.length - 1;
+    const b = $('#tourBubble');
+    b.innerHTML = `
+      <small>${tourIdx + 1} de ${tourSteps.length}</small>
+      <b>${st.title}</b><p>${st.text}</p>
+      <div class="btn-row">
+        ${last ? '' : '<button class="btn" data-tour="skip">Saltar</button>'}
+        <button class="btn btn-primary" data-tour="next">${last ? 'Terminar' : 'Siguiente'}</button>
+      </div>`;
+    const below = r.top + r.height / 2 < innerHeight / 2;
+    b.style.top = below ? `${Math.min(r.bottom + 14, innerHeight - 200)}px` : '';
+    b.style.bottom = below ? '' : `${Math.min(innerHeight - r.top + 14, innerHeight - 200)}px`;
+  });
+}
+$('#tour').addEventListener('click', e => {
+  const b = e.target.closest('[data-tour]');
+  if (b?.dataset.tour === 'skip') return endTour();
+  tourIdx++; renderTour();   // tocar en cualquier parte avanza
+});
+$('#helpBtn').onclick = showHelp;
+$('#kaizenBtn').onclick = showKaizen;
+$('#tourBtn').onclick = startTour;
 
 /** Formulario para crear/editar actividades y misiones. */
 async function editorSheet({ title, item, maxXp, allowBonus, allowDelete }) {
@@ -993,12 +1099,20 @@ async function editorSheet({ title, item, maxXp, allowBonus, allowDelete }) {
         `<button type="button" class="chip stat-chip ${it.stat === s.id ? 'on' : ''}" data-stat="${s.id}" style="--c:${s.color}"><img src="${statIcon(s.id)}" alt="">${s.name}</button>`).join('')}
       </div>
     </div>
+    ${allowBonus ? `
+    <div class="field"><span>¿Cuánto esfuerzo te pide?</span>
+      <div class="effort" id="edEffort">${G.EFFORT_LEVELS.map(l => `
+        <button type="button" class="effort-btn ${it.xp === l.xp ? 'on' : ''}" data-xp="${l.xp}"><b>${l.name}</b><small>${l.hint}</small><em>+${l.xp} XP</em></button>`).join('')}
+        ${G.EFFORT_LEVELS.some(l => l.xp === it.xp) ? '' : `<button type="button" class="effort-btn on" data-xp="${it.xp}"><b>Actual</b><small>Como estaba</small><em>+${it.xp} XP</em></button>`}
+      </div>
+      <input type="hidden" id="edXp" value="${it.xp}">
+    </div>` : `
     <div class="field"><span>XP (${G.XP_MIN}–${maxXp})</span>
       <div class="range-row">
         <input type="range" id="edXp" min="${G.XP_MIN}" max="${maxXp}" step="5" value="${xpVal}">
         <output id="edXpOut">+${xpVal}</output>
       </div>
-    </div>
+    </div>`}
     ${allowBonus ? `
     <label class="toggle"><input type="checkbox" id="edBonusOn" ${it.bonus ? 'checked' : ''}> <span>Bono opcional (ej. ruta larga)</span></label>
     <div id="edBonus" ${it.bonus ? '' : 'hidden'} class="char-editor">
@@ -1032,7 +1146,12 @@ async function editorSheet({ title, item, maxXp, allowBonus, allowDelete }) {
     stat = c.dataset.stat;
     document.querySelectorAll('#edStats .chip').forEach(x => x.classList.toggle('on', x === c));
   };
-  $('#edXp').oninput = e => { $('#edXpOut').textContent = `+${e.target.value}`; };
+  if (allowBonus) $('#edEffort').onclick = e => {
+    const b = e.target.closest('[data-xp]'); if (!b) return;
+    $('#edXp').value = b.dataset.xp;
+    document.querySelectorAll('#edEffort .effort-btn').forEach(x => x.classList.toggle('on', x === b));
+  };
+  else $('#edXp').oninput = e => { $('#edXpOut').textContent = `+${e.target.value}`; };
   if (allowBonus) {
     $('#edBonusOn').onchange = e => { $('#edBonus').hidden = !e.target.checked; };
     $('#edBonusXp').oninput = e => { $('#edBonusOut').textContent = `+${e.target.value}`; };
@@ -1068,7 +1187,15 @@ function doLog(activityId, bonus, origin) {
     origin.classList.remove('flash'); void origin.offsetWidth; origin.classList.add('flash');
   }
   heroReact();
-  const news = [...lastNews];
+  // Qué avanzó en el RPG: la guardiana de esa stat (con su Afinidad) y el jefe.
+  const boss = G.bossStatus(state);
+  const dmg = boss.claimed ? 0 : G.bossDamageFor(entry, boss);
+  const gName = GUARDIANS[entry.stat]?.name || G.statById(entry.stat).name;
+  const rpg = `${gName} +${entry.xp}${entry.guardXp ? ` <small>(Afinidad +${entry.guardXp})</small>` : ''}${dmg ? ` · ${esc(boss.name.split(',')[0])} −${dmg} PV` : ''}`;
+  const news = [rpg, ...lastNews];
+  // La primera vez del día en esa stat, su guardiana dice algo de su propósito.
+  const firstOfStat = state.log.filter(e => e.type === 'activity' && e.stat === entry.stat && G.dayKey(e.ts) === today).length === 1;
+  if (firstOfStat && !lastNews.length && GUARDIAN_LINES[entry.stat]) news.push(`<i>${esc(gName)}: «${esc(lineOfDay(GUARDIAN_LINES[entry.stat], entry.stat, today))}»</i>`);
   const coins = G.coinsFor(entry) + (firstToday ? G.chestFor(today) : 0);
   showResult(`<b>${esc(entry.name)}</b> · +${entry.xp} XP · +${coins} 🪙`, news,
     () => { commit(s => G.undoEntry(s, entry.id), { celebrate: false }); toast('Registro deshecho'); });
@@ -1236,12 +1363,12 @@ async function share(card, text) {
 function shareProgress() {
   const p = G.deriveProfile(state);
   return share({ kicker: `Rango ${p.rank.letter} · ${p.rank.title}`, title: `¡Nivel ${p.level}!`, sub: `${p.totalXp} XP · racha de ${plural(p.streak.current, 'día', 'días')} · ${G.unlockedAchievements(state, p).length} logros` },
-    `¡Voy en nivel ${p.level} en Kaisen!`);
+    `¡Voy en nivel ${p.level} en Kaizen!`);
 }
 function shareBoss() {
   const b = G.bossStatus(state);
   return share({ kicker: 'Jefe derrotado', title: `¡Vencí a ${b.name.split(',')[0]}!`, sub: b.name, art: art.boss(b.id), accent: '#ff3b4e', dimArt: true },
-    `¡Derroté a ${b.name} en Kaisen!`);
+    `¡Derroté a ${b.name} en Kaizen!`);
 }
 function shareCoupon(id) {
   const c = state.purchases.find(x => x.id === id);
@@ -1292,21 +1419,60 @@ async function openRewardIdeas() {
 async function editReward(id) {
   const r = id ? state.rewards.find(x => x.id === id) : null;
   const cost = r?.cost || 150;
+  let type = r?.type || (cost <= 100 ? 'gratis' : cost <= 250 ? 'gusto' : cost <= 600 ? 'experiencia' : 'inversion');
+  const lk = r?.lock || null;
+  const acts = state.activities.filter(a => !a.resist);
   const p = openSheet(`
     <h3>${r ? 'Editar recompensa' : 'Nueva recompensa'}</h3>
     <label class="field"><span>¿Qué te vas a regalar?</span>
       <input type="text" id="rwName" maxlength="40" value="${esc(r?.name || '')}" placeholder="Ej. Salir por un helado" autocomplete="off"></label>
+    <div class="field"><span>Tipo</span>
+      <div class="chips" id="rwType">${G.REWARD_TYPES.map(t => `<button type="button" class="chip ${t.id === type ? 'on' : ''}" data-type="${t.id}">${esc(t.name)}</button>`).join('')}</div>
+    </div>
     <div class="field"><span>Precio en monedas</span>
       <div class="range-row"><input type="range" id="rwCost" min="20" max="1000" step="10" value="${cost}"><output id="rwOut">${cost}</output></div>
-      <span style="text-transform:none;letter-spacing:0">Referencia: un día normal da unas 25–35 monedas.</span>
+      <span class="rw-guide" id="rwGuide"></span>
+    </div>
+    <div class="field"><span>Reto para desbloquearla (opcional)</span>
+      <select id="rwLock">
+        <option value="">Sin reto: solo el precio</option>
+        ${G.REWARD_LOCKS.map(l => `<option value="${l.id}" ${lk?.kind === l.id ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}
+      </select>
+      <div id="rwLockHabit" class="rw-lock-opts" ${lk?.kind === 'habit' ? '' : 'hidden'}>
+        <select id="rwLockAct">${acts.map(a => `<option value="${esc(a.id)}" ${lk?.act === a.id ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select>
+        <select id="rwLockN">${[3, 5, 7, 10, 14].map(n => `<option value="${n}" ${(lk?.n || 5) === n ? 'selected' : ''}>${n} días</option>`).join('')}</select>
+      </div>
+      <div id="rwLockGuard" class="rw-lock-opts" ${lk?.kind === 'guardian' ? '' : 'hidden'}>
+        <select id="rwLockStat">${G.STATS.map(s => `<option value="${s.id}" ${lk?.stat === s.id ? 'selected' : ''}>${esc(GUARDIANS[s.id]?.name || s.name)} (${esc(s.name)})</option>`).join('')}</select>
+        <select id="rwLockTier">${[2, 3, 4, 5].map(t => `<option value="${t}" ${(lk?.tier || 2) === t ? 'selected' : ''}>Forma ${t}</option>`).join('')}</select>
+      </div>
+      <span class="rw-guide">Un reto hace que el premio se sienta ganado. Cada canje pide cumplirlo otra vez (salvo el de guardiana).</span>
     </div>
     <div class="btn-row"><button class="btn" data-close="cancel">Cancelar</button><button class="btn btn-primary" id="rwSave">Guardar</button></div>
     ${r ? '<button class="btn btn-danger btn-block" data-close="delete">Borrar</button>' : ''}`);
-  $('#rwCost').oninput = e => { $('#rwOut').textContent = e.target.value; };
+  const guide = () => {
+    const h = G.rewardPriceHint(type, Number($('#rwCost').value));
+    $('#rwGuide').innerHTML = h ? `Precio guía para este tipo: <b>${h.min}–${h.max}</b> monedas (un día normal da unas 25–35).${h.low ? '<br><b class="warn">Muy barata: una recompensa así deja de sentirse ganada.</b>' : ''}` : '';
+  };
+  guide();
+  $('#rwCost').oninput = e => { $('#rwOut').textContent = e.target.value; guide(); };
+  $('#rwType').onclick = e => {
+    const c = e.target.closest('[data-type]'); if (!c) return;
+    type = c.dataset.type;
+    document.querySelectorAll('#rwType .chip').forEach(x => x.classList.toggle('on', x === c));
+    guide();
+  };
+  $('#rwLock').onchange = e => { $('#rwLockHabit').hidden = e.target.value !== 'habit'; $('#rwLockGuard').hidden = e.target.value !== 'guardian'; };
   $('#rwSave').onclick = () => {
     const name = $('#rwName').value.trim();
     if (!name) { $('#rwName').focus(); return; }
-    closeSheet({ name, cost: Math.min(1000, Math.max(20, Number($('#rwCost').value) || 100)) });
+    const kind = $('#rwLock').value;
+    const same = lk && lk.kind === kind;
+    const lock = !kind ? null
+      : kind === 'habit' ? { kind, act: $('#rwLockAct').value, n: Number($('#rwLockN').value), since: same && lk.act === $('#rwLockAct').value ? lk.since : Date.now() }
+      : kind === 'guardian' ? { kind, stat: $('#rwLockStat').value, tier: Number($('#rwLockTier').value) }
+      : { kind, since: same ? lk.since : Date.now() };
+    closeSheet({ name, type, lock, cost: Math.min(1000, Math.max(20, Number($('#rwCost').value) || 100)) });
   };
   const res = await p;
   if (!res || res === 'cancel') return;
@@ -1342,44 +1508,44 @@ function checkShields() {
 // Perfiles y personajes
 // ---------------------------------------------------------------------
 /**
- * Selector en dos pasos: «Elige tu héroe» (6 héroes con su cualidad) y
- * «Elige tu look» (sus dos versiones, con el mismo peso visual).
- * `pickHero` es el héroe abierto en el paso 2, o null para el paso 1.
+ * Selector de héroe: primero «¿Cómo quieres que se vea?» (Hombre / Mujer, con
+ * el mismo peso visual) y luego los seis héroes en ese look. En Ajustes el
+ * look se cambia con un selector arriba de la lista. Elegir héroe o look solo
+ * cambia el avatar: la XP es la misma con cualquiera.
  */
-function heroPicker(selected, pickHero, { compact = false } = {}) {
+function heroPicker(selected, { askLook = false, compact = false } = {}) {
   const cur = characterById(selected);
-  if (!pickHero) {
-    const cards = CHARACTERS.map(c => {
-      const key = `${c.id}-${cur.look}`, on = c.id === cur.hero;
-      return `
-      <button class="char-card ${on ? 'on' : ''}" data-hero="${c.id}" style="--c:${c.accent}" aria-label="${esc(c.names[cur.look])}: ${esc(c.title)}">
-        ${on ? '<span class="char-check">✓</span>' : ''}
-        <img class="char-fig" src="${characterImg(key)}" alt="">
-        <b>${esc(c.names[cur.look])}</b><em>${esc(c.title)}</em>${compact ? '' : `<small>${esc(c.blurb)}</small>`}
+  if (askLook) {
+    const card = (lk, label) => `
+      <button class="look-pick" data-look="${lk}">
+        <span class="look-mosaic">${['relampago', 'titan', 'implacable'].map(h => `<img src="${characterImg(`${h}-${lk}`)}" alt="">`).join('')}</span>
+        <b>${label}</b>
       </button>`;
-    }).join('');
     return `
-      <div class="hp-head"><b>Elige tu héroe</b></div>
-      <p class="hp-hint">Elige un héroe que te represente o que encarne algo que quieres cultivar.</p>
-      <div class="char-grid ${compact ? 'w-chars' : ''}">${cards}</div>
-      <p class="hp-note">Todas las actividades dan la misma XP con cualquier héroe, y puedes cambiarlo cuando quieras sin perder progreso.</p>`;
+      <div class="hp-head"><b>¿Cómo quieres que se vea tu héroe?</b></div>
+      <p class="hp-hint">Los seis héroes existen en las dos versiones. Puedes cambiarlo cuando quieras.</p>
+      <div class="look-picks">${card('m', 'Hombre')}${card('f', 'Mujer')}</div>`;
   }
-  const c = CHARACTERS.find(x => x.id === pickHero);
-  const looks = ['m', 'f'].map(lk => {
-    const key = `${c.id}-${lk}`, on = key === cur.key;
+  const lk = cur.look;
+  const cards = CHARACTERS.map(c => {
+    const key = `${c.id}-${lk}`, on = c.id === cur.hero;
     return `
-      <button class="char-card look-card ${on ? 'on' : ''}" data-char="${key}" style="--c:${c.accent}" aria-label="${esc(c.names[lk])}">
+      <button class="char-card ${on ? 'on' : ''}" data-char="${key}" style="--c:${c.accent}" aria-label="${esc(c.names[lk])}: ${esc(c.title)}">
         ${on ? '<span class="char-check">✓</span>' : ''}
         <img class="char-fig" src="${characterImg(key)}" alt="">
-        <b>${esc(c.names[lk])}</b>
+        <b>${esc(c.names[lk])}</b><em>${esc(c.title)}</em>${compact ? '' : `<small>${esc(c.blurb)}</small>`}
       </button>`;
   }).join('');
   return `
-    <div class="hp-head"><button class="hp-back" data-hero-back>‹ Héroes</button><b>Elige tu look</b></div>
-    <p class="hp-hint"><em style="--c:${c.accent}">${esc(c.title)}</em> · «${esc(c.blurb)}»</p>
-    <div class="char-grid look-grid">${looks}</div>`;
+    <div class="hp-head"><b>Elige tu héroe</b>
+      <span class="hp-looks" role="group" aria-label="Look">
+        <button class="${lk === 'm' ? 'on' : ''}" data-look="m">Hombre</button><button class="${lk === 'f' ? 'on' : ''}" data-look="f">Mujer</button>
+      </span></div>
+    <p class="hp-hint">Elige un héroe que te represente o que encarne algo que quieres cultivar.</p>
+    <div class="char-grid ${compact ? 'w-chars' : ''}">${cards}</div>
+    <p class="hp-note">Todas las actividades dan la misma XP con cualquier héroe, y puedes cambiarlo cuando quieras sin perder progreso.</p>`;
 }
-let settingsPickHero = null;
+const withLook = (id, lk) => `${charHero(id)}-${lk}`;
 
 function useProfile(id, { silent = false } = {}) {
   state = Profiles.switchProfile(id);
@@ -1405,7 +1571,7 @@ async function newProfileFlow() {
 // ---------------------------------------------------------------------
 // Bienvenida: 3 pasos para empezar (nombre y personaje → hábitos → listo)
 // ---------------------------------------------------------------------
-const welcomeDraft = { step: 1, name: '', character: DEFAULT_CHARACTER, pickHero: null, habits: [], rewards: [] };
+const welcomeDraft = { step: 1, name: '', character: DEFAULT_CHARACTER, lookChosen: false, habits: [], rewards: [] };
 const W_STEPS = 4;
 const habitChips = (ids, selected) => ids.map(t => {
   const st = G.statById(t.stat);
@@ -1419,7 +1585,7 @@ const areaGroups = (selected, filter = () => true) => G.HABIT_AREAS.map(ar => {
 
 function maybeWelcome() {
   if (state.onboarded) { $('#welcome').hidden = true; return; }
-  Object.assign(welcomeDraft, { step: 1, name: state.profile.name === 'Héroe' ? '' : state.profile.name, character: state.profile.character, pickHero: null, habits: [], rewards: [] });
+  Object.assign(welcomeDraft, { step: 1, name: state.profile.name === 'Héroe' ? '' : state.profile.name, character: state.profile.character, lookChosen: false, habits: [], rewards: [] });
   $('#welcome').hidden = false;
   renderWelcome();
 }
@@ -1430,12 +1596,13 @@ function renderWelcome() {
   let body = '';
   if (d.step === 1) {
     body = `
-      <div class="w-brand">KAI<span>SEN</span></div>
+      <div class="w-brand">KAI<span>ZEN</span></div>
+      <button class="w-kaizen" data-kaizen><span lang="ja">${KAIZEN_MEANING.kanji}</span> ${KAIZEN_MEANING.short} <u>¿Qué significa?</u></button>
       <h2>Tu vida es la aventura</h2>
       <p>Cada cosa buena que haces en la vida real le da experiencia a tu héroe. Empecemos por conocerte.</p>
       <label class="field"><span>¿Cómo se llama tu héroe?</span>
         <input type="text" id="wName" maxlength="16" placeholder="Héroe" value="${esc(d.name)}" autocomplete="off"></label>
-      <div class="field hero-picker" id="wChars">${heroPicker(d.character, d.pickHero, { compact: true })}</div>
+      <div class="field hero-picker" id="wChars">${heroPicker(d.character, { askLook: !d.lookChosen, compact: true })}</div>
       <button class="btn btn-primary btn-block" data-w="next">Siguiente</button>`;
   } else if (d.step === 2) {
     body = `
@@ -1473,16 +1640,17 @@ function renderWelcome() {
         <li><b>Registra</b> lo que hiciste con un toque. Si te equivocas, toca <b>Deshacer</b>.</li>
         <li><b>Lo básico</b> se marca una vez al día desde Inicio.</li>
         <li>Cada día que registras algo, tu <b>huevo</b> se calienta. En 2 días nace tu mascota.</li>
-        <li>Lo demás (jefes, guardianas, tienda) lo irás descubriendo.</li>
+        <li>Lo demás (jefes, guardianas, tienda) lo irás descubriendo. Toca <b>?</b> arriba cuando tengas dudas.</li>
       </ul>
       <button class="btn btn-primary btn-block" data-w="finish">${first ? `Empezar: registrar «${esc(first.name)}»` : 'Empezar'}</button>
+      <button class="btn btn-block" data-w="finish-tour">Entrar y ver un tour rápido</button>
       <button class="w-skip" data-w="finish-only">Entrar sin registrar todavía</button>`;
   }
   $('#welcomeInner').innerHTML = `<div class="w-dots">${dots}</div>${body}`;
   $('#welcomeInner').scrollTop = 0;
 }
 
-function finishWelcome({ habits = welcomeDraft.habits, logFirst = false } = {}) {
+function finishWelcome({ habits = welcomeDraft.habits, logFirst = false, quiet = false } = {}) {
   const d = welcomeDraft;
   G.applyOnboarding(state, { name: d.name, character: d.character, habitIds: habits, rewardIds: d.rewards });
   save();
@@ -1494,18 +1662,18 @@ function finishWelcome({ habits = welcomeDraft.habits, logFirst = false } = {}) 
     const btn = document.querySelector(`#quickLog [data-act="${CSS.escape(habits[0])}"], #basicsRow [data-act="${CSS.escape(habits[0])}"]`);
     if (btn) onActivityTap(btn);
   }, 350);
-  else toast(`¡Bienvenido, ${esc(state.profile.name)}! Registra algo cuando lo hagas.`);
+  else if (!quiet) toast(`¡Bienvenido, ${esc(state.profile.name)}! Registra algo cuando lo hagas. Si tienes dudas, toca <b>?</b> arriba.`);
 }
 
 $('#welcome').addEventListener('input', e => { if (e.target.id === 'wName') welcomeDraft.name = e.target.value; });
 $('#welcome').addEventListener('click', e => {
   const d = welcomeDraft;
-  const hp = e.target.closest('[data-hero], [data-hero-back], [data-char]');
+  if (e.target.closest('[data-kaizen]')) return showKaizen();
+  const hp = e.target.closest('#wChars [data-look], #wChars [data-char]');
   if (hp) {
-    if (hp.dataset.char) d.character = hp.dataset.char;
-    d.pickHero = hp.dataset.hero || (hp.dataset.char ? charHero(hp.dataset.char) : null);
-    $('#wChars').innerHTML = heroPicker(d.character, d.pickHero, { compact: true });
-    if (hp.dataset.hero) $('#wChars').scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    if (hp.dataset.look) { d.character = withLook(d.character, hp.dataset.look); d.lookChosen = true; }
+    else d.character = hp.dataset.char;
+    $('#wChars').innerHTML = heroPicker(d.character, { compact: true });
     return;
   }
   const rw = e.target.closest('[data-reward]');
@@ -1533,6 +1701,7 @@ $('#welcome').addEventListener('click', e => {
   if (act === 'skip') finishWelcome({ habits: [] });
   if (act === 'finish') finishWelcome({ logFirst: true });
   if (act === 'finish-only') finishWelcome();
+  if (act === 'finish-tour') { finishWelcome({ quiet: true }); setTimeout(startTour, 400); }
 });
 
 /** Ajustes: agregar más hábitos de la lista. */
@@ -1566,6 +1735,7 @@ async function openStatDetail(statId) {
   const acts = state.activities.filter(a => a.stat === statId);
   const g = guardianFor(statId, st.level);
   const gName = g.name || `Guardián de ${s.name}`;
+  const aff = G.affinityFor(state, statId);
   const p = openSheet(`
     <div class="stat-detail-head" style="--c:${s.color}">
       <img src="${statIcon(s.id)}" alt="">
@@ -1579,8 +1749,10 @@ async function openStatDetail(statId) {
         <span class="soon">Próximamente</span>
       </div>
       <div class="guardian-text">
-        <small>Guardián · Evolución ${g.tier}/5</small><b>${esc(gName)}</b>
-        <p>${g.nextAt ? `Evoluciona cuando ${s.name} llegue al nivel ${g.nextAt}.` : '¡Alcanzó su forma final!'}</p>
+        <small>Guardiana · Forma ${g.tier}/5</small><b>${esc(gName)}</b>
+        <q class="g-say">${esc(lineOfDay(GUARDIAN_LINES[statId], statId, G.dayKey(Date.now())))}</q>
+        <p class="g-aff"><strong>Afinidad: ${aff.pct ? `+${aff.pct} %` : 'aún no'}</strong> de XP y monedas en actividades de ${s.name}.
+          ${g.nextAt ? `En el nivel ${g.nextAt} evoluciona y sube a +${G.AFFINITY_PCT[g.tier]} %.` : '¡Forma final!'}</p>
       </div>
     </div>
     <div class="field"><span>Actividades (${acts.length})</span>
@@ -1635,13 +1807,13 @@ function showLevelUp(p) {
 async function exportBackup() {
   const payload = G.exportPayload(state);
   const json = JSON.stringify(payload, null, 2);
-  const name = `kaisen-respaldo-${G.dayKey(Date.now())}.json`;
+  const name = `kaizen-respaldo-${G.dayKey(Date.now())}.json`;
   const file = new File([json], name, { type: 'application/json' });
   let done = false;
   try {
     // En iPhone, compartir permite "Guardar en Archivos" / iCloud Drive.
     if (navigator.canShare?.({ files: [file] })) {
-      await navigator.share({ files: [file], title: 'Respaldo Kaisen' });
+      await navigator.share({ files: [file], title: 'Respaldo Kaizen' });
       done = true;
     }
   } catch (err) {
@@ -1817,13 +1989,14 @@ $('#charName').addEventListener('input', e => {
 });
 $('#charName').addEventListener('blur', () => renderSettings());
 $('#charGrid').addEventListener('click', e => {
-  const h = e.target.closest('[data-hero]');
-  if (h) { settingsPickHero = h.dataset.hero; renderSettings(); return; }
-  if (e.target.closest('[data-hero-back]')) { settingsPickHero = null; renderSettings(); return; }
-  const c = e.target.closest('[data-char]'); if (!c) return;
-  settingsPickHero = null;
+  const l = e.target.closest('[data-look]');
+  const c = e.target.closest('[data-char]');
+  if (!l && !c) return;
+  const next = l ? withLook(state.profile.character, l.dataset.look) : c.dataset.char;
+  if (next === G.migrateCharacter(state.profile.character)) return;
   // Solo cambia el avatar: nivel, XP, historial y guardianas siguen igual.
-  commit(s => { s.profile.character = c.dataset.char; }, { celebrate: false });
+  commit(s => { s.profile.character = next; }, { celebrate: false });
+  if (l) return;
   toast(`Ahora juegas como ${characterById(c.dataset.char).name}`);
 });
 $('#idleChips').addEventListener('click', e => {
@@ -1859,8 +2032,35 @@ $('#resetBtn').onclick = async () => {
   maybeWelcome();
 };
 
+/**
+ * Al volver después de faltar uno o más días: bienvenida sin culpa. Dice que
+ * el progreso sigue intacto, cómo quedó la racha y si el jefe se recuperó.
+ */
+function welcomeBack() {
+  if (!state.onboarded) return;
+  const away = G.daysAway(state);
+  const today = G.dayKey(Date.now());
+  if (!away || state.notices?.backDay === today) return;
+  state.notices = { ...state.notices, backDay: today };
+  save();
+  const p = G.deriveProfile(state);
+  const b = G.bossStatus(state);
+  const lines = [p.streak.current > 0
+    ? `Tu racha sigue en <b>${p.streak.current}</b>${p.streak.graceDays.length ? ' gracias al día de gracia' : ''}. Registra algo hoy para mantenerla.`
+    : 'Tu racha empieza de nuevo hoy. Tu nivel, tus guardianas y tus monedas siguen igual.'];
+  // Lo que el jefe recuperó desde tu último registro (solo si es el mismo mes).
+  const lastTs = Math.max(...state.log.filter(G.isBase).map(e => e.ts));
+  const healedAway = b.healed - (G.monthKey(lastTs) === b.monthKey ? G.bossStatus(state, lastTs).healed : 0);
+  if (healedAway > 0 && !b.defeated) {
+    const ch = state.activities.find(a => a.resist === b.id);
+    lines.push(`${esc(b.name.split(',')[0])} recuperó ${healedAway} PV mientras no estabas.${ch ? ` Hoy «${esc(ch.name)}» le pega ×3.` : ''}`);
+  }
+  setTimeout(() => toast(`<span class="res-head">💪 ¡Volviste! Tu progreso sigue intacto.</span>${lines.map(l => `<span class="res-line">${l}</span>`).join('')}`,
+    { kind: 'result', duration: 8000 }), 700);
+}
+
 // Al volver a la app (p. ej. al día siguiente) se recalcula racha y "hoy".
-document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkShields(); renderAll(); } });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { checkShields(); renderAll(); welcomeBack(); heroSays(); } });
 
 // ---------------------------------------------------------------------
 // Inicio
@@ -1872,6 +2072,8 @@ checkShields();
 renderAll();
 noticeSkyRefund();
 maybeWelcome();
+welcomeBack();
+heroSays();
 
 /** Una sola vez: avisa que se devolvieron las monedas de los Ambientes retirados. */
 function noticeSkyRefund() {
@@ -1897,7 +2099,7 @@ function renderInstall() {
   $('#installCard').dataset.kind = info.kind;
 }
 addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; renderInstall(); });
-addEventListener('appinstalled', () => { installPrompt = null; justInstalled = true; renderInstall(); toast('📲 ¡Kaisen instalada!', { kind: 'ach' }); });
+addEventListener('appinstalled', () => { installPrompt = null; justInstalled = true; renderInstall(); toast('📲 ¡Kaizen instalada!', { kind: 'ach' }); });
 $('#installCard').addEventListener('click', async e => {
   if (!e.target.closest('#installBtn') || !installPrompt) return;
   const p = installPrompt; installPrompt = null;

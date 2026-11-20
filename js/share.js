@@ -99,10 +99,10 @@ export async function makeCard({ kicker = '', title, sub = '', art, footer = '',
     ctx.shadowBlur = 0;
   }
   ctx.font = '60px Bangers, "Arial Black", sans-serif';
-  const brandW = ctx.measureText('KAISEN').width;
+  const brandW = ctx.measureText('KAIZEN').width;
   ctx.textAlign = 'left';
   ctx.fillStyle = '#fff'; ctx.fillText('KAI', 60, H - 44);
-  ctx.fillStyle = '#ffd23f'; ctx.fillText('SEN', 60 + ctx.measureText('KAI').width, H - 44);
+  ctx.fillStyle = '#ffd23f'; ctx.fillText('ZEN', 60 + ctx.measureText('KAI').width, H - 44);
   if (footer) {
     ctx.textAlign = 'right'; ctx.font = '900 34px Nunito, sans-serif'; ctx.fillStyle = '#c9c3e6';
     ctx.fillText(footer, W - 60, H - 50, W - 160 - brandW);
@@ -111,7 +111,7 @@ export async function makeCard({ kicker = '', title, sub = '', art, footer = '',
 }
 
 /** Comparte la tarjeta (o la descarga si el navegador no puede compartir archivos). */
-export async function shareCard(blob, { text = '', filename = 'kaisen.png' } = {}) {
+export async function shareCard(blob, { text = '', filename = 'kaizen.png' } = {}) {
   const file = new File([blob], filename, { type: 'image/png' });
   try {
     if (navigator.canShare?.({ files: [file] })) {

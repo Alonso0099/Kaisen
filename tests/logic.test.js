@@ -93,20 +93,27 @@ test('misiones únicas: completar y deshacer', () => {
   assert.equal(s.quests[0].completedAt, undefined);
 });
 
-test('racha: días seguidos, viva si registraste ayer, se rompe con un hueco', () => {
+test('racha: días seguidos con un día de gracia por semana; dos días seguidos sin registrar la rompen', () => {
   const s = L.defaultState();
   const today = noon(2026, 11, 16);
   for (const d of [16, 15, 14, 12, 11, 10, 9]) L.logActivity(s, 'def-gym', { now: noon(2026, 11, d) });
   let st = L.computeStreak(s.log, today);
-  assert.equal(st.current, 3);
-  assert.equal(st.best, 4);
+  assert.equal(st.current, 7);              // el 13 sin registrar se perdona (gracia de esa semana)
+  assert.deepEqual(st.graceDays, ['2026-11-13']);
+  assert.equal(st.best, 7);
   assert.equal(st.loggedToday, true);
-  // Al día siguiente sin registrar: sigue en 3 (aún puede mantenerla)
+  // Al día siguiente sin registrar: sigue viva
   st = L.computeStreak(s.log, today + DAY);
-  assert.equal(st.current, 3);
+  assert.equal(st.current, 7);
   assert.equal(st.loggedToday, false);
-  // Dos días después: se rompió
-  assert.equal(L.computeStreak(s.log, today + 2 * DAY).current, 0);
+  // Dos días después: el 17 también se perdona (es otra semana)
+  assert.equal(L.computeStreak(s.log, today + 2 * DAY).current, 7);
+  // Tres días después (17 y 18 sin registrar): se rompe
+  assert.equal(L.computeStreak(s.log, today + 3 * DAY).current, 0);
+  // Dos huecos sueltos en la misma semana: solo se perdona uno
+  const s2 = L.defaultState();
+  for (const d of [20, 18, 16]) L.logActivity(s2, 'def-gym', { now: noon(2026, 11, d) });   // lun 16 – dom 22
+  assert.equal(L.computeStreak(s2.log, noon(2026, 11, 20)).current, 2);
 });
 
 test('racha cruza fin de mes', () => {
@@ -238,7 +245,7 @@ test('los premios no cuentan para racha, misiones ni jefe', () => {
   L.claimWeekly(s, 'a', mon + 2 * DAY); // se reclama dos días después
   assert.equal(L.bossStatus(s, mon + 2 * DAY).damage, before.boss);
   assert.equal(L.weeklyMissions(s, mon + 2 * DAY)[1].progress, before.xp);
-  assert.equal(L.computeStreak(s.log, mon + 2 * DAY).current, 0); // reclamar no mantiene la racha
+  assert.equal(L.computeStreak(s.log, mon + 2 * DAY).current, 1); // solo el lunes (el martes se perdona); reclamar no suma
   assert.equal(L.petStatus(s, mon + 2 * DAY).activeDays, 1);
 });
 
@@ -459,15 +466,18 @@ test('escudo de racha: salva un día perdido, máximo 2 guardados', () => {
   assert.equal(L.shieldsLeft(s), 2);
   // Sin faltar ningún día no se gasta nada
   assert.deepEqual(L.applyShields(s, last + DAY), []);
-  // Falta 1 día (día 21) y abres la app el día 22
-  const saved = L.applyShields(s, last + 2 * DAY);
+  // Falta 1 día: lo cubre el día de gracia, no se gasta escudo
+  assert.deepEqual(L.applyShields(s, last + 2 * DAY), []);
+  assert.equal(L.deriveProfile(s, last + 2 * DAY).streak.current, 20);
+  // Faltan 2 días: un escudo para uno, la gracia para el otro
+  const saved = L.applyShields(s, last + 3 * DAY);
   assert.equal(saved.length, 1);
   assert.equal(L.shieldsLeft(s), 1);
-  let st = L.deriveProfile(s, last + 2 * DAY).streak;
+  let st = L.deriveProfile(s, last + 3 * DAY).streak;
   assert.equal(st.current, 21);            // 20 días + el salvado
   assert.equal(st.loggedToday, false);     // el escudo no cuenta como registrar hoy
-  assert.deepEqual(L.applyShields(s, last + 2 * DAY), []); // no se gasta dos veces
-  assert.equal(L.petStatus(s, last + 2 * DAY).activeDays, 20); // la mascota no crece con escudos
+  assert.deepEqual(L.applyShields(s, last + 3 * DAY), []); // no se gasta dos veces
+  assert.equal(L.petStatus(s, last + 3 * DAY).activeDays, 20); // la mascota no crece con escudos
 });
 
 test('escudo de racha: si el hueco es mayor que tus escudos, no se gasta ninguno', () => {
@@ -476,9 +486,9 @@ test('escudo de racha: si el hueco es mayor que tus escudos, no se gasta ninguno
   for (let d = 0; d < 20; d++) for (const id of ['def-gym', 'def-tarea', 'def-tiempo']) L.logActivity(s, id, { now: t + d * DAY });
   const last = t + 19 * DAY;
   L.buyShield(s, last);
-  assert.deepEqual(L.applyShields(s, last + 3 * DAY), []); // faltaron 2 días, hay 1 escudo
+  assert.deepEqual(L.applyShields(s, last + 4 * DAY), []); // faltaron 3 días, hay 1 escudo (+ 1 gracia)
   assert.equal(L.shieldsLeft(s), 1);
-  assert.equal(L.deriveProfile(s, last + 3 * DAY).streak.current, 0);
+  assert.equal(L.deriveProfile(s, last + 4 * DAY).streak.current, 0);
 });
 
 // ---------------- Nombre de la mascota ----------------
@@ -547,11 +557,11 @@ test('equipo: comprar, equipar y ganar % extra solo en su stat', () => {
   Gear.equipItem(s, 'casco', 'casco-cuero');
   assert.equal(Gear.gearPct(s, 'fuerza'), 5);
   assert.equal(Gear.gearPct(s, 'intelecto'), 0);
-  const e = L.logActivity(s, 'def-gym', { now });         // 30 XP → +2 (5 % redondeado)
-  assert.equal(e.xp, 32);
+  const e = L.logActivity(s, 'def-gym', { now });         // 30 XP → +2 (5 % redondeado) + Afinidad
   assert.equal(e.gearXp, 2);
+  assert.equal(e.xp, 32 + (e.guardXp || 0));
   const e2 = L.logActivity(s, 'def-estudio', { now });    // otra stat: sin extra
-  assert.equal(e2.xp, 25);
+  assert.equal(e2.xp, 25 + (e2.guardXp || 0));
   assert.equal(e2.gearXp, undefined);
 });
 
@@ -599,9 +609,10 @@ test('equipo: deshacer un registro con bonus quita exactamente lo ganado', () =>
   L.buyItem(s, 'guanteletes', now); Gear.equipItem(s, 'guantes', 'guanteletes');
   const before = L.deriveProfile(s, now).totalXp;
   const e = L.logActivity(s, 'def-gym', { now });
-  assert.equal(L.deriveProfile(s, now).totalXp, before + 33);
+  const won = 33 + (e.guardXp || 0);
+  assert.equal(L.deriveProfile(s, now).totalXp, before + won);
   Gear.equipItem(s, 'guantes', null);                     // quitarse el equipo no cambia lo ya ganado
-  assert.equal(L.deriveProfile(s, now).totalXp, before + 33);
+  assert.equal(L.deriveProfile(s, now).totalXp, before + won);
   L.undoEntry(s, e.id);
   assert.equal(L.deriveProfile(s, now).totalXp, before);
 });
@@ -814,4 +825,86 @@ test('A-14: los avatares anteriores pasan al héroe equivalente con el mismo loo
   for (const k of ['sabio-f', 'implacable-m']) assert.equal(L.migrateCharacter(k), k);
   assert.equal(L.migrateCharacter('no-existe'), 'titan-m');
   assert.equal(L.migrateCharacter('relampago'), 'relampago-m');
+});
+
+test('Afinidad: la guardiana da +5/10/15/20 % en su stat según su forma, guardado en el registro', () => {
+  const s = L.defaultState();
+  const now = new Date(2026, 10, 19, 10).getTime();
+  const e1 = L.logActivity(s, 'def-gym', { now });          // forma 1: sin extra
+  assert.equal(e1.guardXp, undefined);
+  // Llevar fuerza a nivel 5 (forma 2) con registros sueltos.
+  while (L.affinityFor(s, 'fuerza').tier < 2) s.log.push({ id: L.uid(), ts: now - 86400000, type: 'activity', refId: 'x', name: 'x', stat: 'fuerza', xp: 50 });
+  assert.deepEqual(L.affinityFor(s, 'fuerza'), { tier: 2, pct: 5 });
+  const e2 = L.logActivity(s, 'def-gym', { now });          // 30 XP → +2
+  assert.equal(e2.guardXp, 2); assert.equal(e2.xp, 32);
+  assert.equal(L.coinsFor(e2), Math.round(32 / 5), 'las monedas salen de la XP con Afinidad');
+  const e3 = L.logActivity(s, 'def-estudio', { now });      // otra stat: sin extra
+  assert.equal(e3.guardXp, undefined);
+  assert.equal(L.guardianTier(35), 5); assert.equal(L.AFFINITY_PCT[4], 20);
+});
+
+test('jefe: se recupera un poco tras un día sin golpes en su contra; Defensa lo evita; nunca quita nada al jugador', () => {
+  const day = d => new Date(2026, 10, d, 12).getTime();          // noviembre 2026: Scrollax (débil a sabiduría)
+  const mk = () => { const s = L.defaultState(); s.log.push({ id: L.uid(), ts: new Date(2026, 9, 20, 12).getTime(), type: 'activity', refId: 'x', name: 'x', stat: 'fuerza', xp: 10 }); return s; };
+  const s = mk();
+  const b0 = L.bossStatus(s, day(1));
+  assert.equal(b0.weak, 'sabiduria');
+  s.log.push({ id: 'a', ts: day(1), type: 'activity', refId: 'x', name: 'x', stat: 'sabiduria', xp: 100 });
+  const xpBefore = L.deriveProfile(s, day(3)).totalXp;
+  const b = L.bossStatus(s, day(3));                               // día 2 sin golpes → se recupera
+  const step = Math.round(b.hp * L.BOSS_HEAL.perDay / 5) * 5;
+  assert.equal(b.healed, step);
+  assert.equal(b.healedYesterday, step);
+  assert.equal(b.damage, 200 - step);                              // 100 XP ×2 (débil)
+  assert.equal(L.deriveProfile(s, day(3)).totalXp, xpBefore, 'tu XP no cambia');
+  // Un registro de otra stat no cuenta como golpe en su contra.
+  const s2 = mk();
+  s2.log.push({ id: 'a', ts: day(1), type: 'activity', refId: 'x', name: 'x', stat: 'sabiduria', xp: 100 });
+  s2.log.push({ id: 'b', ts: day(2), type: 'activity', refId: 'x', name: 'x', stat: 'fuerza', xp: 20 });
+  assert.equal(L.bossStatus(s2, day(3)).healed, step);
+  // Defensa: cumplir su reto el día 1 evita la recuperación del día 2.
+  const s3 = mk();
+  s3.log.push({ id: 'r', ts: day(1), type: 'activity', refId: 'res', name: 'reto', stat: 'sabiduria', xp: 15, resist: 'distraccion' });
+  const b3 = L.bossStatus(s3, day(3));
+  assert.equal(b3.healed, 0);
+  assert.equal(L.bossStatus(s3, day(2)).defenseToday, true);
+  // Tope del mes: como mucho el 15 % de su vida.
+  const s4 = mk();
+  s4.log.push({ id: 'a', ts: day(1), type: 'activity', refId: 'x', name: 'x', stat: 'sabiduria', xp: 300 });
+  const b4 = L.bossStatus(s4, day(28));
+  assert.ok(b4.healed <= Math.round(b4.hp * L.BOSS_HEAL.maxMonth));
+  assert.ok(b4.damage >= 0);
+});
+
+test('recompensas con reto: hábito N días, jefe y guardiana; cada canje pide cumplirlo otra vez', () => {
+  const s = rich();
+  const t = noon(2026, 11, 2);
+  s.rewards.push({ id: 'big', name: 'Cena especial', cost: 100, type: 'experiencia', lock: { kind: 'habit', act: 'def-leer', n: 3, since: t } });
+  const r = s.rewards.find(x => x.id === 'big');
+  assert.equal(L.rewardLock(s, r, t).locked, true);
+  assert.throws(() => L.buyReward(s, 'big', t), /Primero cumple su reto/);
+  for (let d = 1; d <= 3; d++) L.logActivity(s, 'def-leer', { now: t + d * DAY });
+  L.logActivity(s, 'def-leer', { now: t + 3 * DAY + 3600e3 });          // dos el mismo día cuentan como uno
+  const lk = L.rewardLock(s, r, t + 3 * DAY + 7200e3);
+  assert.deepEqual([lk.locked, lk.progress, lk.target], [false, 3, 3]);
+  L.buyReward(s, 'big', t + 4 * DAY);
+  assert.equal(L.rewardLock(s, r, t + 4 * DAY).locked, true, 'después de canjear, el reto se reinicia');
+  // Guardiana: queda cumplido para siempre una vez alcanzada la forma
+  s.rewards.push({ id: 'g', name: 'Zapatillas', cost: 100, lock: { kind: 'guardian', stat: 'fuerza', tier: 2 } });
+  const g = s.rewards.find(x => x.id === 'g');
+  assert.equal(L.rewardLock(s, g, t + 5 * DAY).locked, L.affinityFor(s, 'fuerza').tier < 2);
+  // Sin reto: null
+  assert.equal(L.rewardLock(s, s.rewards[0], t), null);
+  // Precio guía
+  assert.deepEqual(L.rewardPriceHint('gusto', 60), { min: 120, max: 250, low: true });
+  assert.equal(L.rewardPriceHint('gusto', 150).low, false);
+});
+
+test('el día de vuelta: días sin registrar desde el último registro', () => {
+  const s = L.defaultState();
+  assert.equal(L.daysAway(s, noon(2026, 11, 5)), 0);
+  L.logActivity(s, 'def-gym', { now: noon(2026, 11, 2) });
+  assert.equal(L.daysAway(s, noon(2026, 11, 3)), 0);
+  assert.equal(L.daysAway(s, noon(2026, 11, 4)), 1);
+  assert.equal(L.daysAway(s, noon(2026, 11, 6)), 3);
 });

@@ -1,6 +1,8 @@
-# ⚔️ Kaisen
+# ⚔️ Kaizen
 
 Un RPG estilo anime donde tu personaje sube de nivel con las actividades de tu vida real.
+
+**Kaizen** (改善) es una palabra japonesa: «cambio» + «bueno», es decir, **mejora continua**: avanzar un poco cada día. (Antes la app se llamaba *Kaisen*; las claves internas de guardado conservan ese nombre para no perder el progreso de nadie.)
 Es una PWA (app web instalable) pensada para iPhone: funciona sin conexión y sin servidor propio.
 
 ---
@@ -10,7 +12,7 @@ Es una PWA (app web instalable) pensada para iPhone: funciona sin conexión y si
 1. Abre la URL de la app en **Safari** (otro navegador no sirve para instalarla en iOS).
 2. Toca el botón **Compartir** (el cuadrito con la flecha hacia arriba).
 3. Elige **"Agregar a pantalla de inicio"** y luego **Agregar**.
-4. Abre Kaisen desde el ícono: se ve a pantalla completa, sin barras de Safari.
+4. Abre Kaizen desde el ícono: se ve a pantalla completa, sin barras de Safari.
 
 Después de abrirla una vez con internet, funciona **offline**.
 
@@ -26,7 +28,7 @@ Para recuperar tus datos: **Importar** y elige ese archivo. La app te recuerda r
 1. Sube el código a GitHub (la rama que quieras publicar, normalmente `main`).
 2. En el repositorio: **Settings → Pages**.
 3. En *Build and deployment* elige **Source: Deploy from a branch**, rama `main`, carpeta `/ (root)` → **Save**.
-4. Espera 1–2 minutos. Tu app quedará en `https://TU-USUARIO.github.io/Kaisen/`.
+4. Espera 1–2 minutos. Tu app quedará en `https://TU-USUARIO.github.io/Kaizen/`.
 5. Abre esa URL en Safari del iPhone e instálala (pasos de arriba).
 
 No hay que compilar nada: son archivos estáticos. El archivo `.nojekyll` le dice a GitHub que los sirva tal cual.
@@ -51,7 +53,35 @@ Dormir, tomar agua, comer fruta o verdura, salir a tomar aire, tender la cama…
 
 ## 🦸 Héroes
 
-Seis héroes, cada uno con una cualidad y dos looks (12 avatares): **Gladiador/a de Bronce** (fuerza y coraje), **Pirata del Cielo** (iniciativa), **Hechicero/a Astral** (curiosidad y estrategia), **Druida de Espinas** (calma y enfoque), **Forjador/a de Almas** (carácter y cuidado) y **Ninja de la Luna** (disciplina y precisión). Se eligen en dos pasos: «Elige tu héroe» y «Elige tu look». El héroe es solo tu avatar: **la misma actividad da la misma XP con cualquiera**, y cambiarlo no toca tu nivel, historial ni guardianas. Los perfiles con un personaje anterior pasan solos al héroe equivalente con el mismo look.
+Seis héroes, cada uno con una cualidad y dos looks (12 avatares): **Gladiador/a de Bronce** (fuerza y coraje), **Pirata del Cielo** (iniciativa), **Hechicero/a Astral** (curiosidad y estrategia), **Druida de Espinas** (calma y enfoque), **Forjador/a de Almas** (carácter y cuidado) y **Ninja de la Luna** (disciplina y precisión). Primero se elige cómo se ve (**Hombre** o **Mujer**, con el mismo peso visual) y después el héroe; en Ajustes el look se cambia con un selector arriba de la lista. El héroe es solo tu avatar: **la misma actividad da la misma XP con cualquiera**, y cambiarlo no toca tu nivel, historial ni guardianas. Los perfiles con un personaje anterior pasan solos al héroe equivalente con el mismo look.
+
+## 💬 Frases
+
+- **El héroe** dice una frase del día según su cualidad (sale sola la primera vez que abres la app cada día; tocando la escena se vuelve a ver).
+- **Cada guardiana** habla de su propósito: en su ficha y la primera vez del día que registras algo de su stat.
+- **Cada jefe** se burla con una frase distinta cada día.
+
+Los textos están en `js/phrases.js` (provisionales; la versión final es el pedido T-04 a GPT).
+
+## 🧭 Ayuda y tour
+
+El botón **?** de arriba explica qué hace cada cosa en la pantalla en la que estás. El **tour** (9 pasos que resaltan cada parte) se ofrece al terminar la bienvenida y se repite desde **?** o **Ajustes → Ayuda**. Los textos están en `js/guide.js`.
+
+## 🔮 Afinidad de las guardianas
+
+Cuando una guardiana evoluciona, las actividades de su stat dan más XP **y más monedas** (las monedas salen de la XP): forma 2 (nivel 5) **+5 %**, forma 3 (nivel 10) **+10 %**, forma 4 (nivel 20) **+15 %**, forma 5 (nivel 35) **+20 %**. Llegar a la forma 2 lleva unas 6 semanas: cuando el premio llega, el hábito ya está hecho. Depende del nivel de la stat, nunca del héroe. El extra se guarda en el registro (`guardXp`), igual que el del equipo.
+
+## 🌤️ Volver sin castigo
+
+- **Día de gracia:** un día suelto sin registrar por semana no rompe la racha (no suma, pero no la corta). Los escudos se gastan solo cuando la gracia no alcanza.
+- **Al volver** después de faltar, un mensaje dice que tu progreso sigue intacto y cómo quedó la racha.
+- **El jefe se recupera:** un día completo sin nada de su stat débil ni de su reto, recupera el 3 % de su vida (máximo 15 % al mes). Nunca te quita XP, monedas ni nada. Cumplir su reto te da **Defensa**: al día siguiente no puede recuperarse.
+
+## 🎁 Recompensas sin autosabotaje
+
+- **Precio guía** por tipo (gratis 40–100, pequeño gusto 120–250, experiencia 300–600, inversión en ti 600+). Si la pones más barata, un aviso amable.
+- **Recompensas con reto:** una recompensa se puede atar a un reto (cumplir un hábito N días, derrotar a un jefe o evolucionar una guardiana). Hasta cumplirlo se ve con candado y barra de avance; cada canje pide cumplirlo otra vez (salvo el de guardiana).
+- **XP por esfuerzo:** al crear una actividad se elige Fácil (+10), Media (+20) o Difícil (+35) en lugar de un número libre.
 
 ## 👋 Bienvenida
 
@@ -118,7 +148,7 @@ tests/logic.test.js    Pruebas automáticas de la lógica
 5. **Las tarjetas para compartir se dibujan en un `<canvas>`** (`share.js`) dentro del teléfono: no hay servidor ni se sube nada.
 5. **Logros calculados**: cada logro es una función `test(estado, perfil)`. Para agregar uno, añade un objeto al arreglo `ACHIEVEMENTS` en `logic.js`.
 6. **El arte vive en un catálogo** (`js/catalog.js`) con rutas fijas por categoría (`art/chars`, `art/guardians`, `art/bosses`, `art/pets`, `art/worlds`…). Agregar arte es guardar el archivo con el nombre correcto; si falta, se muestra "Próximamente". Ver **[ARTE.md](ARTE.md)**.
-6. **Perfiles locales** (`js/profiles.js`): varias personas pueden usar Kaisen en el mismo teléfono, cada una con su progreso y su personaje. No hay servidor: todo queda en el dispositivo.
+6. **Perfiles locales** (`js/profiles.js`): varias personas pueden usar Kaizen en el mismo teléfono, cada una con su progreso y su personaje. No hay servidor: todo queda en el dispositivo.
 7. **La escena se arma por capas** (`.scene` en el CSS): mundo que se desplaza → líneas de velocidad → aura del rango → canvas de brasas → personaje (balanceo suave o quieto, alineado por los pies) → degradado → nivel y barra de XP. Al registrar algo el personaje destella; al completar una misión aparece un destello detrás de él (si estabas en otra pestaña, se reproduce al volver a Inicio). Con "reducir movimiento" activado en el teléfono no hay animaciones.
 8. **Sin frameworks ni paso de compilación.** Se evaluó usar un stack más pesado, pero lo que hace linda la app es el arte, la tipografía y el movimiento; todo eso funciona con HTML + CSS + módulos JS nativos, y así sigue bastando con subir los archivos a GitHub Pages.
 9. **Service worker "caché primero"**: la app abre al instante y sin internet; en segundo plano baja la versión nueva si hay red.
@@ -143,7 +173,7 @@ tests/logic.test.js    Pruebas automáticas de la lógica
 
 ## 📲 Instalar la app
 
-En **Ajustes → Instalar la app** hay una tarjeta que cambia según el dispositivo: en Android y escritorio (Chrome, Edge) un botón **Instalar Kaisen**; en iPhone, los tres pasos de Safari (iOS no permite un botón); y si ya está instalada, lo dice. La lógica está en `js/install.js`.
+En **Ajustes → Instalar la app** hay una tarjeta que cambia según el dispositivo: en Android y escritorio (Chrome, Edge) un botón **Instalar Kaizen**; en iPhone, los tres pasos de Safari (iOS no permite un botón); y si ya está instalada, lo dice. La lógica está en `js/install.js`.
 
 ## ✨ Al registrar
 

@@ -1,5 +1,5 @@
 /* =====================================================================
-   Kaisen — estilo shonen "key visual": fondo oscuro, ilustraciones
+   Kaizen — estilo shonen "key visual": fondo oscuro, ilustraciones
    grandes, títulos de impacto, brillos de energía y paneles de cristal.
    ===================================================================== */
 
@@ -571,7 +571,7 @@ main {
 
 /* ---------- Hoja inferior ---------- */
 .sheet-backdrop {
-  position: fixed; inset: 0; z-index: 50;
+  position: fixed; inset: 0; z-index: 95;
   background: rgba(5,4,12,.65);
   -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
   display: flex; align-items: flex-end; justify-content: center;
@@ -1207,3 +1207,59 @@ body.scrolled .topbar {
 .look-card .char-fig { height: 230px; }
 .look-card b { font-size: 17px; padding: 0 6px 12px; }
 @media (max-height: 640px) { .look-card .char-fig { height: 180px; } }
+
+/* Ayuda, Kaizen y tour */
+.help-chip { width: 34px; height: 34px; border-radius: 50%; border: 0; font-family: var(--display); font-size: 20px; color: #fff;
+  background: rgba(20,17,40,.85); box-shadow: 0 0 0 2px #000, inset 0 0 0 1px var(--sys-line, rgba(169,155,255,.5)); }
+.guide-list { margin: 6px 0 14px; padding-left: 20px; display: grid; gap: 10px; line-height: 1.4; font-size: 14.5px; }
+.kz-kanji { font-size: 54px; text-align: center; color: var(--yellow); text-shadow: 2px 2px 0 var(--red); margin: 4px 0 -4px; }
+.w-kaizen { display: block; background: none; border: 0; color: #d6d0ef; font-weight: 800; font-size: 14px; padding: 0; margin: -6px 0 12px; text-align: left; }
+.w-kaizen span { color: var(--yellow); font-size: 16px; margin-right: 4px; }
+.w-kaizen u { color: var(--sys, #a99bff); text-underline-offset: 3px; margin-left: 4px; }
+.tour { position: fixed; inset: 0; z-index: 120; }
+.tour-spot { position: fixed; border-radius: 16px; box-shadow: 0 0 0 9999px rgba(5,4,15,.74); outline: 2px solid var(--yellow); transition: all .25s ease; pointer-events: none; }
+.tour-bubble { position: fixed; left: 16px; right: 16px; max-width: 420px; margin: 0 auto; background: var(--panel, #14112a); border: 2px solid var(--sys, #a99bff);
+  border-radius: 16px; padding: 14px 16px; box-shadow: 0 10px 30px rgba(0,0,0,.6); }
+.tour-bubble small { color: var(--muted); font-weight: 800; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.tour-bubble b { display: block; font-family: var(--display); font-weight: 400; font-size: 22px; letter-spacing: 1px; margin: 2px 0 4px; }
+.tour-bubble p { margin: 0 0 12px; line-height: 1.4; }
+@media (prefers-reduced-motion: reduce) { .tour-spot { transition: none; } }
+/* Selector: hombre o mujer */
+.look-picks { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.look-pick { border: 2px solid var(--line); border-radius: 16px; background: rgba(0,0,0,.3); color: var(--text); padding: 10px 6px 12px; text-align: center; }
+.look-pick:active { border-color: var(--sys, #a99bff); }
+.look-mosaic { display: flex; justify-content: center; height: 160px; align-items: flex-end; overflow: hidden; }
+.look-mosaic img { height: 82%; width: 50%; flex: none; object-fit: contain; object-position: 50% 100%; margin: 0 -14%; }
+.look-mosaic img:nth-child(2) { height: 100%; width: 62%; position: relative; z-index: 1; }
+.look-pick b { display: block; font-family: var(--display); font-weight: 400; font-size: 22px; letter-spacing: 1.5px; margin-top: 8px; }
+.hero-picker .hp-head { justify-content: space-between; flex-wrap: wrap; }
+.hp-looks { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; }
+.hp-looks button { background: none; border: 0; color: var(--muted); font-weight: 800; font-size: 13px; padding: 6px 12px; }
+.hp-looks button.on { background: var(--sys, #a99bff); color: #120f28; }
+
+/* Frase del día del héroe */
+.hero-say { position: absolute; left: 14px; right: 38%; top: 54px; z-index: 6; text-align: left; border: 2px solid #000; border-radius: 16px 16px 16px 4px;
+  background: #fff8e1; color: #1a1205; font-weight: 800; font-size: 13.5px; line-height: 1.3; padding: 8px 11px; box-shadow: 0 6px 18px rgba(0,0,0,.45); }
+.hero-say b { display: block; font-family: var(--display); font-weight: 400; font-size: 14px; letter-spacing: 1px; color: #7a3b00; }
+.hero-say.show { animation: sayIn .35s cubic-bezier(.2,1.4,.4,1); }
+@keyframes sayIn { from { opacity: 0; transform: translateY(8px) scale(.92); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .hero-say.show { animation: none; } }
+.g-say { display: block; font-style: italic; margin: 4px 0 6px; color: var(--text); }
+.g-say::before { content: "«"; } .g-say::after { content: "»"; }
+
+/* XP por esfuerzo */
+.effort { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.effort-btn { border: 2px solid var(--line); border-radius: 12px; background: rgba(0,0,0,.25); color: var(--text); padding: 8px 4px; text-align: center; text-transform: none; letter-spacing: 0; }
+.effort-btn.on { border-color: var(--sys, #a99bff); box-shadow: 0 0 12px rgba(169,155,255,.4); }
+.effort-btn b { display: block; font-size: 15px; } .effort-btn small { display: block; font-size: 10.5px; color: var(--muted); line-height: 1.2; margin: 2px 0; }
+.effort-btn em { font-style: normal; font-weight: 900; color: var(--yellow); font-size: 12px; }
+
+/* Recompensas con reto */
+.rw-lock { margin-top: 6px; font-size: 12px; color: var(--muted); }
+.rw-lock span { display: block; font-weight: 800; color: var(--text); }
+.rw-lock .hpbar { margin: 4px 0 2px; }
+.shop-row.locked .row-title { color: var(--muted); }
+.rw-guide { display: block; text-transform: none; letter-spacing: 0; font-size: 12.5px; color: var(--muted); margin-top: 6px; line-height: 1.35; }
+.rw-guide .warn { color: #ffb36b; }
+.rw-lock-opts { display: grid; grid-template-columns: 2fr 1fr; gap: 8px; margin-top: 8px; }
+.g-aff { font-size: 13px; } .g-aff strong { color: var(--yellow); font-weight: 900; }

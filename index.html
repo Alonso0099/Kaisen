@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Kaisen</title>
+  <title>Kaizen</title>
   <meta name="description" content="Sube de nivel a tu personaje con las actividades de tu vida real.">
   <meta name="theme-color" content="#0e0c1b">
 
@@ -11,7 +11,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Kaisen">
+  <meta name="apple-mobile-web-app-title" content="Kaizen">
   <meta name="format-detection" content="telephone=no">
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
@@ -21,8 +21,9 @@
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">KAI<span>SEN</span></div>
+    <div class="brand">KAI<span>ZEN</span></div>
     <div class="chips-right">
+    <button class="help-chip" id="helpBtn" aria-label="Ayuda: qué hace cada cosa">?</button>
     <button class="coin-chip" id="coinChip" aria-label="Monedas"><i></i><b id="coinNum">0</b></button>
     <div class="streak-chip" id="streakChip" title="Racha de días">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1 4-3 5.500-3 9a3 3 0 0 0 6 0c0-1 0-1.500-.5-2.500C17 9.500 19 12 19 15a7 7 0 0 1-14 0c0-5 5-7 7-13z"/></svg>
@@ -44,6 +45,7 @@
           <div class="hero-ground"></div>
           <img class="hero-img" id="heroImg" alt="Tu personaje" draggable="false">
         </div>
+        <button class="hero-say" id="heroSay" hidden></button>
         <div class="scene-fade"></div>
         <div class="hud">
           <div class="hud-top">
@@ -218,9 +220,15 @@
         <p class="small muted">El respaldo es un archivo .json. Guárdalo en Archivos o iCloud Drive.</p>
       </div>
 
+      <h2 class="section-title">Ayuda</h2>
+      <div class="btn-row">
+        <button class="btn" id="kaizenBtn">¿Qué es Kaizen?</button>
+        <button class="btn btn-primary" id="tourBtn">Ver tour</button>
+      </div>
+
       <h2 class="section-title danger">Zona peligrosa</h2>
       <button class="btn btn-danger btn-block" id="resetBtn">Borrar todo y empezar de cero</button>
-      <p class="small muted center version">Kaisen · v<span id="appVersion"></span></p>
+      <p class="small muted center version">Kaizen · v<span id="appVersion"></span></p>
     </section>
   </main>
 
@@ -270,6 +278,7 @@
   </div>
 
   <div class="toasts" id="toasts" aria-live="polite"></div>
+  <div class="tour" id="tour" hidden><div class="tour-spot" id="tourSpot"></div><div class="tour-bubble" id="tourBubble" role="dialog" aria-live="polite"></div></div>
 
   <script type="module" src="js/app.js"></script>
 </body>
