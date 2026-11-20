@@ -186,3 +186,96 @@ export function lineOfDay(list, key, day) {
   if (!list?.length) return '';
   return list[hash(`${key}:${day}`) % list.length];
 }
+
+// ---------------------------------------------------------------------
+// Inglés (traducción provisional de Claude; GPT puede revisarla)
+// ---------------------------------------------------------------------
+import { getLang } from './i18n.js';
+
+const HERO_LINES_EN = {
+  titan: [
+    'Plant your feet. Today we lift whatever is within reach.',
+    'We can lower the weight and keep training.',
+    'Let\'s start with the effort that fits in this day.',
+    'Let\'s make room to catch our breath.',
+    'If our grip shakes, let\'s try a smaller step.',
+    'That first try already taught us where to put our feet.',
+    'What takes both hands today deserves its time.',
+  ],
+  relampago: [
+    'We raise the sails with the wind we have.',
+    'Pick a heading. We can correct it in the air.',
+    'One minute is enough to cast off.',
+    'Let\'s try the short route. It leads somewhere too.',
+    'If the wind changes, we change course.',
+    'Let\'s take out the compass. What do you feel like exploring?',
+    'Let\'s open the map where we left it.',
+  ],
+  estratega: [
+    'Let\'s put one question at the center of the map.',
+    'If the plan is long, let\'s check the first box.',
+    'Let\'s try a small version and see what it teaches us.',
+    'Let\'s change a single piece and watch what happens.',
+    'If this door is stuck, let\'s find another way in.',
+    'Let\'s note what worked. Tomorrow it\'ll be a clue.',
+    'Before filling the page, let\'s choose the first line.',
+  ],
+  sabio: [
+    'Let\'s take a breath. There\'s room to choose calmly.',
+    'Let\'s let the noise pass and come back to what\'s in front of us.',
+    'Let\'s find a quiet place to begin.',
+    'If there are too many branches, let\'s follow one to the trunk.',
+    'We can feel a lot and still move slowly.',
+    'Let\'s pause to listen to what we need today.',
+    'Let\'s give one single thing all our attention.',
+  ],
+  guardian: [
+    'Let\'s find a promise we can keep today.',
+    'Let\'s repair one small thing. Start with the one at hand.',
+    'If the piece gets too hot, we let it cool.',
+    'Today we can also take care of ourselves with the same care.',
+    'Let\'s size the promise to the time we really have.',
+    'Before the next strike, let\'s adjust the piece.',
+    'What we care for daily stands the test of time.',
+  ],
+  implacable: [
+    'Let\'s repeat one move until it feels familiar.',
+    'Let\'s get the first step ready for tomorrow.',
+    'If the day changes, let\'s adjust the practice.',
+    'Let\'s do one rep with full attention.',
+    'Let\'s go back to the practice we already know.',
+    'Let\'s find the cue that reminds us to start.',
+    'Let\'s end the session while we still have breath left.',
+  ],
+};
+const GUARDIAN_LINES_EN = {
+  fuerza: ['Push, lift or stretch. Choose how to move your body today.', 'Choose a load you can move with control.', 'Lower the weight with the same care you lifted it.', 'Use an easier version of the move if it helps today.', 'Catch your breath between efforts.', 'Notice which move feels most stable today.'],
+  resistencia: ['Choose a pace you can hold for a good while.', 'A short stretch still adds to the path.', 'Slow down on the climb and catch your breath.', 'If you have less time today, choose a shorter loop.', 'Look how far you\'ve come before choosing the next stretch.', 'Rest when you need to. The trail is still there.'],
+  intelecto: ['Read one page and keep one idea.', 'Write down a question you want to explore.', 'Explain in your own words something you learned today.', 'Try what you read on a simple example.', 'Draw how two ideas connect.', 'Mark where you stopped reading so it\'s easy to pick up.'],
+  sabiduria: ['Before you answer, take a breath.', 'Name what you feel. One word is a start.', 'Choose where to put your attention for this minute.', 'If a decision can wait, give it some space.', 'Notice what changes when you do one thing at a time.', 'Ask yourself what you need before deciding what\'s next.'],
+  vinculo: ['A "thought of you" is also a way to be close.', 'Ask someone how their day went and give them time to answer.', 'Ask for company if it would help today.', 'Put into words something you value about someone.', 'Share some time without looking at your phone.', 'Sometimes caring for a bond starts with saying what you need.'],
+  hogar: ['Leave what you\'ll use tomorrow within reach.', 'Start by clearing one small surface.', 'Give a home to that thing you\'re always looking for.', 'Review one expense and decide if it served its purpose.', 'If you have some margin, set a little aside for something that matters.', 'Tidy a corner so your next task is easier.'],
+};
+const BOSS_LINES_EN = {
+  pereza: ['"My couch has a magnet. Try it with both feet up."', '"The blanket and I already voted. Everyone stays here."', '"Reaching for the remote counts, right?"'],
+  procrastinacion: ['"I moved the deadline to tomorrow. Which tomorrow? We\'ll see."', '"I have a whole calendar devoted to starting later."', '"I booked an hour to decide when we\'ll start."'],
+  desorden: ['"If the pile reaches the ceiling, it counts as a shelf."', '"The keys are under a paper. Which one? Great question."', '"I saved you a seat on the chair. Under the clothes."'],
+  estres: ['"My urgent list has its own urgent list."', '"I even marked the glass of water as urgent."', '"Breathe? Give me a second to put it on the schedule."'],
+  distraccion: ['"Blink twice and I\'ll load ten more videos."', '"I brought you a video about how to stop watching videos."', '"Your next break has sound, subtitles and autoplay."'],
+  soledad: ['"Let\'s rehearse that "hi" eight more times. I have all afternoon."', '"I filed your greeting under "someday". Everything fits there."', '"I put a layer of fog between the "hi" and the send button."'],
+  multitarea: ['"With so many heads, someone must remember what we were doing."', '"I have three planners and they all say "at the same time"."', '"One tab per head. And one more just in case."'],
+  perfeccionismo: ['"It\'s ready. I just need to polish the "submit" button."', '"Can I borrow a ruler? That margin has half a millimeter of freedom."', '"The final version is called "final_final_really". I\'m on the tenth."'],
+  inercia: ['"Let\'s warm up tomorrow. Today it\'s deliciously cold."', '"The first step is frozen. I propose admiring it from here."', '"One foot out of the cave and the thaw begins. How reckless."'],
+  desvelo: ['"I have late-night deals. The first lost hour is on me."', '"The moon is still awake. Great argument, right?"', '"Close the app? I was just about to show you something seventeen minutes long."'],
+};
+const BACK_LINES_EN = [
+  'So good to see you! Your progress is still here.',
+  'You\'re back. You can pick up where you left off.',
+  'Your progress is intact. Choose where you want to continue today.',
+];
+
+const en = () => getLang() === 'en';
+export const heroLines = id => (en() ? HERO_LINES_EN : HERO_LINES)[id] || [];
+export const guardianLines = stat => (en() ? GUARDIAN_LINES_EN : GUARDIAN_LINES)[stat] || [];
+export const bossLines = id => (en() ? BOSS_LINES_EN : BOSS_LINES)[id] || [];
+export const backLines = () => (en() ? BACK_LINES_EN : BACK_LINES);

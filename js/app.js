@@ -9,11 +9,11 @@ import * as Profiles from './profiles.js';
 import * as Gear from './gear.js';
 import { installInfo, isStandalone } from './install.js';
 import { kaizenMeaning, guideFor, tourSteps as tourStepsFor } from './guide.js';
-import { t, tn, getLang, setLang, LANGS, nameOf, statName, bossName, bossShort, bossTaunt, heroName, heroTitle, heroBlurb, missionText, achName } from './i18n.js';
-import { HERO_LINES, GUARDIAN_LINES, BOSS_LINES, BACK_LINES, lineOfDay } from './phrases.js';
+import { t, tn, getLang, setLang, LANGS, nameOf, statName, bossName, bossShort, bossTaunt, heroName, heroTitle, heroBlurb, missionText, achName, statShort, achDesc, itemName, slotName, rarityName, titleName, worldName, speciesName, elementName, stageName, effortName, lockName, guardianPhrase, locale } from './i18n.js';
+import { GUARDIAN_LINES, lineOfDay, heroLines, guardianLines, bossLines, backLines } from './phrases.js';
 import { art, CHARACTERS, DEFAULT_CHARACTER, charHero, characterById, characterImg, guardianFor, guardianEvolutions, syncGuardianSeen, GUARDIANS, WORLDS, worldById, DEFAULT_WORLD, DEFAULT_PET, PET_SPECIES, speciesById } from './catalog.js';
 
-export const APP_VERSION = '2.6.0';
+export const APP_VERSION = '2.7.0';
 const BACKUP_REMINDER_DAYS = 7;
 
 const $ = sel => document.querySelector(sel);
@@ -29,7 +29,7 @@ function save() {
   try {
     Profiles.saveProfileState(profileId, state);
   } catch (err) {
-    toast('⚠️ No se pudo guardar. Exporta un respaldo.', { kind: 'ach' });
+    toast(t('⚠️ No se pudo guardar. Exporta un respaldo.'), { kind: 'ach' });
   }
 }
 
@@ -90,18 +90,18 @@ function collectNews(beforeAdv, afterAdv, before, after) {
     document.querySelectorAll('.boss-hit').forEach(el => { el.classList.remove('hit-shake'); void el.offsetWidth; el.classList.add('hit-shake'); });
   }
   if (afterAdv.boss.defeated && !beforeAdv.boss.defeated && afterAdv.boss.refId === beforeAdv.boss.refId) {
-    lines.push(`👹 ¡Derrotaste a ${esc(afterAdv.boss.name.split(',')[0])}! Reclámalo en Misiones`);
+    lines.push(t('👹 ¡Derrotaste a {boss}! Reclámalo en Misiones', { boss: esc(bossShort(afterAdv.boss)) }));
   }
   // Misiones semanales
   afterAdv.weekly.forEach((m, i) => {
     const b = beforeAdv.weekly[i];
-    if (m.done && b && b.refId === m.refId && !b.done) lines.push(`🗓️ Misión cumplida: ${esc(m.title)}`);
+    if (m.done && b && b.refId === m.refId && !b.done) lines.push(t('🗓️ Misión cumplida: {name}', { name: esc(mText(m).title) }));
   });
   // Mascota
   if (afterAdv.pet.stage > beforeAdv.pet.stage) {
     if (G.shouldAskPetName(state, beforeAdv.pet.stage, afterAdv.pet.stage)) {
       big.push([2, () => queueModal(askPetNameOnHatch), t('🐣 ¡Tu huevo eclosionó! Ponle nombre en su ficha')]);
-    } else lines.push(`🐣 ${esc(petName())} ahora es ${afterAdv.pet.stageName}`);
+    } else lines.push(t('🐣 {name} ahora es {stage}', { name: esc(petName()), stage: stageName(afterAdv.pet.stage) }));
   }
   // Stats
   const ups = G.STATS.filter(s => after.stats[s.id].level > before.stats[s.id].level);
@@ -129,7 +129,7 @@ function collectNews(beforeAdv, afterAdv, before, after) {
 /** Aviso único de resultado: qué pasó, cuánto ganaste, qué se desbloqueó y "Deshacer". */
 function showResult(head, news, onUndo) {
   const MAX = 2;
-  const extra = news.length > MAX ? `<span class="res-more">+${news.length - MAX} más en Progreso</span>` : '';
+  const extra = news.length > MAX ? `<span class="res-more">${t('+{n} más en Progreso', { n: news.length - MAX })}</span>` : '';
   toast(`<span class="res-head">${head}</span>${news.slice(0, MAX).map(l => `<span class="res-line">${l}</span>`).join('')}${extra}`, {
     kind: 'result', pinned: true, duration: news.length ? 7000 : 5000,
     action: onUndo ? t('Deshacer') : null, onAction: onUndo,
@@ -163,16 +163,16 @@ async function runModals() {
 async function showGuardianEvolution(statId, tier) {
   const s = G.statById(statId);
   const g = guardianFor(statId, guardianLevelFor(tier));
-  const name = g.name || `Guardiana de ${s.name}`;
+  const name = g.name || t('Guardiana de {stat}', { stat: statName(s) });
   const res = await openSheet(`
     <div class="evo" style="--c:${s.color}">
-      <div class="evo-kicker">¡Evolución!</div>
-      <div class="evo-art">${artImg(art.guardian(statId, tier), { alt: esc(name), fb: tier > 1 ? art.guardian(statId, 1) : null })}<span class="soon">Próximamente</span></div>
+      <div class="evo-kicker">${t('¡Evolución!')}</div>
+      <div class="evo-art">${artImg(art.guardian(statId, tier), { alt: esc(name), fb: tier > 1 ? art.guardian(statId, 1) : null })}<span class="soon">${t('Próximamente')}</span></div>
       <h3>${esc(name)}</h3>
-      <div class="evo-form">Forma ${tier} de 5 · ${s.name}</div>
-      ${GUARDIANS[statId]?.phrase ? `<blockquote class="evo-quote">«${esc(GUARDIANS[statId].phrase)}»</blockquote>` : ''}
+      <div class="evo-form">${t('Forma {n} de 5 · {stat}', { n: tier, stat: statName(s) })}</div>
+      ${GUARDIANS[statId]?.phrase ? `<blockquote class="evo-quote">«${esc(guardianPhrase(statId, GUARDIANS[statId].phrase))}»</blockquote>` : ''}
     </div>
-    <div class="btn-row"><button class="btn" data-close="see">Ver guardianas</button><button class="btn btn-primary" data-close="ok">Continuar</button></div>`);
+    <div class="btn-row"><button class="btn" data-close="see">${t('Ver guardianas')}</button><button class="btn btn-primary" data-close="ok">${t('Continuar')}</button></div>`);
   if (res === 'see') { showView('achievements'); showView('guardians'); }
 }
 const guardianLevelFor = tier => [1, 5, 10, 20, 35][tier - 1] || 1;
@@ -181,12 +181,12 @@ const guardianLevelFor = tier => [1, 5, 10, 20, 35][tier - 1] || 1;
 async function askPetNameOnHatch() {
   const sp = speciesById(state.pet.species);
   const p = openSheet(`
-    <h3>¡Tu huevo eclosionó!</h3>
+    <h3>${t('¡Tu huevo eclosionó!')}</h3>
     <div class="pet-sheet-art hatch"><img class="pet-img happy" src="${petImg(1)}" alt=""></div>
-    <label class="field"><span>Ponle nombre a tu compañero</span>
-      <input type="text" id="hatchName" maxlength="${G.PET_NAME_MAX}" placeholder="${esc(sp.name)}" autocomplete="off"></label>
-    <p class="small">Si lo dejas vacío se llamará <b>${esc(sp.name)}</b>. Puedes cambiarlo cuando quieras desde su ficha.</p>
-    <div class="btn-row"><button class="btn" data-close="skip">Omitir</button><button class="btn btn-primary" id="hatchSave">Guardar</button></div>`);
+    <label class="field"><span>${t('Ponle nombre a tu compañero')}</span>
+      <input type="text" id="hatchName" maxlength="${G.PET_NAME_MAX}" placeholder="${esc(speciesName(sp))}" autocomplete="off"></label>
+    <p class="small">${t('Si lo dejas vacío se llamará <b>{name}</b>. Puedes cambiarlo cuando quieras desde su ficha.', { name: esc(speciesName(sp)) })}</p>
+    <div class="btn-row"><button class="btn" data-close="skip">${t('Omitir')}</button><button class="btn btn-primary" id="hatchSave">${t('Guardar')}</button></div>`);
   $('#hatchSave').onclick = () => closeSheet({ name: $('#hatchName').value });
   $('#hatchName').addEventListener('keydown', e => { if (e.key === 'Enter') $('#hatchSave').click(); });
   const res = await p;
@@ -195,7 +195,7 @@ async function askPetNameOnHatch() {
   else G.markPetNameAsked(state);
   save();
   renderAll();
-  toast(`🐣 ¡Conoce a <b>${esc(petName())}</b>!`, { kind: 'ach', duration: 4000 });
+  toast(t('🐣 ¡Conoce a <b>{name}</b>!', { name: esc(petName()) }), { kind: 'ach', duration: 4000 });
 }
 
 /** Lo ya conseguido al abrir, cambiar de perfil o importar no se vuelve a anunciar. */
@@ -227,7 +227,7 @@ function renderHeader(p, adv = adventure()) {
   // La racha solo se muestra cuando ya es de 3+ días, y nunca como "rota".
   $('#streakNum').textContent = p.streak.current;
   $('#streakChip').hidden = p.streak.current < 3;
-  $('#streakChip').title = `Racha de ${p.streak.current} días`;
+  $('#streakChip').title = tn(p.streak.current, 'Racha de {n} día', 'Racha de {n} días');
   const qb = $('#questBadge');
   // Insignia de Misiones: premios por reclamar + misiones únicas pendientes
   const pending = claimables(adv) + state.quests.length;
@@ -256,11 +256,11 @@ function radarSvg(p) {
   };
   const poly = r => G.STATS.map((_, i) => pt(i, r).map(n => n.toFixed(1)).join(',')).join(' ');
   const shape = G.STATS.map((_, i) => pt(i, R * Math.max(.1, vals[i] / max)).map(n => n.toFixed(1)).join(',')).join(' ');
-  return `<svg viewBox="0 0 160 160" aria-label="Gráfico de stats">
+  return `<svg viewBox="0 0 160 160" aria-label="${t('Gráfico de stats')}">
     ${[1, .66, .33].map(k => `<polygon class="ring" points="${poly(R * k)}"/>`).join('')}
     ${G.STATS.map((_, i) => { const [x, y] = pt(i, R); return `<line class="axis" x1="${C}" y1="${C}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}"/>`; }).join('')}
     <polygon class="shape" points="${shape}"/>
-    ${G.STATS.map((s, i) => { const [x, y] = pt(i, R + 12); return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" fill="${s.color}" style="filter:brightness(1.4)">${s.short}</text>`; }).join('')}
+    ${G.STATS.map((s, i) => { const [x, y] = pt(i, R + 12); return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" fill="${s.color}" style="filter:brightness(1.4)">${statShort(s)}</text>`; }).join('')}
   </svg>`;
 }
 
@@ -298,13 +298,13 @@ function renderHero() {
  */
 let saySeq = 0;
 function heroSays({ force = false } = {}) {
-  if (!state.onboarded || !$('#tour').hidden || getLang() !== 'es') return;   // frases en inglés: pendiente
+  if (!state.onboarded || !$('#tour').hidden) return;
   const today = G.dayKey(Date.now());
   if (!force && state.notices?.saidDay === today) return;
   if (!force) { state.notices = { ...state.notices, saidDay: today }; save(); }
   const hero = characterById(state.profile.character);
   const el = $('#heroSay');
-  el.innerHTML = `<b>${esc(state.profile.name || hero.name)}</b>${esc(lineOfDay(HERO_LINES[hero.hero], hero.hero, today))}`;
+  el.innerHTML = `<b>${esc(state.profile.name || hero.name)}</b>${esc(lineOfDay(heroLines(hero.hero), hero.hero, today))}`;
   el.hidden = false;
   el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
   const n = ++saySeq;
@@ -330,7 +330,7 @@ function renderHome(p) {
   $('#scene').classList.toggle('has-aura', p.level >= 5);
   sceneFx.set({ color: p.level >= 5 ? p.rank.color : '#ffd23f', amount: Math.min(60, 12 + p.level * 3) });
   renderHero();
-  $('#heroName').textContent = state.profile.name || 'Héroe';
+  $('#heroName').textContent = !state.profile.name || state.profile.name === 'Héroe' ? t('Héroe') : state.profile.name;
   $('#rankBadge').textContent = t('Rango {letter} · {title}', { letter: p.rank.letter, title: t(p.rank.title) });
   const title = G.titleName(state);
   $('#heroTitle').hidden = !title;
@@ -351,7 +351,7 @@ function renderHome(p) {
     return `<div class="stat" data-stat="${s.id}" style="--c:${s.color}">
       <img src="${statIcon(s.id)}" alt="">
       <div>
-        <div class="stat-head"><span>${s.name}</span><b>LV ${st.level}</b></div>
+        <div class="stat-head"><span>${statName(s)}</span><b>LV ${st.level}</b></div>
         <div class="stat-bar"><i style="width:${Math.round(st.pct * 100)}%"></i></div>
       </div>
     </div>`;
@@ -462,14 +462,14 @@ function renderGoal(p, { boss, weekly, pet }) {
   } else {
     // Mascota: lo más tangible al empezar
     if (pet.stage === 0) cands.push({ ico: '🐣', text: pet.daysToNext === 1 ? t('Registra un día más para que nazca tu mascota') : t('Registra {n} días más para que nazca tu mascota', { n: pet.daysToNext }), pct: 1.2 + pet.pct, view: null });
-    else if (pet.next && pet.daysToNext <= 3) cands.push({ ico: '🐾', text: `${pet.daysToNext === 1 ? 'Un día activo más' : `${pet.daysToNext} días activos más`} y ${nameP} será ${pet.next.name}`, pct: 1 + pet.pct * .2, view: null });
+    else if (pet.next && pet.daysToNext <= 3) cands.push({ ico: '🐾', text: (pet.daysToNext === 1 ? t('Un día activo más y {name} será {stage}', { name: nameP, stage: stageName(pet.stage + 1) }) : t('{n} días activos más y {name} será {stage}', { n: pet.daysToNext, name: nameP, stage: stageName(pet.stage + 1) })), pct: 1 + pet.pct * .2, view: null });
     // Premios por reclamar
     if (boss.defeated && !boss.claimed) cands.push({ ico: '👹', text: t('¡Derrotaste al jefe! Reclama tu premio en Misiones'), pct: 2.5, view: 'quests' });
     for (const m of weekly) if (m.done && !m.claimed) cands.push({ ico: '🗓️', text: t('Misión cumplida: reclama «{name}»', { name: mText(m).title }), pct: 2.4, view: 'quests' });
     // Guardiana a punto de evolucionar
     for (const st of G.STATS) {
       const s = p.stats[st.id]; const g = guardianFor(st.id, s.level);
-      if (g.nextAt && g.nextAt - s.level === 1) cands.push({ ico: '✨', text: `${st.name} está a un nivel de que ${g.name || 'su guardiana'} evolucione`, pct: .8 + s.pct * .3, view: null });
+      if (g.nextAt && g.nextAt - s.level === 1) cands.push({ ico: '✨', text: t('{stat} está a un nivel de que {name} evolucione', { stat: statName(st), name: g.name || t('su guardiana') }), pct: .8 + s.pct * .3, view: null });
     }
     // Nivel general (solo si está cerca)
     if (p.pct >= .6) cands.push({ ico: '⬆️', text: t('Te faltan {n} XP para el nivel {lv}', { n: p.needed - p.into, lv: p.level + 1 }), pct: .6 + p.pct * .3, view: null });
@@ -490,7 +490,7 @@ const priceTag = n => `<span class="price"><i class="coin"></i>${n}</span>`;
 // Equipo e inventario
 // ---------------------------------------------------------------------
 const itemIcon = it => `<span class="it-ico">${artImg(art.item(it.id))}<i>${it.icon}</i></span>`;
-const bonusText = it => `+${it.pct}% XP ${it.stat === 'all' ? 'en todo' : `en ${G.statById(it.stat).name}`}`;
+const bonusText = it => it.stat === 'all' ? t('+{n}% XP en todo', { n: it.pct }) : t('+{n}% XP en {stat}', { n: it.pct, stat: statName(G.statById(it.stat)) });
 
 /** XP que muestra un botón de actividad, con el extra del equipo. */
 function actXp(a) {
@@ -503,7 +503,7 @@ function dropLine(boss) {
   if (!d) return '';
   const got = Gear.ownsItem(state, d.id);
   return `<div class="drop-line" style="--r:${Gear.RARITY[d.rarity].color}">${itemIcon(d)}
-    <span><small>Botín</small><b>${esc(d.name)}</b><em>${bonusText(d)}</em></span>${got ? '<span class="tag">Tuyo</span>' : ''}</div>`;
+    <span><small>${t('Botín')}</small><b>${esc(itemName(d))}</b><em>${bonusText(d)}</em></span>${got ? `<span class="tag">${t('Tuyo')}</span>` : ''}</div>`;
 }
 
 function renderGear() {
@@ -511,7 +511,7 @@ function renderGear() {
   const slotHtml = ({ slot, item }) => `
     <button class="gear-slot ${item ? 'full' : ''}" data-slot="${slot.id}" style="--r:${item ? Gear.RARITY[item.rarity].color : 'transparent'}">
       ${item ? itemIcon(item) : `<span class="it-ico empty"><i>${slot.icon}</i></span>`}
-      <small>${item ? esc(item.name) : slot.name}</small>
+      <small>${item ? esc(itemName(item)) : slotName(slot)}</small>
     </button>`;
   $('#gearLeft').innerHTML = eq.slice(0, 4).map(slotHtml).join('');
   $('#gearRight').innerHTML = eq.slice(4).map(slotHtml).join('');
@@ -521,13 +521,13 @@ function renderGear() {
   const sum = Gear.gearSummary(state, G.STAT_IDS);
   $('#gearBonus').innerHTML = sum.length
     ? sum.map(x => { const s = G.statById(x.stat); return `<span class="chip" style="--c:${s.color}"><img src="${statIcon(s.id)}" alt="">+${x.pct}%</span>`; }).join('')
-    : '<span class="small muted">Sin bonus todavía. Equipa piezas para ganar XP extra.</span>';
+    : `<span class="small muted">${t('Sin bonus todavía. Equipa piezas para ganar XP extra.')}</span>`;
   const best = Math.max(0, ...G.STAT_IDS.map(id => Gear.gearPct(state, id)));
   $('#gearChipBonus').textContent = best ? `+${best}%` : '';
 
   const owned = Gear.ownedItemIds(state);
   const worn = new Set(eq.filter(x => x.item).map(x => x.item.id));
-  $('#invHint').textContent = `${owned.size} de ${Gear.ITEMS.length} piezas. Toca una para ver de dónde sale o equiparla.`;
+  $('#invHint').textContent = t('{n} de {total} piezas. Toca una para ver de dónde sale o equiparla.', { n: owned.size, total: Gear.ITEMS.length });
   const order = Object.keys(Gear.RARITY);
   const items = [...Gear.ITEMS].sort((a, b) => (owned.has(b.id) - owned.has(a.id)) || order.indexOf(a.rarity) - order.indexOf(b.rarity));
   $('#invGrid').innerHTML = items.map(it => `
@@ -544,24 +544,24 @@ async function openItem(id) {
   const r = Gear.RARITY[it.rarity];
   const bal = Math.max(0, G.wallet(state).balance);
   const source = it.boss
-    ? `Botín de <b>${esc(G.BOSSES.find(b => b.id === it.boss).name)}</b>.`
-    : `Se vende en la Tienda por <b>${it.cost} monedas</b>.`;
+    ? t('Botín de <b>{boss}</b>.', { boss: esc(bossName(G.BOSSES.find(b => b.id === it.boss))) })
+    : t('Se vende en la Tienda por <b>{n} monedas</b>.', { n: it.cost });
   const action = own
-    ? (wornIn ? `<button class="btn btn-block" data-close="unequip">Quitar</button>` : `<button class="btn btn-primary btn-block" data-close="equip">Equipar</button>`)
-    : it.cost ? `<button class="btn btn-yellow btn-block" data-close="buy" ${bal < it.cost ? 'disabled' : ''}>Comprar · ${it.cost} 🪙</button>` : '';
+    ? (wornIn ? `<button class="btn btn-block" data-close="unequip">${t('Quitar')}</button>` : `<button class="btn btn-primary btn-block" data-close="equip">${t('Equipar')}</button>`)
+    : it.cost ? `<button class="btn btn-yellow btn-block" data-close="buy" ${bal < it.cost ? 'disabled' : ''}>${t('Comprar')} · ${it.cost} 🪙</button>` : '';
   const res = await openSheet(`
     <div class="item-head" style="--r:${r.color}">${itemIcon(it)}
-      <div><h3>${esc(it.name)}</h3><span class="rarity">${r.name} · ${Gear.SLOTS.find(s => (s.type || s.id) === it.type).name}</span></div>
+      <div><h3>${esc(itemName(it))}</h3><span class="rarity">${rarityName(it.rarity, r.name)} · ${slotName(Gear.SLOTS.find(s => (s.type || s.id) === it.type))}</span></div>
     </div>
     <p><b>${bonusText(it)}</b>. ${source}</p>
-    ${!own && it.cost && bal < it.cost ? `<p class="small">Te faltan ${it.cost - bal} monedas.</p>` : ''}
+    ${!own && it.cost && bal < it.cost ? `<p class="small">${t('Te faltan {n} monedas.', { n: it.cost - bal })}</p>` : ''}
     ${action}
-    <button class="btn btn-block" data-close="cancel">Cerrar</button>`);
+    <button class="btn btn-block" data-close="cancel">${t('Cerrar')}</button>`);
   if (res === 'equip') commit(s => Gear.equipItem(s, Gear.slotFor(s, it), id), { celebrate: false });
   if (res === 'unequip') commit(s => Gear.equipItem(s, wornIn, null), { celebrate: false });
-  if (res === 'buy' && tryPay(s => G.buyItem(s, id), `🎒 ¡${esc(it.name)} es tuya!`)) {
+  if (res === 'buy' && tryPay(s => G.buyItem(s, id), t('🎒 ¡{name} es tuya!', { name: esc(itemName(it)) }))) {
     heroReact();
-    if (await confirmSheet('¿Equiparla ahora?', `${esc(it.name)}: ${bonusText(it)}.`, 'Equipar')) {
+    if (await confirmSheet(t('¿Equiparla ahora?'), `${esc(itemName(it))}: ${bonusText(it)}.`, t('Equipar'))) {
       commit(s => Gear.equipItem(s, Gear.slotFor(s, it), id), { celebrate: false });
     }
   }
@@ -575,16 +575,16 @@ async function openSlot(slotId) {
   const options = Gear.ITEMS.filter(i => i.type === type && owned.has(i.id));
   const current = state.equipped.gear?.[slotId];
   const res = await openSheet(`
-    <h3>${slot.name}</h3>
+    <h3>${slotName(slot)}</h3>
     ${options.length ? `<div class="list">${options.map(it => `
       <button class="row slot-opt ${it.id === current ? 'on' : ''}" data-close="${it.id}" style="--c:${Gear.RARITY[it.rarity].color}">
-        ${itemIcon(it)}<div class="row-main"><div class="row-title">${esc(it.name)}</div><div class="row-sub">${bonusText(it)}</div></div>
-        ${it.id === current ? '<span class="tag">Puesta</span>' : ''}
+        ${itemIcon(it)}<div class="row-main"><div class="row-title">${esc(itemName(it))}</div><div class="row-sub">${bonusText(it)}</div></div>
+        ${it.id === current ? `<span class="tag">${t('Puesta')}</span>` : ''}
       </button>`).join('')}</div>`
-      : `<p>No tienes piezas para este espacio. Consíguelas en la <b>Tienda</b> o derrotando jefes.</p>`}
-    ${current ? '<button class="btn btn-block" data-close="__none">Dejar vacío</button>' : ''}
-    ${options.length ? '' : '<button class="btn btn-primary btn-block" data-close="__shop">Ir a la Tienda</button>'}
-    <button class="btn btn-block" data-close="cancel">Cerrar</button>`);
+      : `<p>${t('No tienes piezas para este espacio. Consíguelas en la <b>Tienda</b> o derrotando jefes.')}</p>`}
+    ${current ? `<button class="btn btn-block" data-close="__none">${t('Dejar vacío')}</button>` : ''}
+    ${options.length ? '' : `<button class="btn btn-primary btn-block" data-close="__shop">${t('Ir a la Tienda')}</button>`}
+    <button class="btn btn-block" data-close="cancel">${t('Cerrar')}</button>`);
   if (!res || res === 'cancel') return;
   if (res === '__shop') return showView('shop');
   commit(s => Gear.equipItem(s, slotId, res === '__none' ? null : res), { celebrate: false });
@@ -595,16 +595,16 @@ function renderShop() {
   const bal = Math.max(0, w.balance);
   $('#walletNum').textContent = bal;
   $('#walletHint').textContent = w.chestToday === null
-    ? 'Registra algo hoy para abrir tu cofre del día.'
-    : `Cofre de hoy: +${w.chestToday}. Ganas monedas con cada registro, logro, misión y jefe.`;
+    ? t('Registra algo hoy para abrir tu cofre del día.')
+    : t('Cofre de hoy: +{n}. Ganas monedas con cada registro, logro, misión y jefe.', { n: w.chestToday });
 
   const ownedGear = Gear.ownedItemIds(state);
   $('#shopGear').innerHTML = Gear.shopItems().map(it => {
     const own = ownedGear.has(it.id);
     return `<div class="row shop-row" data-item="${it.id}" style="--c:${Gear.RARITY[it.rarity].color}">
       ${itemIcon(it)}
-      <div class="row-main"><div class="row-title">${esc(it.name)}</div><div class="row-sub">${bonusText(it)}${own ? '' : ` · ${priceTag(it.cost)}`}</div></div>
-      ${own ? '<span class="tag">Tuya</span>' : `<button class="btn btn-yellow" data-item-buy="${it.id}" ${bal < it.cost ? 'disabled' : ''}>Comprar</button>`}
+      <div class="row-main"><div class="row-title">${esc(itemName(it))}</div><div class="row-sub">${bonusText(it)}${own ? '' : ` · ${priceTag(it.cost)}`}</div></div>
+      ${own ? `<span class="tag">${t('Tuya')}</span>` : `<button class="btn btn-yellow" data-item-buy="${it.id}" ${bal < it.cost ? 'disabled' : ''}>${t('Comprar')}</button>`}
     </div>`;
   }).join('');
 
@@ -614,38 +614,38 @@ function renderShop() {
       return `
       <div class="row shop-row ${lock?.locked ? 'locked' : ''}" style="--c:#ffd23f">
         <div class="row-main">
-          <div class="row-title">${lock ? (lock.locked ? '🔒 ' : '🔓 ') : ''}${esc(r.name)}</div>
-          <div class="row-sub">${priceTag(r.cost)}${bal < r.cost ? ` · te faltan ${r.cost - bal}` : ''}</div>
-          ${lock ? `<div class="rw-lock"><span>Reto: ${esc(lock.label)}</span><div class="hpbar pet"><i style="width:${Math.round(lock.progress / lock.target * 100)}%"></i></div><small>${lock.progress}/${lock.target}${lock.locked ? '' : ' · ¡Cumplido!'}</small></div>` : ''}
+          <div class="row-title">${lock ? (lock.locked ? '🔒 ' : '🔓 ') : ''}${esc(nameOf(r))}</div>
+          <div class="row-sub">${priceTag(r.cost)}${bal < r.cost ? t(' · te faltan {n}', { n: r.cost - bal }) : ''}</div>
+          ${lock ? `<div class="rw-lock"><span>${t('Reto: {label}', { label: esc(lockLabel(r.lock, lock)) })}</span><div class="hpbar pet"><i style="width:${Math.round(lock.progress / lock.target * 100)}%"></i></div><small>${lock.progress}/${lock.target}${lock.locked ? '' : t(' · ¡Cumplido!')}</small></div>` : ''}
         </div>
-        <button class="icon-btn" data-reward-edit="${esc(r.id)}" aria-label="Editar">✎</button>
-        <button class="btn btn-yellow" data-reward-buy="${esc(r.id)}" ${bal < r.cost || lock?.locked ? 'disabled' : ''}>Canjear</button>
+        <button class="icon-btn" data-reward-edit="${esc(r.id)}" aria-label="${t('Editar')}">✎</button>
+        <button class="btn btn-yellow" data-reward-buy="${esc(r.id)}" ${bal < r.cost || lock?.locked ? 'disabled' : ''}>${t('Canjear')}</button>
       </div>`;
     }).join('')
-    : `<div class="empty">Crea tu primera recompensa.</div>`;
+    : `<div class="empty">${t('Crea tu primera recompensa.')}</div>`;
 
   const coupons = state.purchases.filter(x => x.kind === 'reward').sort((a, b) => (a.used - b.used) || (b.ts - a.ts));
   $('#couponList').innerHTML = coupons.length
     ? coupons.slice(0, 12).map(c => `
       <div class="row coupon shop-row ${c.used ? 'used' : ''}">
         <div class="row-main">
-          <div class="row-title">🎟️ ${esc(c.name)}</div>
-          <div class="row-sub">${c.used ? `Usado el ${fmtDate(c.usedAt)}` : `Canjeado el ${fmtDate(c.ts)}`}</div>
+          <div class="row-title">🎟️ ${esc(nameOf({ id: c.itemId, name: c.name }))}</div>
+          <div class="row-sub">${c.used ? t('Usado el {date}', { date: fmtDate(c.usedAt) }) : t('Canjeado el {date}', { date: fmtDate(c.ts) })}</div>
         </div>
-        ${c.used ? '' : `<button class="icon-btn" data-coupon-share="${esc(c.id)}" aria-label="Compartir">↗</button>
-        <button class="btn" data-coupon-use="${esc(c.id)}">Usar</button>`}
+        ${c.used ? '' : `<button class="icon-btn" data-coupon-share="${esc(c.id)}" aria-label="${t('Compartir')}">↗</button>
+        <button class="btn" data-coupon-use="${esc(c.id)}">${t('Usar')}</button>`}
       </div>`).join('')
-    : `<p class="small muted">Aún no tienes cupones.</p>`;
+    : `<p class="small muted">${t('Aún no tienes cupones.')}</p>`;
 
   const left = G.shieldsLeft(state), sh = G.SHOP.shield;
   $('#shieldCard').innerHTML = `
     <div class="panel shield-card">
       <div class="shield-ico">🛡️</div>
       <div>
-        <div class="row-title">Tienes ${left} de ${sh.max}</div>
-        <div class="row-sub">Si un día no registras, el escudo se usa solo y tu racha sigue viva.</div>
+        <div class="row-title">${t('Tienes {n} de {max}', { n: left, max: sh.max })}</div>
+        <div class="row-sub">${t('Si faltas más días de los que cubre tu día de gracia, el escudo se usa solo y tu racha sigue viva.')}</div>
         <button class="btn btn-yellow btn-block" id="buyShieldBtn" ${left >= sh.max || bal < sh.cost ? 'disabled' : ''}>
-          ${left >= sh.max ? 'Máximo guardado' : `Comprar · ${sh.cost} 🪙`}</button>
+          ${left >= sh.max ? t('Máximo guardado') : `${t('Comprar')} · ${sh.cost} 🪙`}</button>
       </div>
     </div>`;
 
@@ -655,33 +655,33 @@ function renderShop() {
     const open = lvl >= w.minLevel, on = current === w.id;
     const rank = G.rankFor(w.minLevel);
     return `<button class="sky-tile world-tile ${on ? 'on' : ''} ${open ? '' : 'locked'}" data-world="${w.id}" ${open ? '' : 'disabled'}>
-      <div class="world-prev">${artImg(art.world(w.id))}<span class="soon">Próximamente</span></div>
-      <div class="sky-info"><span>${esc(w.name)}</span><small>${on ? '✔ En uso' : open ? 'Usar' : `Rango ${rank.letter}`}</small></div>
+      <div class="world-prev">${artImg(art.world(w.id))}<span class="soon">${t('Próximamente')}</span></div>
+      <div class="sky-info"><span>${esc(worldName(w))}</span><small>${on ? t('✔ En uso') : open ? t('Usar') : t('Rango {letter}', { letter: rank.letter })}</small></div>
     </button>`;
   }).join('');
 
-  $('#titleList').innerHTML = G.SHOP.titles.map(t => {
-    const own = G.owns(state, t.id), on = state.equipped.title === t.id;
+  $('#titleList').innerHTML = G.SHOP.titles.map(ti => {
+    const own = G.owns(state, ti.id), on = state.equipped.title === ti.id;
     return `<div class="row shop-row" style="--c:#b58cff">
-      <div class="row-main"><div class="row-title">« ${t.name} »</div>${own ? '' : `<div class="row-sub">${priceTag(t.cost)}</div>`}</div>
-      <button class="btn ${on ? 'btn-primary' : own ? '' : 'btn-yellow'}" data-title-item="${t.id}" ${!own && bal < t.cost ? 'disabled' : ''}>${on ? 'Quitar' : own ? 'Usar' : 'Comprar'}</button>
+      <div class="row-main"><div class="row-title">« ${titleName(ti)} »</div>${own ? '' : `<div class="row-sub">${priceTag(ti.cost)}</div>`}</div>
+      <button class="btn ${on ? 'btn-primary' : own ? '' : 'btn-yellow'}" data-title-item="${ti.id}" ${!own && bal < ti.cost ? 'disabled' : ''}>${on ? t('Quitar') : own ? t('Usar') : t('Comprar')}</button>
     </div>`;
   }).join('');
 }
 
 const PET_MOOD = {
-  egg: n => 'Cada día que registras algo le das calor',
-  happy: n => `¡${n} está feliz!`,
-  rest: n => `${n} descansa y te espera`,
-  welcome: n => `¡${n} está feliz de verte de nuevo!`,
+  egg: n => t('Cada día que registras algo le das calor'),
+  happy: n => t('¡{name} está feliz!', { name: n }),
+  rest: n => t('{name} descansa y te espera', { name: n }),
+  welcome: n => t('¡{name} está feliz de verte de nuevo!', { name: n }),
 };
 /** Nombre visible de la mascota: el que eligió el jugador o el de la especie. */
-const petName = () => G.petCustomName(state) || speciesById(state.pet.species).name;
+const petName = () => G.petCustomName(state) || speciesName(speciesById(state.pet.species));
 
 const PET_MOOD_SHORT = { egg: 'Dale calor', happy: '¡Está feliz!', rest: 'Te espera', welcome: '¡Qué bueno verte!' };
 const bossImg = id => art.boss(id);
 const petImg = stage => art.pet(state.pet.species || DEFAULT_PET, stage);
-const monthName = mk => { const [y, m] = mk.split('-').map(Number); return new Date(y, m - 1, 1).toLocaleDateString('es', { month: 'long' }); };
+const monthName = mk => { const [y, m] = mk.split('-').map(Number); return new Date(y, m - 1, 1).toLocaleDateString(locale(), { month: 'long' }); };
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 /** Tarjetas pequeñas de Inicio: jefe del mes y mascota. */
@@ -724,7 +724,7 @@ function renderAdventure({ boss, weekly }) {
       <img class="boss-art boss-hit" src="${bossImg(boss.id)}" alt="${esc(bossName(boss))}">
       ${boss.defeated ? `<div class="boss-stamp">${t('¡Derrotado!')}</div>` : ''}
       <div class="boss-name">${esc(bossName(boss))}</div>
-      <div class="boss-taunt">${esc(getLang() === 'en' ? bossTaunt(boss) : lineOfDay([boss.taunt, ...(BOSS_LINES[boss.id] || [])], boss.id, G.dayKey(Date.now())))}</div>
+      <div class="boss-taunt">${esc(lineOfDay([bossTaunt(boss), ...bossLines(boss.id)], boss.id, G.dayKey(Date.now())))}</div>
       <div class="hpbar"><i style="width:${Math.round((1 - boss.pct) * 100)}%"></i></div>
       <div class="boss-meta">
         <span>${boss.hpLeft} / ${boss.hp} ${t('PV')}</span>
@@ -759,8 +759,8 @@ function renderAdventure({ boss, weekly }) {
 
   const trophies = G.bossTrophies(state);
   $('#trophies').innerHTML = trophies.length
-    ? trophies.map(t => `<div class="trophy"><img src="${bossImg(t.id)}" alt="${esc(t.name)}"><span>${monthName(t.monthKey)} ${t.monthKey.slice(0, 4)}</span></div>`).join('')
-    : `<p class="small muted">Aún no derrotas a ningún jefe.</p>`;
+    ? trophies.map(tr => `<div class="trophy"><img src="${bossImg(tr.id)}" alt="${esc(bossName(tr))}"><span>${monthName(tr.monthKey)} ${tr.monthKey.slice(0, 4)}</span></div>`).join('')
+    : `<p class="small muted">${t('Aún no derrotas a ningún jefe.')}</p>`;
 }
 
 function renderQuests() {
@@ -771,13 +771,13 @@ function renderQuests() {
           <img class="row-ico" src="${statIcon(s.id)}" alt="">
           <div class="row-main">
             <div class="row-title">${esc(q.name)}</div>
-            <div class="row-sub">${s.name} · <span class="row-xp">+${q.xp} XP</span></div>
+            <div class="row-sub">${statName(s)} · <span class="row-xp">+${q.xp} XP</span></div>
           </div>
-          <button class="icon-btn" data-quest-edit="${esc(q.id)}" aria-label="Editar">✎</button>
-          <button class="btn btn-yellow" data-quest-done="${esc(q.id)}">¡Hecho!</button>
+          <button class="icon-btn" data-quest-edit="${esc(q.id)}" aria-label="${t('Editar')}">✎</button>
+          <button class="btn btn-yellow" data-quest-done="${esc(q.id)}">${t('¡Hecho!')}</button>
         </div>`;
       }).join('')
-    : `<div class="empty">Sin misiones pendientes.<br>Crea una para ganar XP extra.</div>`;
+    : `<div class="empty">${t('Sin misiones pendientes.<br>Crea una para ganar XP extra.')}</div>`;
 
   const done = [...state.questHistory].sort((a, b) => b.completedAt - a.completedAt);
   $('#questDone').innerHTML = done.length
@@ -786,19 +786,19 @@ function renderQuests() {
         return `<div class="row done" style="--c:${s.color}">
           <div class="row-main">
             <div class="row-title">✔ ${esc(q.name)}</div>
-            <div class="row-sub">${fmtDate(q.completedAt)} · ${s.name}</div>
+            <div class="row-sub">${fmtDate(q.completedAt)} · ${statName(s)}</div>
           </div>
           <span class="row-xp">+${q.xp}</span>
         </div>`;
       }).join('')
-    : `<p class="small muted">Aún no completas misiones.</p>`;
+    : `<p class="small muted">${t('Aún no completas misiones.')}</p>`;
 }
 
 let historyLimit = 150;
 function renderHistory() {
   const log = [...state.log].sort((a, b) => b.ts - a.ts);
   if (!log.length) {
-    $('#historyList').innerHTML = `<div class="empty">Tu historia empieza con el primer registro. ⚔️</div>`;
+    $('#historyList').innerHTML = `<div class="empty">${t('Tu historia empieza con el primer registro. ⚔️')}</div>`;
     return;
   }
   const shown = log.slice(0, historyLimit);
@@ -817,15 +817,15 @@ function renderHistory() {
       return `<div class="row" style="--c:${s.color}">
         <img class="row-ico" src="${statIcon(s.id)}" alt="">
         <div class="row-main">
-          <div class="row-title">${{ quest: '📜 ', weekly: '🗓️ ', boss: '👹 ' }[e.type] || ''}${esc(e.name)}</div>
-          <div class="row-sub">${fmtTime(e.ts)} · ${s.name} · <span class="row-xp">+${e.xp} XP</span></div>
+          <div class="row-title">${{ quest: '📜 ', weekly: '🗓️ ', boss: '👹 ' }[e.type] || ''}${esc(nameOf(e))}</div>
+          <div class="row-sub">${fmtTime(e.ts)} · ${statName(s)} · <span class="row-xp">+${e.xp} XP</span></div>
         </div>
-        <button class="icon-btn" data-undo="${esc(e.id)}" aria-label="Deshacer">↶</button>
+        <button class="icon-btn" data-undo="${esc(e.id)}" aria-label="${t('Deshacer')}">↶</button>
       </div>`;
     }).join('');
     html += '</div>';
   }
-  if (log.length > historyLimit) html += `<button class="btn btn-block" id="moreHistory" style="margin-top:14px">Ver más</button>`;
+  if (log.length > historyLimit) html += `<button class="btn btn-block" id="moreHistory" style="margin-top:14px">${t('Ver más')}</button>`;
   $('#historyList').innerHTML = html;
 }
 
@@ -834,14 +834,14 @@ function renderGuardians(p) {
   $('#guardianGrid').innerHTML = G.STATS.map(s => {
     const st = p.stats[s.id];
     const g = guardianFor(s.id, st.level);
-    const name = g.name || `Guardián de ${s.name}`;
+    const name = g.name || t('Guardiana de {stat}', { stat: statName(s) });
     return `<button class="g-card" data-stat="${s.id}" style="--c:${s.color}">
-      <div class="g-art">${artImg(g.img, { alt: esc(name), fb: g.tier > 1 ? g.fallback : null })}<span class="soon">Próximamente</span></div>
+      <div class="g-art">${artImg(g.img, { alt: esc(name), fb: g.tier > 1 ? g.fallback : null })}<span class="soon">${t('Próximamente')}</span></div>
       <div class="g-info">
         <b>${esc(name)}</b>
-        <small>${s.name} · Forma ${g.tier}/5</small>
-        <div class="g-pips">${[1, 2, 3, 4, 5].map(t => `<i class="${t <= g.tier ? 'on' : ''}"></i>`).join('')}</div>
-        <span class="g-next">${G.AFFINITY_PCT[g.tier - 1] ? `Afinidad +${G.AFFINITY_PCT[g.tier - 1]} % · ` : ''}${g.nextAt ? `Evoluciona en LV ${g.nextAt}` : 'Forma final'}</span>
+        <small>${t('{stat} · Forma {n}/5', { stat: statName(s), n: g.tier })}</small>
+        <div class="g-pips">${[1, 2, 3, 4, 5].map(k => `<i class="${k <= g.tier ? 'on' : ''}"></i>`).join('')}</div>
+        <span class="g-next">${G.AFFINITY_PCT[g.tier - 1] ? t('Afinidad +{n} % · ', { n: G.AFFINITY_PCT[g.tier - 1] }) : ''}${g.nextAt ? t('Evoluciona en LV {n}', { n: g.nextAt }) : t('Forma final')}</span>
       </div>
     </button>`;
   }).join('');
@@ -850,20 +850,20 @@ function renderGuardians(p) {
 function renderStreakPanel(p) {
   const shields = G.shieldsLeft(state);
   $('#streakPanel').innerHTML = `
-    <div class="sp-item"><b>${p.streak.current}</b><small>Racha actual</small></div>
-    <div class="sp-item"><b>${p.streak.best}</b><small>Mejor racha</small></div>
-    <div class="sp-item"><b>${shields}</b><small>Escudos 🛡️</small></div>`;
+    <div class="sp-item"><b>${p.streak.current}</b><small>${t('Racha actual')}</small></div>
+    <div class="sp-item"><b>${p.streak.best}</b><small>${t('Mejor racha')}</small></div>
+    <div class="sp-item"><b>${shields}</b><small>${t('Escudos 🛡️')}</small></div>`;
 }
 
 function renderAchievements(p) {
   renderStreakPanel(p);
   const unlocked = new Set(G.unlockedAchievements(state, p));
-  $('#achSummary').textContent = `${unlocked.size} de ${G.ACHIEVEMENTS.length} desbloqueados · cada logro da ${G.COINS.achievement} monedas · mejor racha: ${p.streak.best} días`;
+  $('#achSummary').textContent = t('{n} de {total} desbloqueados · cada logro da {coins} monedas · mejor racha: {best} días', { n: unlocked.size, total: G.ACHIEVEMENTS.length, coins: G.COINS.achievement, best: p.streak.best });
   $('#achList').innerHTML = G.ACHIEVEMENTS.map(a => `
     <div class="ach ${unlocked.has(a.id) ? 'unlocked' : 'locked'}">
       <span class="ach-ico">${artImg(art.badge(a.id))}<i>${a.icon}</i></span>
-      <div class="ach-name">${esc(a.name)}</div>
-      <div class="ach-desc">${esc(a.desc)}</div>
+      <div class="ach-name">${esc(achName(a))}</div>
+      <div class="ach-desc">${esc(achDesc(a))}</div>
     </div>`).join('');
 }
 
@@ -874,7 +874,7 @@ function renderSettings() {
   $('#profileChips').innerHTML = profiles.map(pr => `
     <button class="chip profile ${pr.active ? 'on' : ''}" data-profile="${esc(pr.id)}">
       <img src="${characterImg(pr.character)}" alt="">${esc(pr.name)} <small>LV ${pr.level}</small>
-    </button>`).join('') + `<button class="chip" id="newProfileBtn">＋ Nuevo</button>`;
+    </button>`).join('') + `<button class="chip" id="newProfileBtn">${t('＋ Nuevo')}</button>`;
   $('#deleteProfileBtn').hidden = profiles.length < 2;
   $('#charGrid').innerHTML = heroPicker(state.profile.character);
   $('#langChips').innerHTML = LANGS.map(l => `<button class="chip ${getLang() === l.id ? 'on' : ''}" data-lang="${l.id}">${l.name}</button>`).join('');
@@ -885,20 +885,20 @@ function renderSettings() {
       <div class="row" style="--c:${s.color}">
         <img class="row-ico" src="${statIcon(s.id)}" alt="">
         <div class="row-main">
- <div class="row-title">${esc(a.name)} ${a.resist ? '<span class="tag">Reto</span>' : ''}</div>
-          <div class="row-sub">${s.name} · <span class="row-xp">+${a.xp} XP</span>${a.bonus ? ` · ★ ${esc(a.bonus.label)} +${a.bonus.xp}` : ''}</div>
+ <div class="row-title">${esc(nameOf(a))} ${a.resist ? `<span class="tag">${t('Reto')}</span>` : ''}</div>
+          <div class="row-sub">${statName(s)} · <span class="row-xp">+${a.xp} XP</span>${a.bonus ? ` · ★ ${esc(t(a.bonus.label))} +${a.bonus.xp}` : ''}</div>
         </div>
-        <button class="icon-btn" data-act-edit="${esc(a.id)}" aria-label="Editar">✎</button>
-        <button class="icon-btn" data-act-del="${esc(a.id)}" aria-label="Borrar">🗑</button>
-      </div>`)).join('') || `<div class="empty">Sin actividades.</div>`;
+        <button class="icon-btn" data-act-edit="${esc(a.id)}" aria-label="${t('Editar')}">✎</button>
+        <button class="icon-btn" data-act-del="${esc(a.id)}" aria-label="${t('Borrar')}">🗑</button>
+      </div>`)).join('') || `<div class="empty">${t('Sin actividades.')}</div>`;
 
   $('#backupInfo').textContent = state.lastBackup
-    ? `Último respaldo: ${fmtDate(state.lastBackup)} (${state.log.length} registros en total).`
-    : 'Nunca has exportado un respaldo.';
+    ? t('Último respaldo: {date} ({n} registros en total).', { date: fmtDate(state.lastBackup), n: state.log.length })
+    : t('Nunca has exportado un respaldo.');
   $('#backupWarn').hidden = !needsBackup();
   $('#backupWarn').textContent = state.lastBackup
-    ? `⚠️ Tu último respaldo fue hace más de ${BACKUP_REMINDER_DAYS} días. Safari puede borrar los datos de apps web: exporta uno nuevo.`
-    : '⚠️ Aún no tienes respaldo. Safari puede borrar los datos de apps web: exporta uno de vez en cuando.';
+    ? t('⚠️ Tu último respaldo fue hace más de {n} días. Safari puede borrar los datos de apps web: exporta uno nuevo.', { n: BACKUP_REMINDER_DAYS })
+    : t('⚠️ Aún no tienes respaldo. Safari puede borrar los datos de apps web: exporta uno de vez en cuando.');
   $('#appVersion').textContent = APP_VERSION;
 }
 
@@ -918,13 +918,13 @@ function needsBackup() {
 function dayLabel(key) {
   const today = G.dayKey(Date.now());
   const yest = G.dayKey(Date.now() - 86400000);
-  if (key === today) return 'Hoy';
-  if (key === yest) return 'Ayer';
+  if (key === today) return t('Hoy');
+  if (key === yest) return t('Ayer');
   const [y, m, d] = key.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString('es', { weekday: 'long', day: 'numeric', month: 'short' });
+  return new Date(y, m - 1, d).toLocaleDateString(locale(), { weekday: 'long', day: 'numeric', month: 'short' });
 }
-const fmtTime = ts => new Date(ts).toLocaleTimeString('es', { hour: 'numeric', minute: '2-digit' });
-const fmtDate = ts => new Date(ts).toLocaleDateString('es', { day: 'numeric', month: 'short', year: 'numeric' });
+const fmtTime = ts => new Date(ts).toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' });
+const fmtDate = ts => new Date(ts).toLocaleDateString(locale(), { day: 'numeric', month: 'short', year: 'numeric' });
 
 // ---------------------------------------------------------------------
 // Toasts
@@ -997,12 +997,12 @@ function closeSheet(value = null) {
 }
 $('#sheetBackdrop').addEventListener('click', e => { if (e.target.id === 'sheetBackdrop') closeSheet(null); });
 
-async function confirmSheet(title, msg, okLabel = 'Sí', danger = false) {
+async function confirmSheet(title, msg, okLabel = t('Sí'), danger = false) {
   const p = openSheet(`
     <h3>${esc(title)}</h3>
     <p>${msg}</p>
     <div class="btn-row">
-      <button class="btn" data-close="cancel">Cancelar</button>
+      <button class="btn" data-close="cancel">${t('Cancelar')}</button>
       <button class="btn ${danger ? 'btn-danger' : 'btn-primary'}" data-close="ok">${esc(okLabel)}</button>
     </div>`);
   return (await p) === 'ok';
@@ -1018,6 +1018,13 @@ $('#sheet').addEventListener('click', e => {
 // Idioma
 // ---------------------------------------------------------------------
 const mText = m => missionText(m, m.stat ? statName(G.statById(m.stat)) : '');
+/** Texto del reto de una recompensa, armado con sus datos (para poder traducirlo). */
+function lockLabel(lock, st) {
+  if (lock.kind === 'habit') { const a = state.activities.find(x => x.id === lock.act); return t('«{name}» {n} días', { name: a ? nameOf(a) : t('Hábito borrado'), n: st.target }); }
+  if (lock.kind === 'boss') return t('Derrota a un jefe');
+  if (lock.kind === 'guardian') return t('Guardiana de {stat} en forma {n}', { stat: statName(G.statById(lock.stat)), n: st.target });
+  return st.label;
+}
 // Textos fijos de index.html: se traducen en el lugar y se guarda el original
 // para volver al español.
 const staticOrig = new WeakMap();
@@ -1132,19 +1139,19 @@ async function editorSheet({ title, item, maxXp, allowBonus, allowDelete }) {
   const xpVal = Math.min(maxXp, Math.max(G.XP_MIN, it.xp));
   const p = openSheet(`
     <h3>${esc(title)}</h3>
-    <label class="field"><span>Nombre</span>
-      <input type="text" id="edName" maxlength="40" value="${esc(it.name)}" placeholder="Ej. Correr 5 km" autocomplete="off">
+    <label class="field"><span>${t('Nombre')}</span>
+      <input type="text" id="edName" maxlength="40" value="${esc(it.name)}" placeholder="${t('Ej. Correr 5 km')}" autocomplete="off">
     </label>
-    <div class="field"><span>Stat que sube</span>
+    <div class="field"><span>${t('Stat que sube')}</span>
       <div class="chips" id="edStats">${G.STATS.map(s =>
-        `<button type="button" class="chip stat-chip ${it.stat === s.id ? 'on' : ''}" data-stat="${s.id}" style="--c:${s.color}"><img src="${statIcon(s.id)}" alt="">${s.name}</button>`).join('')}
+        `<button type="button" class="chip stat-chip ${it.stat === s.id ? 'on' : ''}" data-stat="${s.id}" style="--c:${s.color}"><img src="${statIcon(s.id)}" alt="">${statName(s)}</button>`).join('')}
       </div>
     </div>
     ${allowBonus ? `
-    <div class="field"><span>¿Cuánto esfuerzo te pide?</span>
+    <div class="field"><span>${t('¿Cuánto esfuerzo te pide?')}</span>
       <div class="effort" id="edEffort">${G.EFFORT_LEVELS.map(l => `
-        <button type="button" class="effort-btn ${it.xp === l.xp ? 'on' : ''}" data-xp="${l.xp}"><b>${l.name}</b><small>${l.hint}</small><em>+${l.xp} XP</em></button>`).join('')}
-        ${G.EFFORT_LEVELS.some(l => l.xp === it.xp) ? '' : `<button type="button" class="effort-btn on" data-xp="${it.xp}"><b>Actual</b><small>Como estaba</small><em>+${it.xp} XP</em></button>`}
+        <button type="button" class="effort-btn ${it.xp === l.xp ? 'on' : ''}" data-xp="${l.xp}"><b>${effortName(l).name}</b><small>${effortName(l).hint}</small><em>+${l.xp} XP</em></button>`).join('')}
+        ${G.EFFORT_LEVELS.some(l => l.xp === it.xp) ? '' : `<button type="button" class="effort-btn on" data-xp="${it.xp}"><b>${t('Actual')}</b><small>${t('Como estaba')}</small><em>+${it.xp} XP</em></button>`}
       </div>
       <input type="hidden" id="edXp" value="${it.xp}">
     </div>` : `
@@ -1155,12 +1162,12 @@ async function editorSheet({ title, item, maxXp, allowBonus, allowDelete }) {
       </div>
     </div>`}
     ${allowBonus ? `
-    <label class="toggle"><input type="checkbox" id="edBonusOn" ${it.bonus ? 'checked' : ''}> <span>Bono opcional (ej. ruta larga)</span></label>
+    <label class="toggle"><input type="checkbox" id="edBonusOn" ${it.bonus ? 'checked' : ''}> <span>${t('Bono opcional (ej. ruta larga)')}</span></label>
     <div id="edBonus" ${it.bonus ? '' : 'hidden'} class="char-editor">
-      <label class="field"><span>Nombre del bono</span>
+      <label class="field"><span>${t('Nombre del bono')}</span>
         <input type="text" id="edBonusLabel" maxlength="24" value="${esc(it.bonus?.label || 'Extra')}">
       </label>
-      <div class="field"><span>XP extra (${G.XP_MIN}–${G.XP_MAX})</span>
+      <div class="field"><span>${t('XP extra ({min}–{max})', { min: G.XP_MIN, max: G.XP_MAX })}</span>
         <div class="range-row">
           <input type="range" id="edBonusXp" min="${G.XP_MIN}" max="${G.XP_MAX}" step="5" value="${it.bonus?.xp || 15}">
           <output id="edBonusOut">+${it.bonus?.xp || 15}</output>
@@ -1168,17 +1175,17 @@ async function editorSheet({ title, item, maxXp, allowBonus, allowDelete }) {
       </div>
     </div>` : ''}
     ${allowBonus ? `
-    <label class="field"><span>¿Es un reto de resistencia? (una vez al día, ×3 a su jefe)</span>
+    <label class="field"><span>${t('¿Es un reto de resistencia? (una vez al día, ×3 a su jefe)')}</span>
       <select id="edResist">
-        <option value="">No, actividad normal</option>
-        ${G.activeBosses().map(b => `<option value="${b.id}" ${it.resist === b.id ? 'selected' : ''}>Sí, contra ${esc(b.name.split(',')[0])}</option>`).join('')}
+        <option value="">${t('No, actividad normal')}</option>
+        ${G.activeBosses().map(b => `<option value="${b.id}" ${it.resist === b.id ? 'selected' : ''}>${t('Sí, contra {boss}', { boss: esc(bossShort(b)) })}</option>`).join('')}
       </select>
     </label>` : ''}
     <div class="btn-row">
-      <button class="btn" data-close="cancel">Cancelar</button>
-      <button class="btn btn-primary" id="edSave">Guardar</button>
+      <button class="btn" data-close="cancel">${t('Cancelar')}</button>
+      <button class="btn btn-primary" id="edSave">${t('Guardar')}</button>
     </div>
-    ${allowDelete ? `<button class="btn btn-danger btn-block" data-close="delete">Borrar</button>` : ''}
+    ${allowDelete ? `<button class="btn btn-danger btn-block" data-close="delete">${t('Borrar')}</button>` : ''}
   `);
 
   let stat = it.stat;
@@ -1199,7 +1206,7 @@ async function editorSheet({ title, item, maxXp, allowBonus, allowDelete }) {
   }
   $('#edSave').onclick = () => {
     const name = $('#edName').value.trim();
-    if (!name) { $('#edName').focus(); $('#edName').placeholder = '¡Ponle un nombre!'; return; }
+    if (!name) { $('#edName').focus(); $('#edName').placeholder = t('¡Ponle un nombre!'); return; }
     const out = { name, stat, xp: G.clampXp($('#edXp').value, maxXp) };
     if (allowBonus) {
       out.bonus = $('#edBonusOn').checked
@@ -1218,7 +1225,7 @@ async function editorSheet({ title, item, maxXp, allowBonus, allowDelete }) {
 function doLog(activityId, bonus, origin) {
   let entry;
   try { entry = commit(s => G.logActivity(s, activityId, { bonus })); }
-  catch (err) { toast(`✋ ${esc(err.message)}`); return; }
+  catch (err) { toast(`✋ ${esc(t(err.message))}`); return; }
   const today = G.dayKey(Date.now());
   const firstToday = state.log.filter(e => G.isBase(e) && G.dayKey(e.ts) === today).length === 1;
   if (origin) {
@@ -1236,7 +1243,7 @@ function doLog(activityId, bonus, origin) {
   const news = [rpg, ...lastNews];
   // La primera vez del día en esa stat, su guardiana dice algo de su propósito.
   const firstOfStat = state.log.filter(e => e.type === 'activity' && e.stat === entry.stat && G.dayKey(e.ts) === today).length === 1;
-  if (firstOfStat && !lastNews.length && GUARDIAN_LINES[entry.stat] && getLang() === 'es') news.push(`<i>${esc(gName)}: «${esc(lineOfDay(GUARDIAN_LINES[entry.stat], entry.stat, today))}»</i>`);
+  if (firstOfStat && !lastNews.length && GUARDIAN_LINES[entry.stat]) news.push(`<i>${esc(gName)}: «${esc(lineOfDay(guardianLines(entry.stat), entry.stat, today))}»</i>`);
   const coins = G.coinsFor(entry) + (firstToday ? G.chestFor(today) : 0);
   showResult(`<b>${esc(nameOf(entry))}</b> · +${entry.xp} XP · +${coins} 🪙`, news,
     () => { commit(s => G.undoEntry(s, entry.id), { celebrate: false }); toast(t('Registro deshecho')); });
@@ -1247,12 +1254,12 @@ async function onActivityTap(btn) {
   if (!a) return;
   if (!a.bonus) return doLog(a.id, false, btn);
   const choice = await openSheet(`
-    <h3>${esc(a.name)}</h3>
+    <h3>${esc(nameOf(a))}</h3>
     <div class="sheet-choice">
-      <button class="btn" data-close="normal"><span>Normal</span><span>+${a.xp} XP</span></button>
-      <button class="btn btn-yellow" data-close="bonus"><span>★ ${esc(a.bonus.label)}</span><span>+${a.xp + a.bonus.xp} XP</span></button>
+      <button class="btn" data-close="normal"><span>${t('Normal')}</span><span>+${a.xp} XP</span></button>
+      <button class="btn btn-yellow" data-close="bonus"><span>★ ${esc(t(a.bonus.label))}</span><span>+${a.xp + a.bonus.xp} XP</span></button>
     </div>
-    <button class="btn btn-block" data-close="cancel">Cancelar</button>`);
+    <button class="btn btn-block" data-close="cancel">${t('Cancelar')}</button>`);
   if (choice === 'normal' || choice === 'bonus') doLog(a.id, choice === 'bonus', btn);
 }
 
@@ -1262,7 +1269,7 @@ async function editActivity(id) {
   // (p. ej. "Terminar libro" = 100), al editarla se respeta su valor como tope.
   const maxXp = Math.max(G.XP_MAX, a?.xp || 0);
   const res = await editorSheet({
-    title: a ? 'Editar actividad' : 'Nueva actividad',
+    title: a ? t('Editar actividad') : t('Nueva actividad'),
     item: a, maxXp, allowBonus: true, allowDelete: !!a,
   });
   if (!res || res === 'cancel') return;
@@ -1271,28 +1278,28 @@ async function editActivity(id) {
     if (a) Object.assign(s.activities.find(x => x.id === a.id), res);
     else s.activities.push({ id: G.uid(), ...res });
   }, { celebrate: false });
-  toast(a ? 'Actividad actualizada' : 'Actividad creada');
+  toast(a ? t('Actividad actualizada') : t('Actividad creada'));
 }
 
 async function deleteActivity(id) {
   const a = state.activities.find(x => x.id === id);
   if (!a) return;
-  const ok = await confirmSheet('¿Borrar actividad?', `“${esc(a.name)}” desaparecerá de la lista. Tu historial y XP se conservan.`, 'Borrar', true);
+  const ok = await confirmSheet(t('¿Borrar actividad?'), t('“{name}” desaparecerá de la lista. Tu historial y XP se conservan.', { name: esc(nameOf(a)) }), t('Borrar'), true);
   if (!ok) return;
   commit(s => { s.activities = s.activities.filter(x => x.id !== id); }, { celebrate: false });
-  toast('Actividad borrada');
+  toast(t('Actividad borrada'));
 }
 
 async function editQuest(id) {
   const q = id ? state.quests.find(x => x.id === id) : null;
   const res = await editorSheet({
-    title: q ? 'Editar misión' : 'Nueva misión única',
+    title: q ? t('Editar misión') : t('Nueva misión única'),
     item: q || { name: '', stat: 'hogar', xp: 50 },
     maxXp: G.QUEST_XP_MAX, allowBonus: false, allowDelete: !!q,
   });
   if (!res || res === 'cancel') return;
   if (res === 'delete') {
-    if (await confirmSheet('¿Borrar misión?', `“${esc(q.name)}” se eliminará sin dar XP.`, 'Borrar', true)) {
+    if (await confirmSheet(t('¿Borrar misión?'), t('“{name}” se eliminará sin dar XP.', { name: esc(q.name) }), t('Borrar'), true)) {
       commit(s => { s.quests = s.quests.filter(x => x.id !== id); }, { celebrate: false });
     }
     return;
@@ -1313,12 +1320,12 @@ function finishQuest(id, btn) {
   heroReact();
   heroFlash();
   showResult(`📜 <b>${esc(entry.name)}</b> · +${entry.xp} XP`, [...lastNews],
-    () => { commit(s => G.undoEntry(s, entry.id), { celebrate: false }); toast('Misión devuelta a pendientes'); });
+    () => { commit(s => G.undoEntry(s, entry.id), { celebrate: false }); toast(t('Misión devuelta a pendientes')); });
 }
 
 function claimReward(fn, btn, label) {
   let entry;
-  try { entry = commit(fn); } catch (err) { toast(`❌ ${esc(err.message)}`); return; }
+  try { entry = commit(fn); } catch (err) { toast(`❌ ${esc(t(err.message))}`); return; }
   if (btn) {
     const r = btn.getBoundingClientRect();
     floatXp(r.left + r.width / 2, r.top, entry.xp);
@@ -1337,20 +1344,20 @@ async function openPetSheet() {
   const p = openSheet(`
     <h3>${esc(name)}</h3>
     <div class="pet-sheet-art"><img class="pet-img ${pet.mood}" src="${petImg(pet.stage)}" alt=""></div>
-    <p><b>${pet.stageName}</b> · ${plural(pet.activeDays, 'día activo', 'días activos')} · ${esc(PET_MOOD[pet.mood](name))}</p>
+    <p><b>${stageName(pet.stage)}</b> · ${tn(pet.activeDays, '{n} día activo', '{n} días activos')} · ${esc(PET_MOOD[pet.mood](name))}</p>
     <div class="hpbar pet" style="height:12px"><i style="width:${Math.round(pet.pct * 100)}%"></i></div>
-    <p>${pet.next ? `Evoluciona a <b>${pet.next.name}</b> en ${plural(pet.daysToNext, 'día activo', 'días activos')} más. Crece cada día que registras algo y nunca retrocede.` : '¡Alcanzó su forma final!'}</p>
+    <p>${pet.next ? t('Evoluciona a <b>{stage}</b> en {days} más. Crece cada día que registras algo y nunca retrocede.', { stage: stageName(pet.stage + 1), days: tn(pet.daysToNext, '{n} día activo', '{n} días activos') }) : t('¡Alcanzó su forma final!')}</p>
     <div class="pet-stages">${G.PET_STAGES.map((st, i) => `
-      <div class="${i > pet.stage ? 'locked' : i === pet.stage ? 'current' : ''}"><img src="${petImg(i)}" alt="">${i > pet.stage ? `${st.min} días` : st.name}</div>`).join('')}
+      <div class="${i > pet.stage ? 'locked' : i === pet.stage ? 'current' : ''}"><img src="${petImg(i)}" alt="">${i > pet.stage ? tn(st.min, '{n} día', '{n} días') : stageName(i)}</div>`).join('')}
     </div>
-    <div class="field"><span>Huevo</span>
+    <div class="field"><span>${t('Huevo')}</span>
       <p class="small" style="margin:0">${pet.stage === 0
-        ? 'Elige qué huevo empollar. Puedes cambiarlo mientras no haya eclosionado.'
-        : `Ya eclosionó: es de la especie ${esc(speciesById(state.pet.species).name)}.`}</p>
+        ? t('Elige qué huevo empollar. Puedes cambiarlo mientras no haya eclosionado.')
+        : t('Ya eclosionó: es de la especie {name}.', { name: esc(speciesName(speciesById(state.pet.species))) })}</p>
       <div class="egg-grid" id="eggGrid">${eggCards(pet.stage)}</div>
     </div>
-    <label class="field"><span>Nombre de tu compañero</span><input type="text" id="petName" maxlength="${G.PET_NAME_MAX}" value="${esc(G.petCustomName(state))}" placeholder="${esc(speciesById(state.pet.species).name)}" autocomplete="off"></label>
-    <button class="btn btn-primary btn-block" data-close="ok">Listo</button>`);
+    <label class="field"><span>${t('Nombre de tu compañero')}</span><input type="text" id="petName" maxlength="${G.PET_NAME_MAX}" value="${esc(G.petCustomName(state))}" placeholder="${esc(speciesName(speciesById(state.pet.species)))}" autocomplete="off"></label>
+    <button class="btn btn-primary btn-block" data-close="ok">${t('Listo')}</button>`);
   $('#petName').addEventListener('input', e => {
     G.setPetName(state, e.target.value);  // vacío = se muestra el nombre de la especie
     save();
@@ -1380,7 +1387,7 @@ function eggCards(stage) {
     const locked = !sp.ready || (stage > 0 && !on);
     return `<button class="egg-card ${on ? 'on' : ''}" data-egg="${sp.id}" ${locked ? 'disabled' : ''}>
       <div class="egg-art">${artImg(art.egg(sp.id), { fb: art.pet(sp.id, 0) })}<span class="soon">?</span></div>
-      <b>${esc(sp.name)}</b><small>${sp.ready ? sp.element : 'Pronto'}</small>
+      <b>${esc(speciesName(sp))}</b><small>${sp.ready ? elementName(sp) : t('Pronto')}</small>
     </button>`;
   }).join('');
 }
@@ -1420,14 +1427,14 @@ function shareCoupon(id) {
 
 function tryPay(fn, okMsg) {
   try { commit(fn, { celebrate: false }); toast(okMsg, { kind: 'ach' }); return true; }
-  catch (err) { toast(`✋ ${esc(err.message)}`); return false; }
+  catch (err) { toast(`✋ ${esc(t(err.message))}`); return false; }
 }
 
 async function buyRewardFlow(id) {
   const r = state.rewards.find(x => x.id === id);
   if (!r) return;
-  if (!(await confirmSheet('¿Canjear recompensa?', `<b>${esc(r.name)}</b> por <b>${r.cost} monedas</b>. Recibirás un cupón para usar cuando quieras.`, 'Canjear'))) return;
-  if (tryPay(s => G.buyReward(s, id), `🎟️ ¡Cupón conseguido: ${esc(r.name)}!`)) heroReact();
+  if (!(await confirmSheet(t('¿Canjear recompensa?'), t('<b>{name}</b> por <b>{n} monedas</b>. Recibirás un cupón para usar cuando quieras.', { name: esc(nameOf(r)), n: r.cost }), t('Canjear')))) return;
+  if (tryPay(s => G.buyReward(s, id), t('🎟️ ¡Cupón conseguido: {name}!', { name: esc(nameOf(r)) }))) heroReact();
 }
 
 /** Ideas de recompensas por tipo, para agregar a la Tienda. */
@@ -1436,14 +1443,14 @@ async function openRewardIdeas() {
   let pick = [];
   const list = () => G.REWARD_TYPES.map(ty => {
     const opts = G.REWARD_TEMPLATES.filter(r => r.type === ty.id && !have.has(r.id));
-    return opts.length ? `<div class="w-group"><div class="w-group-title">${esc(ty.name)}</div><div class="w-habits">${opts.map(r =>
-      `<button class="w-habit w-reward ${pick.includes(r.id) ? 'on' : ''}" data-reward="${r.id}">${esc(r.name)} <small>${r.cost} 🪙</small></button>`).join('')}</div></div>` : '';
-  }).join('') || '<p>Ya tienes todas las ideas. Crea una propia.</p>';
+    return opts.length ? `<div class="w-group"><div class="w-group-title">${esc(t(ty.name))}</div><div class="w-habits">${opts.map(r =>
+      `<button class="w-habit w-reward ${pick.includes(r.id) ? 'on' : ''}" data-reward="${r.id}">${esc(nameOf(r))} <small>${r.cost} 🪙</small></button>`).join('')}</div></div>` : '';
+  }).join('') || `<p>${t('Ya tienes todas las ideas. Crea una propia.')}</p>`;
   const p = openSheet(`
-    <h3>Ideas de recompensas</h3>
-    <p class="small">Los premios gratis cuestan menos: así premiarte no deshace tus metas.</p>
+    <h3>${t('Ideas de recompensas')}</h3>
+    <p class="small">${t('Los premios gratis cuestan menos: así premiarte no deshace tus metas.')}</p>
     <div id="riList">${list()}</div>
-    <div class="btn-row"><button class="btn" data-close="cancel">Cancelar</button><button class="btn btn-primary" id="riAdd">Agregar</button></div>`);
+    <div class="btn-row"><button class="btn" data-close="cancel">${t('Cancelar')}</button><button class="btn btn-primary" id="riAdd">${t('Agregar')}</button></div>`);
   $('#riList').addEventListener('click', e => {
     const r = e.target.closest('[data-reward]'); if (!r) return;
     pick = pick.includes(r.dataset.reward) ? pick.filter(x => x !== r.dataset.reward) : [...pick, r.dataset.reward];
@@ -1454,7 +1461,7 @@ async function openRewardIdeas() {
   if (!res?.ids?.length) return;
   let n = 0;
   commit(s => { n = G.addRewards(s, res.ids); }, { celebrate: false });
-  toast(n === 1 ? 'Recompensa agregada' : `${n} recompensas agregadas`);
+  toast(tn(n, 'Recompensa agregada', '{n} recompensas agregadas'));
 }
 
 async function editReward(id) {
@@ -1464,36 +1471,36 @@ async function editReward(id) {
   const lk = r?.lock || null;
   const acts = state.activities.filter(a => !a.resist);
   const p = openSheet(`
-    <h3>${r ? 'Editar recompensa' : 'Nueva recompensa'}</h3>
-    <label class="field"><span>¿Qué te vas a regalar?</span>
-      <input type="text" id="rwName" maxlength="40" value="${esc(r?.name || '')}" placeholder="Ej. Salir por un helado" autocomplete="off"></label>
-    <div class="field"><span>Tipo</span>
-      <div class="chips" id="rwType">${G.REWARD_TYPES.map(t => `<button type="button" class="chip ${t.id === type ? 'on' : ''}" data-type="${t.id}">${esc(t.name)}</button>`).join('')}</div>
+    <h3>${r ? t('Editar recompensa') : t('Nueva recompensa')}</h3>
+    <label class="field"><span>${t('¿Qué te vas a regalar?')}</span>
+      <input type="text" id="rwName" maxlength="40" value="${esc(r?.name || '')}" placeholder="${t('Ej. Salir por un helado')}" autocomplete="off"></label>
+    <div class="field"><span>${t('Tipo')}</span>
+      <div class="chips" id="rwType">${G.REWARD_TYPES.map(ty => `<button type="button" class="chip ${ty.id === type ? 'on' : ''}" data-type="${ty.id}">${esc(t(ty.name))}</button>`).join('')}</div>
     </div>
-    <div class="field"><span>Precio en monedas</span>
+    <div class="field"><span>${t('Precio en monedas')}</span>
       <div class="range-row"><input type="range" id="rwCost" min="20" max="1000" step="10" value="${cost}"><output id="rwOut">${cost}</output></div>
       <span class="rw-guide" id="rwGuide"></span>
     </div>
-    <div class="field"><span>Reto para desbloquearla (opcional)</span>
+    <div class="field"><span>${t('Reto para desbloquearla (opcional)')}</span>
       <select id="rwLock">
-        <option value="">Sin reto: solo el precio</option>
-        ${G.REWARD_LOCKS.map(l => `<option value="${l.id}" ${lk?.kind === l.id ? 'selected' : ''}>${esc(l.name)}</option>`).join('')}
+        <option value="">${t('Sin reto: solo el precio')}</option>
+        ${G.REWARD_LOCKS.map(l => `<option value="${l.id}" ${lk?.kind === l.id ? 'selected' : ''}>${esc(lockName(l))}</option>`).join('')}
       </select>
       <div id="rwLockHabit" class="rw-lock-opts" ${lk?.kind === 'habit' ? '' : 'hidden'}>
-        <select id="rwLockAct">${acts.map(a => `<option value="${esc(a.id)}" ${lk?.act === a.id ? 'selected' : ''}>${esc(a.name)}</option>`).join('')}</select>
-        <select id="rwLockN">${[3, 5, 7, 10, 14].map(n => `<option value="${n}" ${(lk?.n || 5) === n ? 'selected' : ''}>${n} días</option>`).join('')}</select>
+        <select id="rwLockAct">${acts.map(a => `<option value="${esc(a.id)}" ${lk?.act === a.id ? 'selected' : ''}>${esc(nameOf(a))}</option>`).join('')}</select>
+        <select id="rwLockN">${[3, 5, 7, 10, 14].map(n => `<option value="${n}" ${(lk?.n || 5) === n ? 'selected' : ''}>${tn(n, '{n} día', '{n} días')}</option>`).join('')}</select>
       </div>
       <div id="rwLockGuard" class="rw-lock-opts" ${lk?.kind === 'guardian' ? '' : 'hidden'}>
-        <select id="rwLockStat">${G.STATS.map(s => `<option value="${s.id}" ${lk?.stat === s.id ? 'selected' : ''}>${esc(GUARDIANS[s.id]?.name || s.name)} (${esc(s.name)})</option>`).join('')}</select>
-        <select id="rwLockTier">${[2, 3, 4, 5].map(t => `<option value="${t}" ${(lk?.tier || 2) === t ? 'selected' : ''}>Forma ${t}</option>`).join('')}</select>
+        <select id="rwLockStat">${G.STATS.map(s => `<option value="${s.id}" ${lk?.stat === s.id ? 'selected' : ''}>${esc(GUARDIANS[s.id]?.name || statName(s))} (${esc(statName(s))})</option>`).join('')}</select>
+        <select id="rwLockTier">${[2, 3, 4, 5].map(k => `<option value="${k}" ${(lk?.tier || 2) === k ? 'selected' : ''}>${t('Forma {n}', { n: k })}</option>`).join('')}</select>
       </div>
-      <span class="rw-guide">Un reto hace que el premio se sienta ganado. Cada canje pide cumplirlo otra vez (salvo el de guardiana).</span>
+      <span class="rw-guide">${t('Un reto hace que el premio se sienta ganado. Cada canje pide cumplirlo otra vez (salvo el de guardiana).')}</span>
     </div>
-    <div class="btn-row"><button class="btn" data-close="cancel">Cancelar</button><button class="btn btn-primary" id="rwSave">Guardar</button></div>
-    ${r ? '<button class="btn btn-danger btn-block" data-close="delete">Borrar</button>' : ''}`);
+    <div class="btn-row"><button class="btn" data-close="cancel">${t('Cancelar')}</button><button class="btn btn-primary" id="rwSave">${t('Guardar')}</button></div>
+    ${r ? `<button class="btn btn-danger btn-block" data-close="delete">${t('Borrar')}</button>` : ''}`);
   const guide = () => {
     const h = G.rewardPriceHint(type, Number($('#rwCost').value));
-    $('#rwGuide').innerHTML = h ? `Precio guía para este tipo: <b>${h.min}–${h.max}</b> monedas (un día normal da unas 25–35).${h.low ? '<br><b class="warn">Muy barata: una recompensa así deja de sentirse ganada.</b>' : ''}` : '';
+    $('#rwGuide').innerHTML = h ? t('Precio guía para este tipo: <b>{min}–{max}</b> monedas (un día normal da unas 25–35).', { min: h.min, max: h.max }) + (h.low ? `<br><b class="warn">${t('Muy barata: una recompensa así deja de sentirse ganada.')}</b>` : '') : '';
   };
   guide();
   $('#rwCost').oninput = e => { $('#rwOut').textContent = e.target.value; guide(); };
@@ -1532,8 +1539,8 @@ async function cosmeticFlow(slot, itemId) {
     commit(s => G.equip(s, slot, off ? null : itemId), { celebrate: false });
     return;
   }
-  if (!(await confirmSheet('¿Comprar?', `<b>${esc(item.name)}</b> por <b>${item.cost} monedas</b>.`, 'Comprar'))) return;
-  if (tryPay(s => { G.buyCosmetic(s, itemId); G.equip(s, slot, itemId); }, `✨ ¡${esc(item.name)} es tuyo!`)) heroReact();
+  if (!(await confirmSheet(t('¿Comprar?'), t('<b>{name}</b> por <b>{n} monedas</b>.', { name: esc(titleName(item)), n: item.cost }), t('Comprar')))) return;
+  if (tryPay(s => { G.buyCosmetic(s, itemId); G.equip(s, slot, itemId); }, t('✨ ¡{name} es tuyo!', { name: esc(titleName(item)) }))) heroReact();
 }
 
 /** Usa escudos si hace falta (al abrir la app o volver a ella). */
@@ -1541,7 +1548,7 @@ function checkShields() {
   const saved = G.applyShields(state);
   if (saved.length) {
     save();
-    setTimeout(() => toast(`🛡️ ${saved.length === 1 ? 'Un escudo salvó' : `${saved.length} escudos salvaron`} tu racha`, { kind: 'ach', duration: 5000 }), 600);
+    setTimeout(() => toast(`🛡️ ${tn(saved.length, 'Un escudo salvó tu racha', '{n} escudos salvaron tu racha')}`, { kind: 'ach', duration: 5000 }), 600);
   }
 }
 
@@ -1598,11 +1605,11 @@ function useProfile(id, { silent = false } = {}) {
   renderAll();
   noticeSkyRefund();
   maybeWelcome();
-  if (!silent && state.onboarded) toast(`Hola, ${esc(state.profile.name)} 👋`);
+  if (!silent && state.onboarded) toast(t('Hola, {name} 👋', { name: esc(state.profile.name) }));
 }
 
 async function newProfileFlow() {
-  const ok = await confirmSheet('¿Crear otro perfil?', 'Cada perfil tiene su propio progreso, personaje y hábitos en este teléfono. Podrás volver a este cuando quieras desde Ajustes.', 'Crear perfil');
+  const ok = await confirmSheet(t('¿Crear otro perfil?'), t('Cada perfil tiene su propio progreso, personaje y hábitos en este teléfono. Podrás volver a este cuando quieras desde Ajustes.'), t('Crear perfil'));
   if (!ok) return;
   save(); // guarda el perfil actual antes de cambiar
   const { id } = Profiles.createProfile({ name: 'Héroe', character: DEFAULT_CHARACTER });
@@ -1762,11 +1769,11 @@ $('#welcome').addEventListener('click', e => {
 async function openHabitPicker() {
   const have = new Set(state.activities.map(a => a.id));
   let pick = [];
-  const list = () => areaGroups(pick, t => !have.has(t.id)) || '<p>Ya tienes todos los hábitos de la lista. Puedes crear uno propio.</p>';
+  const list = () => areaGroups(pick, tp => !have.has(tp.id)) || `<p>${t('Ya tienes todos los hábitos de la lista. Puedes crear uno propio.')}</p>`;
   const p = openSheet(`
-    <h3>Elegir de la lista</h3>
+    <h3>${t('Elegir de la lista')}</h3>
     <div id="hpList">${list()}</div>
-    <div class="btn-row"><button class="btn" data-close="cancel">Cancelar</button><button class="btn btn-primary" id="hpAdd">Agregar</button></div>`);
+    <div class="btn-row"><button class="btn" data-close="cancel">${t('Cancelar')}</button><button class="btn btn-primary" id="hpAdd">${t('Agregar')}</button></div>`);
   $('#hpList').addEventListener('click', e => {
     const h = e.target.closest('[data-habit]'); if (!h) return;
     const id = h.dataset.habit;
@@ -1778,7 +1785,7 @@ async function openHabitPicker() {
   if (!res || !res.ids?.length) return;
   let n = 0;
   commit(s => { n = G.addHabits(s, res.ids); }, { celebrate: false });
-  toast(n === 1 ? 'Hábito agregado' : `${n} hábitos agregados`);
+  toast(tn(n, 'Hábito agregado', '{n} hábitos agregados'));
 }
 
 /** Detalle de una stat: nivel, progreso, actividades y su guardián. */
@@ -1788,44 +1795,44 @@ async function openStatDetail(statId) {
   const recent = [...state.log].filter(e => e.stat === statId).sort((a, b) => b.ts - a.ts).slice(0, 5);
   const acts = state.activities.filter(a => a.stat === statId);
   const g = guardianFor(statId, st.level);
-  const gName = g.name || `Guardián de ${s.name}`;
+  const gName = g.name || t('Guardiana de {stat}', { stat: statName(s) });
   const aff = G.affinityFor(state, statId);
   const p = openSheet(`
     <div class="stat-detail-head" style="--c:${s.color}">
       <img src="${statIcon(s.id)}" alt="">
-      <div><h3>${s.name}</h3><div class="lvl">LV ${st.level}</div></div>
+      <div><h3>${statName(s)}</h3><div class="lvl">LV ${st.level}</div></div>
     </div>
     <div class="stat-bar" style="--c:${s.color};height:10px"><i style="width:${Math.round(st.pct * 100)}%"></i></div>
-    <p>${st.into} / ${st.needed} XP para el nivel ${st.level + 1} · ${st.xp} XP en total</p>
+    <p>${t('{into} / {needed} XP para el nivel {lv} · {xp} XP en total', { into: st.into, needed: st.needed, lv: st.level + 1, xp: st.xp })}</p>
     <div class="guardian" style="--c:${s.color}">
       <div class="guardian-art">
         ${artImg(g.img, { alt: esc(gName), fb: g.tier > 1 ? g.fallback : null })}
-        <span class="soon">Próximamente</span>
+        <span class="soon">${t('Próximamente')}</span>
       </div>
       <div class="guardian-text">
-        <small>Guardiana · Forma ${g.tier}/5</small><b>${esc(gName)}</b>
-        <q class="g-say">${esc(lineOfDay(GUARDIAN_LINES[statId], statId, G.dayKey(Date.now())))}</q>
-        <p class="g-aff"><strong>Afinidad: ${aff.pct ? `+${aff.pct} %` : 'aún no'}</strong> de XP y monedas en actividades de ${s.name}.
-          ${g.nextAt ? `En el nivel ${g.nextAt} evoluciona y sube a +${G.AFFINITY_PCT[g.tier]} %.` : '¡Forma final!'}</p>
+        <small>${t('Guardiana · Forma {n}/5', { n: g.tier })}</small><b>${esc(gName)}</b>
+        <q class="g-say">${esc(lineOfDay(guardianLines(statId), statId, G.dayKey(Date.now())))}</q>
+        <p class="g-aff"><strong>${aff.pct ? t('Afinidad: +{n} %', { n: aff.pct }) : t('Afinidad: aún no')}</strong> ${t('de XP y monedas en actividades de {stat}.', { stat: statName(s) })}
+          ${g.nextAt ? t('En el nivel {lv} evoluciona y sube a +{n} %.', { lv: g.nextAt, n: G.AFFINITY_PCT[g.tier] }) : t('¡Forma final!')}</p>
       </div>
     </div>
-    <div class="field"><span>Actividades (${acts.length})</span>
-      <div class="chips">${acts.map(a => `<span class="chip">${esc(a.name)} · +${a.xp}</span>`).join('') || '<span class="small muted">Ninguna todavía.</span>'}</div>
+    <div class="field"><span>${t('Actividades ({n})', { n: acts.length })}</span>
+      <div class="chips">${acts.map(a => `<span class="chip">${esc(nameOf(a))} · +${a.xp}</span>`).join('') || `<span class="small muted">${t('Ninguna todavía.')}</span>`}</div>
     </div>
-    <div class="field"><span>Últimos registros</span>
-      ${recent.length ? recent.map(e => `<div class="small">${fmtDate(e.ts)} · ${esc(e.name)} · <b>+${e.xp}</b></div>`).join('') : '<span class="small muted">Aún no registras nada aquí.</span>'}
+    <div class="field"><span>${t('Últimos registros')}</span>
+      ${recent.length ? recent.map(e => `<div class="small">${fmtDate(e.ts)} · ${esc(nameOf(e))} · <b>+${e.xp}</b></div>`).join('') : `<span class="small muted">${t('Aún no registras nada aquí.')}</span>`}
     </div>
-    <button class="btn btn-primary btn-block" data-close="ok">Cerrar</button>`);
+    <button class="btn btn-primary btn-block" data-close="ok">${t('Cerrar')}</button>`);
   await p;
 }
 
 async function undo(id) {
   const e = state.log.find(x => x.id === id);
   if (!e) return;
-  const extra = { quest: ' La misión volverá a tus pendientes.', weekly: ' Podrás reclamarla de nuevo.', boss: ' Podrás reclamarlo de nuevo.' }[e.type] || '';
-  if (!(await confirmSheet('¿Deshacer registro?', `Se quitarán <b>${e.xp} XP</b> de “${esc(e.name)}”.${extra}`, 'Deshacer', true))) return;
+  const extra = { quest: t(' La misión volverá a tus pendientes.'), weekly: t(' Podrás reclamarla de nuevo.'), boss: t(' Podrás reclamarlo de nuevo.') }[e.type] || '';
+  if (!(await confirmSheet(t('¿Deshacer registro?'), t('Se quitarán <b>{xp} XP</b> de “{name}”.', { xp: e.xp, name: esc(nameOf(e)) }) + extra, t('Deshacer'), true))) return;
   commit(s => G.undoEntry(s, id), { celebrate: false });
-  toast('Registro deshecho');
+  toast(t('Registro deshecho'));
 }
 
 // ---------------------------------------------------------------------
@@ -1882,14 +1889,14 @@ async function exportBackup() {
   }
   state.lastBackup = Date.now();
   save(); renderAll();
-  toast('💾 Respaldo exportado');
+  toast(t('💾 Respaldo exportado'));
 }
 
 async function importBackup(file) {
   try {
     const data = G.validateImport(JSON.parse(await file.text()));
-    const ok = await confirmSheet('¿Importar respaldo?',
-      `Se reemplazarán tus datos actuales por los del archivo (<b>${data.log.length}</b> registros, <b>${data.activities.length}</b> actividades).`,
+    const ok = await confirmSheet(t('¿Importar respaldo?'),
+      t('Se reemplazarán tus datos actuales por los del archivo (<b>{n}</b> registros, <b>{a}</b> actividades).', { n: data.log.length, a: data.activities.length }),
       'Importar', true);
     if (!ok) return;
     data.lastBackup = Date.now();
@@ -1897,9 +1904,9 @@ async function importBackup(file) {
     data.guardianSeen = syncGuardianSeen(data.guardianSeen, G.deriveProfile(data).stats);
     state = data;
     save(); renderAll();
-    toast('✅ Respaldo importado');
+    toast(t('✅ Respaldo importado'));
   } catch (err) {
-    toast(`❌ ${esc(err.message || 'Archivo inválido')}`, { kind: 'ach', duration: 4500 });
+    toast(`❌ ${esc(t(err.message || 'Archivo inválido'))}`, { kind: 'ach', duration: 4500 });
   }
 }
 
@@ -1939,7 +1946,7 @@ $('#couponList').addEventListener('click', async e => {
   const sh = e.target.closest('[data-coupon-share]');
   if (sh) return shareCoupon(sh.dataset.couponShare);
   const use = e.target.closest('[data-coupon-use]');
-  if (use && await confirmSheet('¿Usar cupón?', 'Se marcará como usado. ¡Disfrútalo!', 'Usar')) {
+  if (use && await confirmSheet(t('¿Usar cupón?'), t('Se marcará como usado. ¡Disfrútalo!'), t('Usar'))) {
     commit(s => G.useCoupon(s, use.dataset.couponUse), { celebrate: false });
   }
 });
@@ -1954,12 +1961,12 @@ $('#shopGear').addEventListener('click', e => {
 });
 
 $('#shieldCard').addEventListener('click', e => {
-  if (e.target.closest('#buyShieldBtn')) tryPay(s => G.buyShield(s), '🛡️ Escudo guardado');
+  if (e.target.closest('#buyShieldBtn')) tryPay(s => G.buyShield(s), t('🛡️ Escudo guardado'));
 });
 $('#worldList').addEventListener('click', e => {
   const t = e.target.closest('[data-world]');
   if (!t || t.disabled) return;
-  if (t.querySelector('img.missing')) return toast('Ese mundo aún no tiene arte');
+  if (t.querySelector('img.missing')) return toast(t('Ese mundo aún no tiene arte'));
   commit(s => { s.equipped.world = t.dataset.world; }, { celebrate: false });
 });
 $('#titleList').addEventListener('click', e => { const t = e.target.closest('[data-title-item]'); if (t) cosmeticFlow('title', t.dataset.titleItem); });
@@ -1993,15 +2000,15 @@ $('#bossCard').addEventListener('click', e => {
   if (b) {
     const drop = G.bossDrop(G.bossStatus(state).id);
     const hadIt = drop && Gear.ownsItem(state, drop.id);
-    claimReward(s => G.claimBoss(s), b, '👹 ¡Jefe derrotado!');
-    if (drop && !hadIt) setTimeout(() => toast(`🎁 Botín: <b>${esc(drop.name)}</b> · está en tu inventario`, { kind: 'ach', duration: 5000, action: 'Ver', onAction: () => showView('gear') }), 700);
+    claimReward(s => G.claimBoss(s), b, t('👹 ¡Jefe derrotado!'));
+    if (drop && !hadIt) setTimeout(() => toast(t('🎁 Botín: <b>{name}</b> · está en tu inventario', { name: esc(itemName(drop)) }), { kind: 'ach', duration: 5000, action: t('Ver'), onAction: () => showView('gear') }), 700);
     return;
   }
   if (e.target.closest('#shareBossBtn')) shareBoss();
 });
 $('#weeklyList').addEventListener('click', e => {
   const b = e.target.closest('[data-weekly]');
-  if (b) claimReward(s => G.claimWeekly(s, b.dataset.weekly), b, '🗓️ ¡Misión semanal!');
+  if (b) claimReward(s => G.claimWeekly(s, b.dataset.weekly), b, t('🗓️ ¡Misión semanal!'));
 });
 
 $('#guardianGrid').addEventListener('click', e => {
@@ -2063,10 +2070,10 @@ $('#profileChips').addEventListener('click', e => {
   if (c && c.dataset.profile !== profileId) useProfile(c.dataset.profile);
 });
 $('#deleteProfileBtn').onclick = async () => {
-  if (!(await confirmSheet('¿Borrar este perfil?', `Se borrará <b>${esc(state.profile.name)}</b> con todo su progreso en este teléfono. <b>Exporta un respaldo antes</b> si quieres conservarlo.`, 'Borrar', true))) return;
+  if (!(await confirmSheet(t('¿Borrar este perfil?'), t('Se borrará <b>{name}</b> con todo su progreso en este teléfono. <b>Exporta un respaldo antes</b> si quieres conservarlo.', { name: esc(state.profile.name) }), t('Borrar'), true))) return;
   const next = Profiles.deleteProfile(profileId);
   useProfile(next, { silent: true });
-  toast('Perfil borrado');
+  toast(t('Perfil borrado'));
 };
 
 $('#exportBtn').onclick = exportBackup;
@@ -2078,7 +2085,7 @@ $('#importFile').addEventListener('change', e => {
 });
 
 $('#resetBtn').onclick = async () => {
-  if (!(await confirmSheet('¿Borrar TODO?', 'Perderás tu nivel, historial, misiones y actividades personalizadas. <b>Exporta un respaldo antes</b> si quieres conservarlos.', 'Borrar todo', true))) return;
+  if (!(await confirmSheet(t('¿Borrar TODO?'), t('Perderás tu nivel, historial, misiones y actividades personalizadas. <b>Exporta un respaldo antes</b> si quieres conservarlos.'), t('Borrar todo'), true))) return;
   const keep = { ...state.profile };  // conserva nombre y personaje del perfil
   state = G.defaultState();
   state.profile = { ...state.profile, ...keep };
@@ -2109,7 +2116,7 @@ function welcomeBack() {
     const ch = state.activities.find(a => a.resist === b.id);
     lines.push(t('{boss} recuperó {n} PV mientras no estabas.', { boss: esc(bossShort(b)), n: healedAway }) + (ch ? t(' Hoy «{name}» le pega ×3.', { name: esc(nameOf(ch)) }) : ''));
   }
-  setTimeout(() => toast(`<span class="res-head">💪 ${esc(t(lineOfDay(BACK_LINES, 'back', today)))}</span>${lines.map(l => `<span class="res-line">${l}</span>`).join('')}`,
+  setTimeout(() => toast(`<span class="res-head">💪 ${esc(lineOfDay(backLines(), 'back', today))}</span>${lines.map(l => `<span class="res-line">${l}</span>`).join('')}`,
     { kind: 'result', duration: 8000 }), 700);
 }
 
@@ -2149,15 +2156,15 @@ let installPrompt = null;   // evento beforeinstallprompt guardado (Android / es
 let justInstalled = false;  // se instaló durante esta visita (la pestaña sigue siendo la del navegador)
 function renderInstall() {
   const info = installInfo({ standalone: isStandalone() || justInstalled, hasPrompt: !!installPrompt, ua: navigator.userAgent });
-  const steps = info.steps ? `<ol class="install-steps">${info.steps.map(t => `<li>${esc(t)}</li>`).join('')}</ol>` : '';
+  const steps = info.steps ? `<ol class="install-steps">${info.steps.map(st => `<li>${esc(t(st))}</li>`).join('')}</ol>` : '';
   $('#installCard').innerHTML = `
-    <p class="install-title">${esc(info.title)}</p>
+    <p class="install-title">${esc(t(info.title))}</p>
     ${steps}
-    ${info.button ? `<button class="btn btn-primary btn-block" id="installBtn">${esc(info.button)}</button>` : ''}`;
+    ${info.button ? `<button class="btn btn-primary btn-block" id="installBtn">${esc(t(info.button))}</button>` : ''}`;
   $('#installCard').dataset.kind = info.kind;
 }
 addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; renderInstall(); });
-addEventListener('appinstalled', () => { installPrompt = null; justInstalled = true; renderInstall(); toast('📲 ¡Kaizen instalada!', { kind: 'ach' }); });
+addEventListener('appinstalled', () => { installPrompt = null; justInstalled = true; renderInstall(); toast(t('📲 ¡Kaizen instalada!'), { kind: 'ach' }); });
 $('#installCard').addEventListener('click', async e => {
   if (!e.target.closest('#installBtn') || !installPrompt) return;
   const p = installPrompt; installPrompt = null;
@@ -2165,7 +2172,7 @@ $('#installCard').addEventListener('click', async e => {
   const choice = await p.userChoice.catch(() => ({ outcome: 'dismissed' }));
   // Si lo cancela, Chrome no vuelve a ofrecer el aviso hasta más tarde: se explica el menú.
   if (choice.outcome === 'accepted') justInstalled = true;
-  else toast('Puedes instalarla después desde Ajustes o el menú del navegador');
+  else toast(t('Puedes instalarla después desde Ajustes o el menú del navegador'));
   renderInstall();
 });
 matchMedia('(display-mode: standalone)').addEventListener?.('change', renderInstall);

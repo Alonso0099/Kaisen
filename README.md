@@ -69,8 +69,8 @@ Se elige en la bienvenida (arriba a la derecha) o en **Ajustes → Perfil → Id
 
 - `js/i18n.js`: `t('texto en español')` devuelve la traducción o el mismo español si falta; el contenido (hábitos, recompensas, héroes, jefes, logros) se traduce por id. **Lo que el jugador escribió o renombró nunca se traduce.**
 - `js/names-en.js`: nombres en inglés de T-04.
-- **Fase 1 (lista):** bienvenida, hábitos y recompensas sugeridos, Inicio, Misiones, ayuda y tour, avisos al registrar y al volver, tarjetas para compartir y todos los textos fijos de la página.
-- **Fase 2 (pendiente):** Tienda, Progreso, Ajustes y hojas de edición; las frases del héroe y de las guardianas en inglés (mientras tanto, en inglés no se muestran).
+- **Cobertura:** toda la app (bienvenida, Inicio, Misiones, Tienda, Progreso, Ajustes, equipo, mascota, hojas de edición, avisos, errores, fechas y tarjetas para compartir).
+- **Frases en inglés** del héroe, las guardianas, los jefes y la vuelta: traducción provisional en `js/phrases.js` (GPT puede revisarla: pedido T-05).
 
 ## 🧭 Ayuda y tour
 

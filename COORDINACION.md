@@ -39,6 +39,7 @@ Prioridad de arriba hacia abajo. Tamaños y nombres según ARTE.md.
 | A-13 | (opcional) 4 piezas épicas de botín para esos jefes: nombre, espacio, stat e ícono 512×512 | `art/items/<id>.webp` + texto | ✅ |
 | A-14 | 12 héroes nuevos: 6 arquetipos × 2 looks (ver sección A-14 abajo) | `art/chars/<arquetipo>-{m,f}.webp` | ✅ |
 | T-04 | Frases del día (ver sección T-04 abajo) y nombres en inglés | texto | ✅ |
+| T-05 | (opcional) Revisar la traducción al inglés de las frases (héroes, guardianas, burlas, vuelta y frases de evolución) en `js/phrases.js` y `js/i18n.js` | texto | ⏳ |
 
 **Reglas que hacen que todo encaje:** fondo transparente (salvo los mundos), lienzo 720×1000 con los pies en el borde inferior para las figuras de pie, mismo estilo en toda la serie (adjuntar una imagen anterior como referencia) y sin texto dentro de las imágenes.
 
