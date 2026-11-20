@@ -1274,3 +1274,13 @@ body.scrolled .topbar {
 .w-lang { position: absolute; top: calc(var(--safe-top, 0px) + 14px); right: 18px; display: inline-flex; border: 1px solid var(--line); border-radius: 999px; overflow: hidden; z-index: 2; }
 .w-lang button { background: rgba(0,0,0,.35); border: 0; color: var(--muted); font-weight: 800; font-size: 12px; padding: 6px 10px; }
 .w-lang button.on { background: var(--sys, #a99bff); color: #120f28; }
+
+/* Para hoy (plan) */
+.plan-row { border-color: color-mix(in srgb, var(--yellow) 45%, transparent); }
+.plan-chip span { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; }
+.plan-chip small { font-size: 10.5px; font-weight: 800; opacity: .8; }
+.act-plan { display: block; font-size: 10.5px; font-weight: 800; color: var(--yellow); margin-top: 2px; }
+.weekdays { margin-top: 8px; }
+.weekdays .chip { min-width: 44px; justify-content: center; text-transform: capitalize; }
+#edPlanWeek { margin-top: 8px; }
+.plan-hint { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; text-transform: none; letter-spacing: 0; line-height: 1.35; }

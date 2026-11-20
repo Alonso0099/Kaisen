@@ -908,3 +908,37 @@ test('el día de vuelta: días sin registrar desde el último registro', () => {
   assert.equal(L.daysAway(s, noon(2026, 11, 4)), 1);
   assert.equal(L.daysAway(s, noon(2026, 11, 6)), 3);
 });
+
+test('plan: días fijos y meta semanal; un día fuera de agenda no cuenta como falta', () => {
+  const s = L.defaultState();
+  const mon = noon(2026, 11, 16), wed = mon + 2 * DAY, thu = mon + 3 * DAY;
+  const hike = s.activities.find(a => a.id === 'def-hike');
+  hike.plan = { kind: 'week', target: 3 };
+  L.logActivity(s, 'def-hike', { now: mon });
+  L.logActivity(s, 'def-hike', { now: wed });
+  let st = L.planStatus(s, hike, thu);
+  assert.deepEqual([st.done, st.target, st.met, st.dueToday], [2, 3, false, true]);   // «2 de 3»
+  L.logActivity(s, 'def-hike', { now: thu });
+  st = L.planStatus(s, hike, thu);
+  assert.deepEqual([st.done, st.met, st.doneToday], [3, true, true]);
+  assert.equal(L.planStatus(s, hike, thu + DAY).dueToday, false, 'meta cumplida: ya no toca');
+  assert.equal(L.planStatus(s, hike, mon + 7 * DAY).done, 0, 'la semana siguiente empieza de cero');
+  // Días fijos: lunes, miércoles y viernes
+  const gym = s.activities.find(a => a.id === 'def-gym');
+  gym.plan = { kind: 'days', days: [1, 3, 5] };
+  assert.equal(L.planStatus(s, gym, mon).dueToday, true);
+  assert.equal(L.planStatus(s, gym, mon + DAY).scheduledToday, false, 'martes: fuera de agenda');
+  assert.equal(L.todayPlan(s, mon + DAY).some(x => x.act.id === 'def-gym'), false);
+  assert.equal(L.todayPlan(s, mon).some(x => x.act.id === 'def-gym'), true);
+  // Planes inválidos se limpian
+  assert.equal(L.normalizePlan({ kind: 'days', days: [] }), null);
+  assert.deepEqual(L.normalizePlan({ kind: 'week', target: 12 }), { kind: 'week', target: 7 });
+});
+
+test('fijar un hábito nuevo si hay espacio en Inicio', () => {
+  const s = L.defaultState();
+  s.pinned = [];
+  L.addHabits(s, ['tpl-correr', 'tpl-yoga', 'tpl-nadar', 'tpl-deporte', 'tpl-agua']);
+  assert.deepEqual(s.pinned, ['tpl-correr', 'tpl-yoga', 'tpl-nadar'], 'hasta 3, sin soltar ninguno; lo básico no se fija');
+  assert.equal(L.pinIfRoom(s, 'def-gym'), false);
+});

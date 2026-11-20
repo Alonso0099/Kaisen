@@ -80,6 +80,10 @@ El botón **?** de arriba explica qué hace cada cosa en la pantalla en la que e
 
 Cuando una guardiana evoluciona, las actividades de su stat dan más XP **y más monedas** (las monedas salen de la XP): forma 2 (nivel 5) **+5 %**, forma 3 (nivel 10) **+10 %**, forma 4 (nivel 20) **+15 %**, forma 5 (nivel 35) **+20 %**. Llegar a la forma 2 lleva unas 6 semanas: cuando el premio llega, el hábito ya está hecho. Depende del nivel de la stat, nunca del héroe. El extra se guarda en el registro (`guardXp`), igual que el del equipo.
 
+## 📅 Para hoy: días fijos o meta semanal
+
+Al editar una actividad, **¿Cuándo?** permite elegir *Cuando pueda* (libre), **Días fijos** (p. ej. lun · mié · vie) o **Veces por semana** (p. ej. 3×). Inicio muestra la fila **Para hoy** con lo que toca y el progreso de la semana («2 de 3 esta semana»); al cumplir la meta sale «🎯 Meta de la semana cumplida». Un día fuera de agenda **nunca cuenta como falta**: solo se mide lo hecho en la semana. Lo que está en *Para hoy* no se repite en los accesos rápidos. Un hábito nuevo se **fija solo** en Inicio si queda espacio (hasta 3). Lógica: `planStatus` y `todayPlan` en `js/logic.js`.
+
 ## 🌤️ Volver sin castigo
 
 - **Día de gracia:** un día suelto sin registrar por semana no rompe la racha (no suma, pero no la corta). Los escudos se gastan solo cuando la gracia no alcanza.

@@ -13,7 +13,7 @@ import { t, tn, getLang, setLang, LANGS, nameOf, statName, bossName, bossShort, 
 import { GUARDIAN_LINES, lineOfDay, heroLines, guardianLines, bossLines, backLines } from './phrases.js';
 import { art, CHARACTERS, DEFAULT_CHARACTER, charHero, characterById, characterImg, guardianFor, guardianEvolutions, syncGuardianSeen, GUARDIANS, WORLDS, worldById, DEFAULT_WORLD, DEFAULT_PET, PET_SPECIES, speciesById } from './catalog.js';
 
-export const APP_VERSION = '2.7.1';
+export const APP_VERSION = '2.8.0';
 const BACKUP_REMINDER_DAYS = 7;
 
 const $ = sel => document.querySelector(sel);
@@ -128,7 +128,7 @@ function collectNews(beforeAdv, afterAdv, before, after) {
 
 /** Aviso único de resultado: qué pasó, cuánto ganaste, qué se desbloqueó y "Deshacer". */
 function showResult(head, news, onUndo) {
-  const MAX = 2;
+  const MAX = 3;
   const extra = news.length > MAX ? `<span class="res-more">${t('+{n} más en Progreso', { n: news.length - MAX })}</span>` : '';
   toast(`<span class="res-head">${head}</span>${news.slice(0, MAX).map(l => `<span class="res-line">${l}</span>`).join('')}${extra}`, {
     kind: 'result', pinned: true, duration: news.length ? 7000 : 5000,
@@ -369,6 +369,7 @@ function actBtn(a) {
       <span class="act-name">${G.isPinned(state, a.id) ? '<i class="pin-dot">★</i>' : ''}${esc(nameOf(a))}</span>
       ${actXp(a)}
       ${a.bonus ? `<span class="act-bonus-tag">★ ${esc(t(a.bonus.label))} +${a.bonus.xp}</span>` : ''}
+      ${(() => { const st = G.planStatus(state, a); return st ? `<span class="act-plan">${planProgress(st)}</span>` : ''; })()}
     </span>
   </button>`;
 }
@@ -392,11 +393,42 @@ function renderBasics() {
     }).join('')}</div>`;
 }
 
+/** Texto corto del plan de una actividad: «lun · mié · vie» o «3 por semana». */
+const WEEKDAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
+const weekdayShort = d => new Date(2026, 10, 15 + d).toLocaleDateString(locale(), { weekday: 'short' }).replace('.', '');
+function planLabel(plan) {
+  const p = G.normalizePlan(plan);
+  if (!p) return '';
+  return p.kind === 'days' ? WEEKDAY_ORDER.filter(d => p.days.includes(d)).map(weekdayShort).join(' · ') : t('{n} por semana', { n: p.target });
+}
+/** Progreso de la semana de una actividad con plan: «2 de 3 esta semana». */
+const planProgress = st => st.met ? t('✓ Meta de la semana') : t('{n} de {total} esta semana', { n: st.done, total: st.target });
+
+/** "Para hoy": lo que toca hoy según el plan de cada actividad. */
+function renderPlan() {
+  const row = $('#planRow');
+  const items = G.todayPlan(state);
+  row.hidden = !items.length;
+  if (!items.length) return;
+  const n = items.filter(x => x.st.doneToday).length;
+  row.innerHTML = `
+    <div class="basics-head"><b>${t('Para hoy')}</b><span class="${n === items.length ? 'all' : ''}">${t('{n} de {total}', { n, total: items.length })}${n === items.length ? ' ✓' : ''}</span></div>
+    <div class="basics-list">${items.map(({ act: a, st }) => {
+      const c = G.statById(a.stat).color;
+      return `<button class="basic-chip plan-chip act-btn ${st.doneToday ? 'done' : ''}" data-act="${esc(a.id)}" style="--c:${c}" ${st.doneToday ? 'disabled' : ''}>
+        <i>${st.doneToday ? '✓' : '+'}</i><span>${esc(nameOf(a))}<small>${planProgress(st)}</small></span></button>`;
+    }).join('')}</div>`;
+}
+
 function renderQuick() {
+  renderPlan();
   renderBasics();
-  const quick = G.quickActivities(state);
+  // Lo que ya está en «Para hoy» no se repite en los accesos rápidos.
+  const inPlan = new Set(G.todayPlan(state).map(x => x.act.id));
+  const quick = G.quickActivities(state, Date.now(), 12).filter(a => !inPlan.has(a.id)).slice(0, G.QUICK_MAX);
   $('#quickLog').innerHTML = quick.length
     ? quick.map(actBtn).join('')
+    : inPlan.size ? ''
     : `<button class="quick-empty" id="quickEmpty"><b>${t('¿Qué hiciste hoy?')}</b><span>${t('Elige una actividad y tu aventura empieza. Las que más uses aparecerán aquí.')}</span></button>`;
   $('#quickLog').classList.toggle('n1', quick.length === 1);
   $('#quickLog').classList.toggle('n2', quick.length === 2);
@@ -413,7 +445,7 @@ async function openCatalog() {
     return `<div class="cat-row ${done ? 'done' : ''}" style="--c:${st.color}">
       <button class="cat-main" data-pick="${esc(a.id)}" ${done ? 'disabled' : ''}>
         <img src="${a.resist ? art.boss(a.resist) : statIcon(st.id)}" alt="">
-        <span><b>${done ? '✔ ' : ''}${esc(nameOf(a))}</b><small>+${a.xp + extra} XP${a.bonus ? ` · ★ ${esc(t(a.bonus.label))}` : ''}${a.resist === boss.id ? t(' · ⚡ ×3 al jefe') : ''}</small></span>
+        <span><b>${done ? '✔ ' : ''}${esc(nameOf(a))}</b><small>+${a.xp + extra} XP${a.bonus ? ` · ★ ${esc(t(a.bonus.label))}` : ''}${a.resist === boss.id ? t(' · ⚡ ×3 al jefe') : ''}${a.plan ? ` · 📅 ${planLabel(a.plan)}` : ''}</small></span>
       </button>
       ${a.resist || a.basic ? '' : `<button class="cat-pin ${G.isPinned(state, a.id) ? 'on' : ''}" data-pin="${esc(a.id)}" aria-label="${t('Fijar en Inicio')}">★</button>`}
       <button class="cat-edit" data-edit="${esc(a.id)}" aria-label="${t('Editar')}">✎</button>
@@ -886,7 +918,7 @@ function renderSettings() {
         <img class="row-ico" src="${statIcon(s.id)}" alt="">
         <div class="row-main">
  <div class="row-title">${esc(nameOf(a))} ${a.resist ? `<span class="tag">${t('Reto')}</span>` : ''}</div>
-          <div class="row-sub">${statName(s)} · <span class="row-xp">+${a.xp} XP</span>${a.bonus ? ` · ★ ${esc(t(a.bonus.label))} +${a.bonus.xp}` : ''}</div>
+          <div class="row-sub">${statName(s)} · <span class="row-xp">+${a.xp} XP</span>${a.bonus ? ` · ★ ${esc(t(a.bonus.label))} +${a.bonus.xp}` : ''}${a.plan ? ` · 📅 ${planLabel(a.plan)}` : ''}</div>
         </div>
         <button class="icon-btn" data-act-edit="${esc(a.id)}" aria-label="${t('Editar')}">✎</button>
         <button class="icon-btn" data-act-del="${esc(a.id)}" aria-label="${t('Borrar')}">🗑</button>
@@ -1163,6 +1195,18 @@ async function editorSheet({ title, item, maxXp, allowBonus, allowDelete }) {
       </div>
     </div>`}
     ${allowBonus ? `
+    <div class="field"><span>${t('¿Cuándo?')}</span>
+      <div class="chips" id="edPlanKind">
+        ${[['', t('Cuando pueda')], ['days', t('Días fijos')], ['week', t('Veces por semana')]].map(([k, l]) => `<button type="button" class="chip ${(it.plan?.kind || '') === k ? 'on' : ''}" data-plan="${k}">${l}</button>`).join('')}
+      </div>
+      <div class="chips weekdays" id="edPlanDays" ${it.plan?.kind === 'days' ? '' : 'hidden'}>
+        ${WEEKDAY_ORDER.map(d => `<button type="button" class="chip ${it.plan?.days?.includes(d) ? 'on' : ''}" data-day="${d}">${weekdayShort(d)}</button>`).join('')}
+      </div>
+      <div class="chips" id="edPlanWeek" ${it.plan?.kind === 'week' ? '' : 'hidden'}>
+        ${[1, 2, 3, 4, 5, 6].map(n => `<button type="button" class="chip ${(it.plan?.target || 3) === n && it.plan?.kind === 'week' ? 'on' : ''}" data-target="${n}">${n}×</button>`).join('')}
+      </div>
+      <small class="plan-hint">${t('Aparecerá en «Para hoy» los días que toca. Un día fuera de agenda nunca cuenta como falta.')}</small>
+    </div>
     <label class="toggle"><input type="checkbox" id="edBonusOn" ${it.bonus ? 'checked' : ''}> <span>${t('Bono opcional (ej. ruta larga)')}</span></label>
     <div id="edBonus" ${it.bonus ? '' : 'hidden'} class="char-editor">
       <label class="field"><span>${t('Nombre del bono')}</span>
@@ -1195,6 +1239,31 @@ async function editorSheet({ title, item, maxXp, allowBonus, allowDelete }) {
     stat = c.dataset.stat;
     document.querySelectorAll('#edStats .chip').forEach(x => x.classList.toggle('on', x === c));
   };
+  let plan = G.normalizePlan(it.plan);
+  if (allowBonus) {
+    $('#edPlanKind').onclick = e => {
+      const b = e.target.closest('[data-plan]'); if (!b) return;
+      const k = b.dataset.plan;
+      plan = k === 'days' ? { kind: 'days', days: plan?.kind === 'days' ? plan.days : [new Date().getDay()] } : k === 'week' ? { kind: 'week', target: plan?.target || 3 } : null;
+      document.querySelectorAll('#edPlanKind .chip').forEach(x => x.classList.toggle('on', x === b));
+      $('#edPlanDays').hidden = k !== 'days'; $('#edPlanWeek').hidden = k !== 'week';
+      document.querySelectorAll('#edPlanDays .chip').forEach(x => x.classList.toggle('on', plan?.kind === 'days' && plan.days.includes(+x.dataset.day)));
+      document.querySelectorAll('#edPlanWeek .chip').forEach(x => x.classList.toggle('on', plan?.kind === 'week' && plan.target === +x.dataset.target));
+    };
+    $('#edPlanDays').onclick = e => {
+      const b = e.target.closest('[data-day]'); if (!b) return;
+      const d = +b.dataset.day;
+      const days = plan.days.includes(d) ? plan.days.filter(x => x !== d) : [...plan.days, d];
+      if (!days.length) return;   // al menos un día
+      plan = { kind: 'days', days };
+      b.classList.toggle('on', days.includes(d));
+    };
+    $('#edPlanWeek').onclick = e => {
+      const b = e.target.closest('[data-target]'); if (!b) return;
+      plan = { kind: 'week', target: +b.dataset.target };
+      document.querySelectorAll('#edPlanWeek .chip').forEach(x => x.classList.toggle('on', x === b));
+    };
+  }
   if (allowBonus) $('#edEffort').onclick = e => {
     const b = e.target.closest('[data-xp]'); if (!b) return;
     $('#edXp').value = b.dataset.xp;
@@ -1215,6 +1284,7 @@ async function editorSheet({ title, item, maxXp, allowBonus, allowDelete }) {
         ? { label: $('#edBonusLabel').value.trim() || 'Extra', xp: G.clampXp($('#edBonusXp').value) }
         : null;
       out.resist = $('#edResist').value || null;
+      out.plan = G.normalizePlan(plan);
     }
     closeSheet(out);
   };
@@ -1225,6 +1295,8 @@ async function editorSheet({ title, item, maxXp, allowBonus, allowDelete }) {
 // Acciones
 // ---------------------------------------------------------------------
 function doLog(activityId, bonus, origin) {
+  const planAct = state.activities.find(x => x.id === activityId);
+  const planBefore = G.planStatus(state, planAct);
   let entry;
   try { entry = commit(s => G.logActivity(s, activityId, { bonus })); }
   catch (err) { toast(`✋ ${esc(t(err.message))}`); return; }
@@ -1243,6 +1315,9 @@ function doLog(activityId, bonus, origin) {
   const gName = GUARDIANS[entry.stat]?.name || statName(G.statById(entry.stat));
   const rpg = `${gName} +${entry.xp}${entry.guardXp ? ` <small>${t('(Afinidad +{n})', { n: entry.guardXp })}</small>` : ''}${dmg ? ` · ${t('{boss} −{n} PV', { boss: esc(bossShort(boss)), n: dmg })}` : ''}`;
   const news = [rpg, ...lastNews];
+  const planAfter = G.planStatus(state, planAct);
+  if (planBefore && !planBefore.met && planAfter?.met) news.unshift(t('🎯 Meta de la semana cumplida: {name} {n}/{n}', { name: esc(nameOf(planAct)), n: planAfter.target }));
+  else if (planAfter && !planAfter.met && planAfter.done > (planBefore?.done || 0)) news.unshift(t('📅 {name}: {n} de {total} esta semana', { name: esc(nameOf(planAct)), n: planAfter.done, total: planAfter.target }));
   // La primera vez del día en esa stat, su guardiana dice algo de su propósito.
   const firstOfStat = state.log.filter(e => e.type === 'activity' && e.stat === entry.stat && G.dayKey(e.ts) === today).length === 1;
   if (firstOfStat && !lastNews.length && GUARDIAN_LINES[entry.stat]) news.push(`<i>${esc(gName)}: «${esc(lineOfDay(guardianLines(entry.stat), entry.stat, today))}»</i>`);
@@ -1278,7 +1353,7 @@ async function editActivity(id) {
   if (res === 'delete') return deleteActivity(a.id);
   commit(s => {
     if (a) Object.assign(s.activities.find(x => x.id === a.id), res);
-    else s.activities.push({ id: G.uid(), ...res });
+    else { const id = G.uid(); s.activities.push({ id, ...res }); G.pinIfRoom(s, id); }
   }, { celebrate: false });
   toast(a ? t('Actividad actualizada') : t('Actividad creada'));
 }

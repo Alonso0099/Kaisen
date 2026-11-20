@@ -17,7 +17,7 @@ export const KAIZEN_MEANING = {
 export const GUIDES = {
   home: { title: 'Inicio', points: [
     'Cuando hagas algo bueno en tu vida real, toca <b>Registrar actividad</b> o uno de los accesos rápidos. Si te equivocas, toca <b>Deshacer</b>.',
-    '<b>Lo básico de hoy</b> (agua, dormir, comer…) se marca con un toque, una vez al día.',
+    '<b>Para hoy</b> muestra lo que toca según los días o la meta semanal de cada hábito (se elige al editarlo). <b>Lo básico de hoy</b> (agua, dormir, comer…) se marca con un toque, una vez al día.',
     'La tarjeta del <b>jefe</b> muestra su reto de hoy; la <b>mascota</b> crece con cada día que registras algo.',
   ] },
   quests: { title: 'Misiones', points: [
@@ -53,6 +53,7 @@ GUIDES.history = GUIDES.achievements;
 export const TOUR = [
   { view: 'home', sel: '#heroStage', title: 'Tu héroe', text: 'Sube de nivel con lo que haces en la vida real. Cada día te dice una frase para arrancar.' },
   { view: 'home', sel: '#logMainBtn', title: 'Registrar', text: '¿Hiciste algo bueno? Regístralo aquí. Un toque y listo.' },
+  { view: 'home', sel: '#planRow', title: 'Para hoy', text: 'Lo que toca hoy según tus días fijos o tu meta de la semana: «2 de 3 esta semana».' },
   { view: 'home', sel: '#basicsRow', title: 'Lo básico de hoy', text: 'Agua, dormir, comer bien… Se marcan una vez al día.' },
   { view: 'home', sel: '#bossMini', title: 'Jefe del mes', text: 'Todo lo que registras le hace daño. Su reto pega ×3.' },
   { view: 'home', sel: '#petMini', title: 'Tu mascota', text: 'Nace y crece con los días que registras algo.' },
@@ -78,7 +79,7 @@ const KAIZEN_MEANING_EN = {
 const GUIDES_EN = {
   home: { title: 'Home', points: [
     'When you do something good in real life, tap <b>Log activity</b> or one of the shortcuts. If you make a mistake, tap <b>Undo</b>.',
-    '<b>Today\'s basics</b> (water, sleep, food…) are checked with one tap, once a day.',
+    '<b>For today</b> shows what\'s due based on each habit\'s days or weekly goal (set it when editing). <b>Today\'s basics</b> (water, sleep, food…) are checked with one tap, once a day.',
     'The <b>boss</b> card shows today\'s challenge; your <b>pet</b> grows with every day you log something.',
   ] },
   quests: { title: 'Quests', points: [
@@ -112,6 +113,7 @@ GUIDES_EN.history = GUIDES_EN.achievements;
 const TOUR_EN = [
   'Levels up with what you do in real life. Every day it gives you a line to get going.',
   'Did something good? Log it here. One tap and done.',
+  'What\'s due today based on your set days or weekly goal: "2 of 3 this week".',
   'Water, sleep, eating well… Checked once a day.',
   'Everything you log damages it. Its challenge hits ×3.',
   'Hatches and grows with the days you log something.',
@@ -120,7 +122,7 @@ const TOUR_EN = [
   'Achievements, stats and your guardians, who give you more XP and coins as they evolve.',
   'Tap ? on any screen to see what each thing does or repeat this tour.',
 ];
-const TOUR_TITLES_EN = ['Your hero', 'Log', 'Today\'s basics', 'Boss of the month', 'Your pet', 'Quests', 'Shop', 'Progress', 'Questions?'];
+const TOUR_TITLES_EN = ['Your hero', 'Log', 'For today', 'Today\'s basics', 'Boss of the month', 'Your pet', 'Quests', 'Shop', 'Progress', 'Questions?'];
 
 export const kaizenMeaning = () => (getLang() === 'en' ? KAIZEN_MEANING_EN : KAIZEN_MEANING);
 export const guideFor = view => (getLang() === 'en' ? GUIDES_EN : GUIDES)[view] || (getLang() === 'en' ? GUIDES_EN : GUIDES).home;

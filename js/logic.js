@@ -1001,6 +1001,59 @@ export function quickActivities(state, now = Date.now(), n = QUICK_MAX) {
 
 export const isPinned = (state, id) => (state.pinned || []).includes(id);
 
+/** Fija una actividad nueva en Inicio si queda espacio (sin soltar ninguna). */
+export function pinIfRoom(state, id) {
+  const a = state.activities.find(x => x.id === id);
+  if (!a || a.basic || a.resist) return false;
+  state.pinned = (state.pinned || []).filter(x => state.activities.some(y => y.id === x));
+  if (state.pinned.includes(id) || state.pinned.length >= QUICK_MAX) return false;
+  state.pinned.push(id);
+  return true;
+}
+
+// ---------------------------------------------------------------------
+// Plan: qué toca hoy. Una actividad puede tener días fijos de la semana
+// ({ kind: 'days', days: [1, 3, 5] }, 0 = domingo) o una meta semanal
+// flexible ({ kind: 'week', target: 3 }). Sin plan, es libre. Un día fuera
+// de agenda nunca cuenta como falta: solo se mide lo hecho en la semana.
+// ---------------------------------------------------------------------
+export function normalizePlan(plan) {
+  if (!plan || typeof plan !== 'object') return null;
+  if (plan.kind === 'days') {
+    const days = [...new Set((plan.days || []).map(Number).filter(d => d >= 0 && d <= 6))].sort();
+    return days.length ? { kind: 'days', days } : null;
+  }
+  if (plan.kind === 'week') {
+    const target = Math.min(7, Math.max(1, Math.round(Number(plan.target) || 0)));
+    return target ? { kind: 'week', target } : null;
+  }
+  return null;
+}
+
+/** Estado de una actividad con plan en la semana actual (lunes a domingo). */
+export function planStatus(state, act, now = Date.now()) {
+  const plan = normalizePlan(act?.plan);
+  if (!plan) return null;
+  const wk = weekKey(now);
+  const today = dayKey(now);
+  const doneDays = new Set(state.log.filter(e => isBase(e) && e.refId === act.id && weekKey(e.ts) === wk).map(e => dayKey(e.ts)));
+  const doneToday = doneDays.has(today);
+  const weekday = new Date(now).getDay();
+  const target = plan.kind === 'days' ? plan.days.length : plan.target;
+  const done = Math.min(doneDays.size, target);
+  const met = doneDays.size >= target;
+  const scheduledToday = plan.kind === 'days' ? plan.days.includes(weekday) : !met || doneToday;
+  return { plan, done, target, met, doneToday, scheduledToday, dueToday: scheduledToday && !doneToday && !met };
+}
+
+/** Lo que toca hoy: actividades con plan programadas para hoy o con meta semanal pendiente. */
+export function todayPlan(state, now = Date.now()) {
+  return state.activities
+    .map(a => ({ act: a, st: planStatus(state, a, now) }))
+    .filter(x => x.st && (x.st.scheduledToday || x.st.doneToday))
+    .sort((a, b) => (a.st.doneToday - b.st.doneToday) || (b.st.dueToday - a.st.dueToday));
+}
+
 /** Fija o suelta una actividad. Si ya hay 3 fijadas, suelta la más antigua. */
 export function togglePin(state, id) {
   const p = (state.pinned || []).filter(x => x !== id);
@@ -1143,6 +1196,7 @@ export function addHabits(state, habitIds = []) {
     const firstResist = state.activities.findIndex(a => a.resist);
     const act = { ...t, bonus: t.bonus ? { ...t.bonus } : null };
     if (firstResist < 0) state.activities.push(act); else state.activities.splice(firstResist, 0, act);
+    pinIfRoom(state, act.id);
     n++;
   }
   return n;
