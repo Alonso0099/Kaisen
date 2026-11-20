@@ -108,7 +108,7 @@ const CONTENT_EN = {
   'def-estudio': 'Study', 'def-tarea': 'Turn in an assignment', 'def-programar': 'Work on a personal project', 'def-leer': 'Read 20+ min',
   'def-terminar-libro': 'Finish a book', 'def-tiempo': 'Quality time together', 'def-familia': 'Outing with family or friends',
   'def-proyecto-casa': 'Home project', 'def-cocinar': 'Cook at home',
-  'tpl-dormir': 'Sleep 7+ hours', 'tpl-agua': 'Drink my glasses of water', 'bas-fruta': 'Eat fruit or vegetables', 'bas-desayuno': 'Eat a good breakfast',
+  'tpl-dormir': 'Sleep 7+ hours', 'tpl-agua': 'Drink water', 'bas-fruta': 'Eat fruit or vegetables', 'bas-desayuno': 'Eat a good breakfast',
   'bas-aire': 'Get some fresh air or sun', 'bas-cama': 'Make the bed', 'bas-cuidado': 'Shower and get ready',
   'tpl-correr': 'Run', 'tpl-yoga': 'Yoga or stretching', 'tpl-nadar': 'Swim', 'tpl-deporte': 'Play a sport',
   'tpl-meditar': 'Meditate or breathe 5 min', 'tpl-diario': 'Write 3 good things about today', 'tpl-pausa-redes': 'One hour off social media', 'tpl-reflexion': 'Pray or reflect',
@@ -132,9 +132,9 @@ const HERO_EN = {
   titan:      { title: 'Strength and courage',     blurb: 'When something is heavy, plant your feet and take the next step.' },
   relampago:  { title: 'Initiative',               blurb: 'Raise the sails before the wind dies down.' },
   estratega:  { title: 'Curiosity and strategy',   blurb: 'When lost, look at the star map again.' },
-  sabio:      { title: 'Calm and focus',           blurb: 'Among so many branches, knows where to put attention.' },
-  guardian:   { title: 'Character and care',       blurb: 'What is promised gets done. What breaks gets repaired.' },
-  implacable: { title: 'Discipline and precision', blurb: 'Practices the same move until it comes out silent.' },
+  sabio:      { title: 'Calm and focus',           blurb: 'Among all the branches, they know which one to follow.' },
+  guardian:   { title: 'Character and care',       blurb: 'They keep their promises. They mend what breaks.' },
+  implacable: { title: 'Discipline and precision', blurb: 'They practice the same move until they can do it without a sound.' },
 };
 
 const ACH_EN = {
@@ -171,16 +171,16 @@ const EFFORT_EN = {
 const LOCKS_EN = { habit: 'Do a habit several days', boss: 'Defeat a boss', guardian: 'Evolve a guardian' };
 // Frases de evolución de las guardianas (T-03), traducidas.
 const EVO_EN = {
-  fuerza: 'Today I can handle what weighed on me yesterday.', resistencia: 'Look how far we\'ve come, step by step.',
-  intelecto: 'One more question, and another door opened.', sabiduria: 'I learned to pause before answering.',
-  vinculo: 'Every time we reach out, the bond grows stronger.', hogar: 'Little by little, this place feels like ours.',
+  fuerza: 'Today I can carry what weighed me down yesterday.', resistencia: 'Look how far we\'ve come, step by step.',
+  intelecto: 'I asked one more question, and another door opened.', sabiduria: 'I learned to pause before answering.',
+  vinculo: 'Every time we reach out, our bond grows stronger.', hogar: 'Little by little, this place feels like ours.',
 };
 
 const TAUNT_EN = {
   pereza: '"Five more minutes…"', procrastinacion: '"Start tomorrow, not today."', desorden: '"You can put that away later."',
-  estres: '"You have no time for anything!"', distraccion: '"Just one more video…"', soledad: '"Better stay alone."',
+  estres: '"You have no time for anything!"', distraccion: '"Just one more video…"', soledad: '"Why not keep to yourself?"',
   multitarea: '"Almost done? Let\'s open three more things."', perfeccionismo: '"If it has a crack, throw it all away."',
-  inercia: '"The first step weighs more than the whole mountain."', desvelo: '"Give me twenty more minutes. We\'ll see tomorrow."',
+  inercia: '"That first step is heavier than the whole mountain."', desvelo: '"Give me twenty more minutes. Tomorrow can wait."',
 };
 
 // ---------------------------------------------------------------------
@@ -221,7 +221,7 @@ const EN = {
   '¿Cómo quieres que se vea tu héroe?': 'How do you want your hero to look?',
   'Los seis héroes existen en las dos versiones. Puedes cambiarlo cuando quieras.': 'All six heroes come in both versions. You can change it anytime.',
   'Hombre': 'Man', 'Mujer': 'Woman', 'Elige tu héroe': 'Choose your hero',
-  'Elige un héroe que te represente o que encarne algo que quieres cultivar.': 'Choose a hero who represents you or something you want to grow.',
+  'Elige un héroe que te represente o que encarne algo que quieres cultivar.': 'Choose a hero who reflects who you are or who you want to become.',
   'Todas las actividades dan la misma XP con cualquier héroe, y puedes cambiarlo cuando quieras sin perder progreso.': 'Every activity gives the same XP with any hero, and you can switch anytime without losing progress.',
   'Primero elige cómo quieres que se vea tu héroe: Hombre o Mujer.': 'First choose how your hero looks: Man or Woman.',
   'Elige tu héroe tocando una de las tarjetas.': 'Choose your hero by tapping one of the cards.',
@@ -284,7 +284,7 @@ const EN = {
   '{boss} recuperó {n} PV mientras no estabas.': '{boss} recovered {n} HP while you were away.', ' Hoy «{name}» le pega ×3.': ' Today "{name}" hits it ×3.',
   '¡Qué bueno verte! Tu progreso sigue aquí.': 'So good to see you! Your progress is still here.',
   'Volviste. Puedes retomar desde donde lo dejaste.': 'You\'re back. You can pick up where you left off.',
-  'Tu progreso sigue intacto. Elige por dónde quieres seguir hoy.': 'Your progress is intact. Choose where you want to continue today.',
+  'Tu progreso sigue intacto. Elige por dónde quieres seguir hoy.': 'Your progress is still here. Pick where you\'d like to start today.',
 
   // Tarjetas para compartir
   'Preparando tarjeta…': 'Preparing card…', 'Tarjeta guardada como imagen': 'Card saved as an image', '❌ No se pudo crear la tarjeta': '❌ Couldn\'t create the card',

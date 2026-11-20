@@ -13,7 +13,7 @@ import { t, tn, getLang, setLang, LANGS, nameOf, statName, bossName, bossShort, 
 import { GUARDIAN_LINES, lineOfDay, heroLines, guardianLines, bossLines, backLines } from './phrases.js';
 import { art, CHARACTERS, DEFAULT_CHARACTER, charHero, characterById, characterImg, guardianFor, guardianEvolutions, syncGuardianSeen, GUARDIANS, WORLDS, worldById, DEFAULT_WORLD, DEFAULT_PET, PET_SPECIES, speciesById } from './catalog.js';
 
-export const APP_VERSION = '2.7.0';
+export const APP_VERSION = '2.7.1';
 const BACKUP_REMINDER_DAYS = 7;
 
 const $ = sel => document.querySelector(sel);
@@ -285,7 +285,7 @@ function renderHero() {
   const img = $('#heroImg');
   const src = characterImg(ch.key);
   if (img.getAttribute('src') !== src) img.src = src;
-  img.alt = ch.name;
+  img.alt = heroName(ch, ch.look);
   const stage = $('#heroStage');
   stage.style.setProperty('--flash', ch.accent);
   stage.classList.toggle('idle-sway', state.prefs?.idle !== 'static');
@@ -304,7 +304,7 @@ function heroSays({ force = false } = {}) {
   if (!force) { state.notices = { ...state.notices, saidDay: today }; save(); }
   const hero = characterById(state.profile.character);
   const el = $('#heroSay');
-  el.innerHTML = `<b>${esc(state.profile.name || hero.name)}</b>${esc(lineOfDay(heroLines(hero.hero), hero.hero, today))}`;
+  el.innerHTML = `<b>${esc(state.profile.name || heroName(hero, hero.look))}</b>${esc(lineOfDay(heroLines(hero.hero), hero.hero, today))}`;
   el.hidden = false;
   el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
   const n = ++saySeq;
@@ -709,7 +709,7 @@ function renderMinis({ boss, pet }) {
   $('#petMini').innerHTML = `
     <img class="pet-img ${pet.mood}" src="${petImg(pet.stage)}" alt="">
     <div class="mini-body">
-      <div class="mini-kicker">${pet.stageName}</div>
+      <div class="mini-kicker">${stageName(pet.stage)}</div>
       <div class="mini-title">${esc(name)}</div>
       <div class="hpbar pet"><i style="width:${Math.round(pet.pct * 100)}%"></i></div>
       <div class="mini-sub">${t(PET_MOOD_SHORT[pet.mood])}</div>
@@ -1055,6 +1055,7 @@ function changeLang(l) {
   setLang(l);
   translateStatic();
   renderAll();
+  renderInstall();
   if (!$('#welcome').hidden) { const y = $('#welcomeInner').scrollTop; renderWelcome(); $('#welcomeInner').scrollTop = y; }
   toast(t('Idioma cambiado'));
 }
@@ -1140,7 +1141,7 @@ async function editorSheet({ title, item, maxXp, allowBonus, allowDelete }) {
   const p = openSheet(`
     <h3>${esc(title)}</h3>
     <label class="field"><span>${t('Nombre')}</span>
-      <input type="text" id="edName" maxlength="40" value="${esc(it.name)}" placeholder="${t('Ej. Correr 5 km')}" autocomplete="off">
+      <input type="text" id="edName" maxlength="40" value="${esc(nameOf(it))}" placeholder="${t('Ej. Correr 5 km')}" autocomplete="off">
     </label>
     <div class="field"><span>${t('Stat que sube')}</span>
       <div class="chips" id="edStats">${G.STATS.map(s =>
@@ -1207,7 +1208,8 @@ async function editorSheet({ title, item, maxXp, allowBonus, allowDelete }) {
   $('#edSave').onclick = () => {
     const name = $('#edName').value.trim();
     if (!name) { $('#edName').focus(); $('#edName').placeholder = t('¡Ponle un nombre!'); return; }
-    const out = { name, stat, xp: G.clampXp($('#edXp').value, maxXp) };
+    // Si el nombre traducido no cambió, se guarda el original (así se sigue traduciendo).
+    const out = { name: item && name === nameOf(item) ? item.name : name, stat, xp: G.clampXp($('#edXp').value, maxXp) };
     if (allowBonus) {
       out.bonus = $('#edBonusOn').checked
         ? { label: $('#edBonusLabel').value.trim() || 'Extra', xp: G.clampXp($('#edBonusXp').value) }
@@ -1473,7 +1475,7 @@ async function editReward(id) {
   const p = openSheet(`
     <h3>${r ? t('Editar recompensa') : t('Nueva recompensa')}</h3>
     <label class="field"><span>${t('¿Qué te vas a regalar?')}</span>
-      <input type="text" id="rwName" maxlength="40" value="${esc(r?.name || '')}" placeholder="${t('Ej. Salir por un helado')}" autocomplete="off"></label>
+      <input type="text" id="rwName" maxlength="40" value="${esc(r ? nameOf(r) : '')}" placeholder="${t('Ej. Salir por un helado')}" autocomplete="off"></label>
     <div class="field"><span>${t('Tipo')}</span>
       <div class="chips" id="rwType">${G.REWARD_TYPES.map(ty => `<button type="button" class="chip ${ty.id === type ? 'on' : ''}" data-type="${ty.id}">${esc(t(ty.name))}</button>`).join('')}</div>
     </div>
@@ -1520,7 +1522,7 @@ async function editReward(id) {
       : kind === 'habit' ? { kind, act: $('#rwLockAct').value, n: Number($('#rwLockN').value), since: same && lk.act === $('#rwLockAct').value ? lk.since : Date.now() }
       : kind === 'guardian' ? { kind, stat: $('#rwLockStat').value, tier: Number($('#rwLockTier').value) }
       : { kind, since: same ? lk.since : Date.now() };
-    closeSheet({ name, type, lock, cost: Math.min(1000, Math.max(20, Number($('#rwCost').value) || 100)) });
+    closeSheet({ name: r && name === nameOf(r) ? r.name : name, type, lock, cost: Math.min(1000, Math.max(20, Number($('#rwCost').value) || 100)) });
   };
   const res = await p;
   if (!res || res === 'cancel') return;

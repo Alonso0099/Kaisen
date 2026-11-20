@@ -1,7 +1,7 @@
 // Service worker de Kaizen: guarda la app en caché para que funcione
 // sin conexión. Al publicar cambios, sube CACHE_VERSION para que los
 // iPhones descarguen la nueva versión.
-const CACHE_VERSION = 'kaizen-v2.7.0';
+const CACHE_VERSION = 'kaizen-v2.7.1';
 // Lo esencial para funcionar offline. El arte nuevo que agregues se
 // guarda en caché automáticamente la primera vez que se muestra.
 const ASSETS = [
