@@ -151,3 +151,26 @@ test('T-04: frases para cada héroe (7), guardiana (6), jefe (3 + su burla) y 3 
   assert.equal(P.BACK_LINES.length, 3);
   assert.equal(P.lineOfDay(P.BACK_LINES, 'back', '2026-11-20'), P.lineOfDay(P.BACK_LINES, 'back', '2026-11-20'));
 });
+
+test('idioma: traduce plantillas por id, respeta lo que el jugador renombró y no toca el progreso', async () => {
+  const I = await import('../js/i18n.js');
+  const L = await import('../js/logic.js');
+  const s = L.defaultState();
+  L.logActivity(s, 'def-mtb', { bonus: true, now: Date.now() });
+  const before = JSON.stringify(L.deriveProfile(s));
+  I.setLang('en');
+  assert.equal(I.nameOf(s.activities.find(a => a.id === 'def-leer')), 'Read 20+ min');
+  assert.equal(I.nameOf(s.log[0]), 'Cycling · Long route');
+  assert.equal(I.nameOf({ id: 'def-leer', name: 'Leer novelas' }), 'Leer novelas', 'renombrada: no se traduce');
+  assert.equal(I.nameOf({ id: 'x123', name: 'Mi hábito propio' }), 'Mi hábito propio');
+  assert.equal(I.nameOf({ id: 'def-cocinar', name: 'Cocinar en vez de pedir' }), 'Cook at home');
+  assert.equal(I.t('Siguiente'), 'Next');
+  assert.equal(I.t('Texto sin traducir todavía'), 'Texto sin traducir todavía');
+  assert.equal(I.statName(L.statById('hogar')), 'Hearth');
+  assert.equal(I.bossName(L.BOSSES[0]), 'The Lord of the Couch');
+  assert.equal(I.missionText({ id: 'b', target: 250 }).title, 'Power Build-Up');
+  assert.equal(JSON.stringify(L.deriveProfile(s)), before, 'cambiar de idioma no cambia nada del progreso');
+  I.setLang('es');
+  assert.equal(I.nameOf(s.log[0]), s.log[0].name);
+  assert.equal(I.t('Siguiente'), 'Siguiente');
+});

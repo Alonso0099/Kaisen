@@ -1,5 +1,7 @@
 # Plan de mejoras · Kaizen v2.5 y siguientes
 
+> **Idioma (v2.6.0):** fase 1 del inglés lista (ver README → Idioma). Falta la fase 2.
+>
 > **Estado (2026-11-20):** v2.5.0 implementa la sección 1 completa, las tres mejoras recomendadas (2.1 Afinidad, volver sin castigo con 2.3 y la racha con gracia, 2.2 recompensas con reto + precio guía + XP por esfuerzo), el aviso con lo que avanzó en el RPG y las frases del día (héroe, guardianas y jefes). Pendiente: expedición, contadores y temporizadores, días programados, inglés, y fijar automáticamente un hábito nuevo.
 
 Fecha: 2026-11-20. Este plan no cambia código todavía: sirve para decidir qué entra en la próxima versión.

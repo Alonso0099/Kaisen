@@ -8,11 +8,12 @@ import { makeCard, shareCard } from './share.js';
 import * as Profiles from './profiles.js';
 import * as Gear from './gear.js';
 import { installInfo, isStandalone } from './install.js';
-import { KAIZEN_MEANING, GUIDES, TOUR } from './guide.js';
+import { kaizenMeaning, guideFor, tourSteps as tourStepsFor } from './guide.js';
+import { t, tn, getLang, setLang, LANGS, nameOf, statName, bossName, bossShort, bossTaunt, heroName, heroTitle, heroBlurb, missionText, achName } from './i18n.js';
 import { HERO_LINES, GUARDIAN_LINES, BOSS_LINES, BACK_LINES, lineOfDay } from './phrases.js';
 import { art, CHARACTERS, DEFAULT_CHARACTER, charHero, characterById, characterImg, guardianFor, guardianEvolutions, syncGuardianSeen, GUARDIANS, WORLDS, worldById, DEFAULT_WORLD, DEFAULT_PET, PET_SPECIES, speciesById } from './catalog.js';
 
-export const APP_VERSION = '2.5.1';
+export const APP_VERSION = '2.6.0';
 const BACKUP_REMINDER_DAYS = 7;
 
 const $ = sel => document.querySelector(sel);
@@ -99,26 +100,26 @@ function collectNews(beforeAdv, afterAdv, before, after) {
   // Mascota
   if (afterAdv.pet.stage > beforeAdv.pet.stage) {
     if (G.shouldAskPetName(state, beforeAdv.pet.stage, afterAdv.pet.stage)) {
-      big.push([2, () => queueModal(askPetNameOnHatch), '🐣 ¡Tu huevo eclosionó! Ponle nombre en su ficha']);
+      big.push([2, () => queueModal(askPetNameOnHatch), t('🐣 ¡Tu huevo eclosionó! Ponle nombre en su ficha')]);
     } else lines.push(`🐣 ${esc(petName())} ahora es ${afterAdv.pet.stageName}`);
   }
   // Stats
   const ups = G.STATS.filter(s => after.stats[s.id].level > before.stats[s.id].level);
-  if (ups.length) lines.push(ups.map(s => `${s.name} nivel ${after.stats[s.id].level}`).join(' · '));
+  if (ups.length) lines.push(ups.map(s => t('{stat} nivel {lv}', { stat: statName(s), lv: after.stats[s.id].level })).join(' · '));
   // Logros
   const fresh = G.unlockedAchievements(state, after).filter(id => !state.seenAchievements.includes(id));
   if (fresh.length) {
     state.seenAchievements = [...new Set([...state.seenAchievements, ...fresh])];
-    for (const id of fresh) { const a = G.ACHIEVEMENTS.find(x => x.id === id); lines.push(`${a.icon} Logro: ${esc(a.name)}`); }
+    for (const id of fresh) { const a = G.ACHIEVEMENTS.find(x => x.id === id); lines.push(`${a.icon} ${t('Logro: {name}', { name: esc(achName(a)) })}`); }
   }
   // Guardianas
   for (const { stat, tier } of guardianEvolutions(after.stats, state.guardianSeen)) {
     state.guardianSeen = { ...state.guardianSeen, [stat]: tier };
     const name = GUARDIANS[stat]?.name || G.statById(stat).name;
-    big.push([3, () => queueModal(() => showGuardianEvolution(stat, tier)), `✨ ${esc(name)} evolucionó a la forma ${tier}`]);
+    big.push([3, () => queueModal(() => showGuardianEvolution(stat, tier)), t('✨ {name} evolucionó a la forma {n}', { name: esc(name), n: tier })]);
   }
   // Nivel general
-  if (after.level > before.level) big.push([1, () => showLevelUp(after), `⬆️ ¡Nivel ${after.level}!`]);
+  if (after.level > before.level) big.push([1, () => showLevelUp(after), `⬆️ ${t('¡Nivel {lv}!', { lv: after.level })}`]);
   big.sort((a, b) => a[0] - b[0]);
   big.forEach(([, show, line], i) => (i === 0 ? show() : lines.unshift(line)));
   save();
@@ -131,7 +132,7 @@ function showResult(head, news, onUndo) {
   const extra = news.length > MAX ? `<span class="res-more">+${news.length - MAX} más en Progreso</span>` : '';
   toast(`<span class="res-head">${head}</span>${news.slice(0, MAX).map(l => `<span class="res-line">${l}</span>`).join('')}${extra}`, {
     kind: 'result', pinned: true, duration: news.length ? 7000 : 5000,
-    action: onUndo ? 'Deshacer' : null, onAction: onUndo,
+    action: onUndo ? t('Deshacer') : null, onAction: onUndo,
   });
 }
 
@@ -297,7 +298,7 @@ function renderHero() {
  */
 let saySeq = 0;
 function heroSays({ force = false } = {}) {
-  if (!state.onboarded || !$('#tour').hidden) return;
+  if (!state.onboarded || !$('#tour').hidden || getLang() !== 'es') return;   // frases en inglés: pendiente
   const today = G.dayKey(Date.now());
   if (!force && state.notices?.saidDay === today) return;
   if (!force) { state.notices = { ...state.notices, saidDay: today }; save(); }
@@ -330,7 +331,7 @@ function renderHome(p) {
   sceneFx.set({ color: p.level >= 5 ? p.rank.color : '#ffd23f', amount: Math.min(60, 12 + p.level * 3) });
   renderHero();
   $('#heroName').textContent = state.profile.name || 'Héroe';
-  $('#rankBadge').textContent = `Rango ${p.rank.letter} · ${p.rank.title}`;
+  $('#rankBadge').textContent = t('Rango {letter} · {title}', { letter: p.rank.letter, title: t(p.rank.title) });
   const title = G.titleName(state);
   $('#heroTitle').hidden = !title;
   $('#heroTitle').textContent = title ? `« ${title} »` : '';
@@ -342,7 +343,7 @@ function renderHome(p) {
   lastLevelShown = p.level;
   $('#xpFill').style.width = `${Math.max(p.pct > 0 ? 4 : 0, Math.round(p.pct * 100))}%`;
   $('#xpText').textContent = `${p.into} / ${p.needed} XP`;
-  $('#todayText').textContent = `Hoy +${p.todayXp} XP`;
+  $('#todayText').textContent = t('Hoy +{n} XP', { n: p.todayXp });
 
   $('#radar').innerHTML = radarSvg(p);
   $('#statsGrid').innerHTML = G.STATS.map(s => {
@@ -365,9 +366,9 @@ function actBtn(a) {
   return `<button class="act-btn" data-act="${esc(a.id)}" style="--c:${s.color}">
     <img class="act-ico" src="${statIcon(s.id)}" alt="">
     <span class="act-text">
-      <span class="act-name">${G.isPinned(state, a.id) ? '<i class="pin-dot">★</i>' : ''}${esc(a.name)}</span>
+      <span class="act-name">${G.isPinned(state, a.id) ? '<i class="pin-dot">★</i>' : ''}${esc(nameOf(a))}</span>
       ${actXp(a)}
-      ${a.bonus ? `<span class="act-bonus-tag">★ ${esc(a.bonus.label)} +${a.bonus.xp}</span>` : ''}
+      ${a.bonus ? `<span class="act-bonus-tag">★ ${esc(t(a.bonus.label))} +${a.bonus.xp}</span>` : ''}
     </span>
   </button>`;
 }
@@ -383,11 +384,11 @@ function renderBasics() {
   const done = new Set(state.log.filter(e => G.dayKey(e.ts) === today).map(e => e.refId));
   const n = basics.filter(a => done.has(a.id)).length;
   row.innerHTML = `
-    <div class="basics-head"><b>Lo básico de hoy</b><span class="${n === basics.length ? 'all' : ''}">${n} de ${basics.length}${n === basics.length ? ' ✓' : ''}</span></div>
+    <div class="basics-head"><b>${t('Lo básico de hoy')}</b><span class="${n === basics.length ? 'all' : ''}">${t('{n} de {total}', { n, total: basics.length })}${n === basics.length ? ' ✓' : ''}</span></div>
     <div class="basics-list">${basics.map(a => {
       const st = G.statById(a.stat); const ok = done.has(a.id);
       return `<button class="basic-chip act-btn ${ok ? 'done' : ''}" data-act="${esc(a.id)}" style="--c:${st.color}" ${ok ? 'disabled' : ''}>
-        <i>${ok ? '✓' : '+'}</i><span>${esc(a.name)}</span></button>`;
+        <i>${ok ? '✓' : '+'}</i><span>${esc(nameOf(a))}</span></button>`;
     }).join('')}</div>`;
 }
 
@@ -396,7 +397,7 @@ function renderQuick() {
   const quick = G.quickActivities(state);
   $('#quickLog').innerHTML = quick.length
     ? quick.map(actBtn).join('')
-    : `<button class="quick-empty" id="quickEmpty"><b>¿Qué hiciste hoy?</b><span>Elige una actividad y tu aventura empieza. Las que más uses aparecerán aquí.</span></button>`;
+    : `<button class="quick-empty" id="quickEmpty"><b>${t('¿Qué hiciste hoy?')}</b><span>${t('Elige una actividad y tu aventura empieza. Las que más uses aparecerán aquí.')}</span></button>`;
   $('#quickLog').classList.toggle('n1', quick.length === 1);
   $('#quickLog').classList.toggle('n2', quick.length === 2);
 }
@@ -412,24 +413,24 @@ async function openCatalog() {
     return `<div class="cat-row ${done ? 'done' : ''}" style="--c:${st.color}">
       <button class="cat-main" data-pick="${esc(a.id)}" ${done ? 'disabled' : ''}>
         <img src="${a.resist ? art.boss(a.resist) : statIcon(st.id)}" alt="">
-        <span><b>${done ? '✔ ' : ''}${esc(a.name)}</b><small>+${a.xp + extra} XP${a.bonus ? ` · ★ ${esc(a.bonus.label)}` : ''}${a.resist === boss.id ? ' · ⚡ ×3 al jefe' : ''}</small></span>
+        <span><b>${done ? '✔ ' : ''}${esc(nameOf(a))}</b><small>+${a.xp + extra} XP${a.bonus ? ` · ★ ${esc(t(a.bonus.label))}` : ''}${a.resist === boss.id ? t(' · ⚡ ×3 al jefe') : ''}</small></span>
       </button>
-      ${a.resist || a.basic ? '' : `<button class="cat-pin ${G.isPinned(state, a.id) ? 'on' : ''}" data-pin="${esc(a.id)}" aria-label="Fijar en Inicio">★</button>`}
-      <button class="cat-edit" data-edit="${esc(a.id)}" aria-label="Editar">✎</button>
+      ${a.resist || a.basic ? '' : `<button class="cat-pin ${G.isPinned(state, a.id) ? 'on' : ''}" data-pin="${esc(a.id)}" aria-label="${t('Fijar en Inicio')}">★</button>`}
+      <button class="cat-edit" data-edit="${esc(a.id)}" aria-label="${t('Editar')}">✎</button>
     </div>`;
   };
   const basics = state.activities.filter(a => a.basic);
-  const body = () => (basics.length ? `<div class="cat-group"><div class="cat-title">Lo básico · una vez al día</div>${basics.map(row).join('')}</div>` : '') + G.STATS.map(st => {
+  const body = () => (basics.length ? `<div class="cat-group"><div class="cat-title">${t('Lo básico · una vez al día')}</div>${basics.map(row).join('')}</div>` : '') + G.STATS.map(st => {
     const acts = state.activities.filter(a => a.stat === st.id && !a.resist && !a.basic);
-    return acts.length ? `<div class="cat-group"><div class="cat-title" style="--c:${st.color}">${st.name}</div>${acts.map(row).join('')}</div>` : '';
+    return acts.length ? `<div class="cat-group"><div class="cat-title" style="--c:${st.color}">${statName(st)}</div>${acts.map(row).join('')}</div>` : '';
   }).join('') + (state.activities.some(a => a.resist)
-    ? `<div class="cat-group"><div class="cat-title">Retos de resistencia</div><p class="small">Una vez al día cada uno. El del jefe del mes hace ×3.</p>${state.activities.filter(a => a.resist).map(row).join('')}</div>` : '');
+    ? `<div class="cat-group"><div class="cat-title">${t('Retos de resistencia')}</div><p class="small">${t('Una vez al día cada uno. El del jefe del mes hace ×3.')}</p>${state.activities.filter(a => a.resist).map(row).join('')}</div>` : '');
   const p = openSheet(`
-    <h3>Registrar actividad</h3>
-    <p class="small">Toca una para registrarla. ★ la fija en Inicio (hasta 3).</p>
+    <h3>${t('Registrar actividad')}</h3>
+    <p class="small">${t('Toca una para registrarla. ★ la fija en Inicio (hasta 3).')}</p>
     <div id="catBody">${body()}</div>
-    <button class="btn btn-block" data-close="new">＋ Crear actividad</button>
-    <button class="btn btn-block" data-close="cancel">Cerrar</button>`);
+    <button class="btn btn-block" data-close="new">${t('＋ Crear actividad')}</button>
+    <button class="btn btn-block" data-close="cancel">${t('Cerrar')}</button>`);
   $('#catBody').addEventListener('click', e => {
     const pin = e.target.closest('[data-pin]');
     if (pin) { G.togglePin(state, pin.dataset.pin); save(); renderQuick(); $('#catBody').innerHTML = body(); return; }
@@ -457,24 +458,24 @@ function renderGoal(p, { boss, weekly, pet }) {
   const cands = [];
   const anyLog = state.log.some(G.isBase);
   if (!anyLog) {
-    cands.push({ ico: '🥚', text: 'Registra tu primera actividad para que tu huevo empiece a calentarse', pct: 3, view: null });
+    cands.push({ ico: '🥚', text: t('Registra tu primera actividad para que tu huevo empiece a calentarse'), pct: 3, view: null });
   } else {
     // Mascota: lo más tangible al empezar
-    if (pet.stage === 0) cands.push({ ico: '🐣', text: pet.daysToNext === 1 ? 'Registra un día más para que nazca tu mascota' : `Registra ${pet.daysToNext} días más para que nazca tu mascota`, pct: 1.2 + pet.pct, view: null });
+    if (pet.stage === 0) cands.push({ ico: '🐣', text: pet.daysToNext === 1 ? t('Registra un día más para que nazca tu mascota') : t('Registra {n} días más para que nazca tu mascota', { n: pet.daysToNext }), pct: 1.2 + pet.pct, view: null });
     else if (pet.next && pet.daysToNext <= 3) cands.push({ ico: '🐾', text: `${pet.daysToNext === 1 ? 'Un día activo más' : `${pet.daysToNext} días activos más`} y ${nameP} será ${pet.next.name}`, pct: 1 + pet.pct * .2, view: null });
     // Premios por reclamar
-    if (boss.defeated && !boss.claimed) cands.push({ ico: '👹', text: '¡Derrotaste al jefe! Reclama tu premio en Misiones', pct: 2.5, view: 'quests' });
-    for (const m of weekly) if (m.done && !m.claimed) cands.push({ ico: '🗓️', text: `Misión cumplida: reclama «${m.title}»`, pct: 2.4, view: 'quests' });
+    if (boss.defeated && !boss.claimed) cands.push({ ico: '👹', text: t('¡Derrotaste al jefe! Reclama tu premio en Misiones'), pct: 2.5, view: 'quests' });
+    for (const m of weekly) if (m.done && !m.claimed) cands.push({ ico: '🗓️', text: t('Misión cumplida: reclama «{name}»', { name: mText(m).title }), pct: 2.4, view: 'quests' });
     // Guardiana a punto de evolucionar
     for (const st of G.STATS) {
       const s = p.stats[st.id]; const g = guardianFor(st.id, s.level);
       if (g.nextAt && g.nextAt - s.level === 1) cands.push({ ico: '✨', text: `${st.name} está a un nivel de que ${g.name || 'su guardiana'} evolucione`, pct: .8 + s.pct * .3, view: null });
     }
     // Nivel general (solo si está cerca)
-    if (p.pct >= .6) cands.push({ ico: '⬆️', text: `Te faltan ${p.needed - p.into} XP para el nivel ${p.level + 1}`, pct: .6 + p.pct * .3, view: null });
+    if (p.pct >= .6) cands.push({ ico: '⬆️', text: t('Te faltan {n} XP para el nivel {lv}', { n: p.needed - p.into, lv: p.level + 1 }), pct: .6 + p.pct * .3, view: null });
     // Misión semanal con progreso real
-    for (const m of weekly) if (!m.done && m.progress > 0) cands.push({ ico: '🗓️', text: `${m.title}: ${m.progress} de ${m.target}`, pct: .5 + (m.progress / m.target) * .3, view: 'quests' });
-    if (!boss.defeated) cands.push({ ico: '👹', text: `A ${boss.name.split(',')[0]} le quedan ${boss.hpLeft} PV`, pct: .3 + boss.pct * .2, view: 'quests' });
+    for (const m of weekly) if (!m.done && m.progress > 0) cands.push({ ico: '🗓️', text: t('{title}: {n} de {target}', { title: mText(m).title, n: m.progress, target: m.target }), pct: .5 + (m.progress / m.target) * .3, view: 'quests' });
+    if (!boss.defeated) cands.push({ ico: '👹', text: t('A {boss} le quedan {hp} PV', { boss: bossShort(boss), hp: boss.hpLeft }), pct: .3 + boss.pct * .2, view: 'quests' });
   }
   const g = cands.sort((a, b) => b.pct - a.pct)[0];
   if (!g) { el.hidden = true; return; }
@@ -694,15 +695,15 @@ function renderMinis({ boss, pet }) {
   bm.innerHTML = `
     <img class="boss-hit" src="${bossImg(boss.id)}" alt="" style="${boss.defeated ? 'filter:grayscale(1) brightness(.9);opacity:.6' : ''}">
     <div class="mini-body">
-      <div class="mini-kicker">Jefe del mes</div>
-      <div class="mini-title">${esc(boss.name.split(',')[0])}</div>
+      <div class="mini-kicker">${t('Jefe del mes')}</div>
+      <div class="mini-title">${esc(bossShort(boss))}</div>
       ${boss.defeated
-        ? `<div class="mini-sub" style="color:var(--yellow)">${boss.claimed ? '✔ Derrotado' : '¡Reclama tu premio!'}</div>`
+        ? `<div class="mini-sub" style="color:var(--yellow)">${boss.claimed ? t('✔ Derrotado') : t('¡Reclama tu premio!')}</div>`
         : `<div class="hpbar"><i style="width:${Math.round((1 - boss.pct) * 100)}%"></i></div>
-           <div class="mini-sub">${boss.hpLeft} PV · ${boss.daysLeft} d${boss.defenseToday ? ' · 🛡️' : ''}</div>`}
+           <div class="mini-sub">${boss.hpLeft} ${t('PV')} · ${boss.daysLeft} d${boss.defenseToday ? ' · 🛡️' : ''}</div>`}
     </div>
     ${challenge && !boss.defeated ? `<button class="boss-challenge act-btn ${doneToday ? 'done' : ''}" data-act="${esc(challenge.id)}" style="--c:${G.statById(challenge.stat).color}" ${doneToday ? 'disabled' : ''}>
-      <span>${doneToday ? '✔ Reto de hoy hecho' : `⚡ ${esc(challenge.name)}`}</span><b>${doneToday ? '' : `+${challenge.xp} XP · ×3`}</b>
+      <span>${doneToday ? t('✔ Reto de hoy hecho') : `⚡ ${esc(nameOf(challenge))}`}</span><b>${doneToday ? '' : `+${challenge.xp} XP · ×3`}</b>
     </button>` : ''}`;
   const name = petName();
   $('#petMini').innerHTML = `
@@ -711,7 +712,7 @@ function renderMinis({ boss, pet }) {
       <div class="mini-kicker">${pet.stageName}</div>
       <div class="mini-title">${esc(name)}</div>
       <div class="hpbar pet"><i style="width:${Math.round(pet.pct * 100)}%"></i></div>
-      <div class="mini-sub">${PET_MOOD_SHORT[pet.mood]}</div>
+      <div class="mini-sub">${t(PET_MOOD_SHORT[pet.mood])}</div>
     </div>`;
 }
 
@@ -720,39 +721,39 @@ function renderAdventure({ boss, weekly }) {
   const weak = G.statById(boss.weak);
   $('#bossCard').innerHTML = `
     <div class="boss-card ${boss.defeated ? 'defeated' : ''}">
-      <img class="boss-art boss-hit" src="${bossImg(boss.id)}" alt="${esc(boss.name)}">
-      ${boss.defeated ? '<div class="boss-stamp">¡Derrotado!</div>' : ''}
-      <div class="boss-name">${esc(boss.name)}</div>
-      <div class="boss-taunt">${esc(lineOfDay([boss.taunt, ...(BOSS_LINES[boss.id] || [])], boss.id, G.dayKey(Date.now())))}</div>
+      <img class="boss-art boss-hit" src="${bossImg(boss.id)}" alt="${esc(bossName(boss))}">
+      ${boss.defeated ? `<div class="boss-stamp">${t('¡Derrotado!')}</div>` : ''}
+      <div class="boss-name">${esc(bossName(boss))}</div>
+      <div class="boss-taunt">${esc(getLang() === 'en' ? bossTaunt(boss) : lineOfDay([boss.taunt, ...(BOSS_LINES[boss.id] || [])], boss.id, G.dayKey(Date.now())))}</div>
       <div class="hpbar"><i style="width:${Math.round((1 - boss.pct) * 100)}%"></i></div>
       <div class="boss-meta">
-        <span>${boss.hpLeft} / ${boss.hp} PV</span>
-        <span class="boss-weak"><img src="${statIcon(weak.id)}" alt="">Débil a ${weak.name} <b>×2</b></span>
+        <span>${boss.hpLeft} / ${boss.hp} ${t('PV')}</span>
+        <span class="boss-weak"><img src="${statIcon(weak.id)}" alt="">${t('Débil a {stat}', { stat: statName(weak) })} <b>×2</b></span>
       </div>
       ${boss.defeated
         ? boss.claimed
-          ? `<p class="boss-note">Premio reclamado. Un nuevo jefe llegará el mes que viene.</p>
-             <button class="btn btn-block" id="shareBossBtn">Presumir la victoria</button>`
-          : `<button class="btn btn-yellow btn-block" id="claimBossBtn">Reclamar +${boss.rewardXp} XP</button>`
-        : `<p class="boss-note">Cada XP que ganas le quita 1 PV. Te ${boss.daysLeft === 1 ? 'queda 1 día' : `quedan ${boss.daysLeft} días`} para derrotarlo y ganar <b>+${boss.rewardXp} XP</b>.</p>
+          ? `<p class="boss-note">${t('Premio reclamado. Un nuevo jefe llegará el mes que viene.')}</p>
+             <button class="btn btn-block" id="shareBossBtn">${t('Presumir la victoria')}</button>`
+          : `<button class="btn btn-yellow btn-block" id="claimBossBtn">${t('Reclamar +{n} XP', { n: boss.rewardXp })}</button>`
+        : `<p class="boss-note">${boss.daysLeft === 1 ? t('Cada XP que ganas le quita 1 PV. Te queda 1 día para derrotarlo y ganar <b>+{xp} XP</b>.', { xp: boss.rewardXp }) : t('Cada XP que ganas le quita 1 PV. Te quedan {n} días para derrotarlo y ganar <b>+{xp} XP</b>.', { n: boss.daysLeft, xp: boss.rewardXp })}</p>
            <p class="boss-note small">${boss.defenseToday
-             ? '🛡️ <b>Defensa activa:</b> cumpliste su reto ayer, así que hoy no puede recuperarse.'
-             : `Si pasa un día sin que registres nada de ${weak.name} ni su reto, recupera un poco de vida (nunca te quita nada a ti). Cumplir su reto te da <b>Defensa</b> para el día siguiente.`}${boss.healed ? ` Este mes ha recuperado ${boss.healed} PV.` : ''}</p>`}
+             ? t('🛡️ <b>Defensa activa:</b> cumpliste su reto ayer, así que hoy no puede recuperarse.')
+             : t('Si pasa un día sin que registres nada de {stat} ni su reto, recupera un poco de vida (nunca te quita nada a ti). Cumplir su reto te da <b>Defensa</b> para el día siguiente.', { stat: statName(weak) })}${boss.healed ? t(' Este mes ha recuperado {n} PV.', { n: boss.healed }) : ''}</p>`}
       ${dropLine(boss)}
     </div>`;
 
-  $('#weeklyHint').textContent = `Se renuevan cada lunes. ${weekly[0].daysLeft === 1 ? 'Queda 1 día' : `Quedan ${weekly[0].daysLeft} días`}.`;
+  $('#weeklyHint').textContent = weekly[0].daysLeft === 1 ? t('Se renuevan cada lunes. Queda 1 día.') : t('Se renuevan cada lunes. Quedan {n} días.', { n: weekly[0].daysLeft });
   $('#weeklyList').innerHTML = weekly.map(m => {
     const st = m.stat ? G.statById(m.stat) : null;
     return `<div class="row weekly ${m.claimed ? 'claimed' : ''}" style="--c:${st ? st.color : '#ffd23f'}">
       <div class="w-ico">${st ? `<img src="${statIcon(st.id)}" alt="">` : m.icon}</div>
       <div class="row-main">
-        <div class="row-title">${esc(m.title)}</div>
-        <div class="row-sub"><span>${esc(m.desc)}</span></div>
+        <div class="row-title">${esc(mText(m).title)}</div>
+        <div class="row-sub"><span>${esc(mText(m).desc)}</span></div>
         <div class="hpbar goal"><i style="width:${Math.round(m.progress / m.target * 100)}%"></i></div>
         <div class="row-sub"><span>${m.progress} / ${m.target}</span><span class="row-xp">+${m.rewardXp} XP</span></div>
       </div>
-      ${m.claimed ? '<span class="w-check">✔</span>' : m.done ? `<button class="btn btn-yellow" data-weekly="${m.id}">Reclamar</button>` : ''}
+      ${m.claimed ? '<span class="w-check">✔</span>' : m.done ? `<button class="btn btn-yellow" data-weekly="${m.id}">${t('Reclamar')}</button>` : ''}
     </div>`;
   }).join('');
 
@@ -876,6 +877,7 @@ function renderSettings() {
     </button>`).join('') + `<button class="chip" id="newProfileBtn">＋ Nuevo</button>`;
   $('#deleteProfileBtn').hidden = profiles.length < 2;
   $('#charGrid').innerHTML = heroPicker(state.profile.character);
+  $('#langChips').innerHTML = LANGS.map(l => `<button class="chip ${getLang() === l.id ? 'on' : ''}" data-lang="${l.id}">${l.name}</button>`).join('');
   document.querySelectorAll('#idleChips .chip').forEach(c => c.classList.toggle('on', c.dataset.idle === (state.prefs?.idle || 'sway')));
 
   $('#activityList').innerHTML = G.STATS.flatMap(s =>
@@ -1013,28 +1015,67 @@ $('#sheet').addEventListener('click', e => {
 });
 
 // ---------------------------------------------------------------------
+// Idioma
+// ---------------------------------------------------------------------
+const mText = m => missionText(m, m.stat ? statName(G.statById(m.stat)) : '');
+// Textos fijos de index.html: se traducen en el lugar y se guarda el original
+// para volver al español.
+const staticOrig = new WeakMap();
+const STATIC_ATTRS = ['placeholder', 'aria-label', 'title'];
+function translateStatic() {
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    if (n.parentElement?.closest('#welcomeInner, #sheet, #toasts, script, style')) continue;
+    let orig = staticOrig.get(n);
+    if (orig === undefined) {
+      const k = n.nodeValue.trim();
+      if (getLang() === 'es' || !k || t(k) === k) continue;   // nada que traducir
+      orig = n.nodeValue; staticOrig.set(n, orig);
+    }
+    n.nodeValue = getLang() === 'es' ? orig : orig.replace(orig.trim(), t(orig.trim()));
+  }
+  document.querySelectorAll(STATIC_ATTRS.map(a => `[${a}]`).join(',')).forEach(el => {
+    for (const a of STATIC_ATTRS) {
+      if (!el.hasAttribute(a)) continue;
+      const key = `data-es-${a}`;
+      if (!el.hasAttribute(key)) el.setAttribute(key, el.getAttribute(a));
+      el.setAttribute(a, t(el.getAttribute(key)));
+    }
+  });
+}
+function changeLang(l) {
+  if (l === getLang()) return;
+  setLang(l);
+  translateStatic();
+  renderAll();
+  if (!$('#welcome').hidden) { const y = $('#welcomeInner').scrollTop; renderWelcome(); $('#welcomeInner').scrollTop = y; }
+  toast(t('Idioma cambiado'));
+}
+
+// ---------------------------------------------------------------------
 // Ayuda: guía de cada sección, significado de Kaizen y tour
 // ---------------------------------------------------------------------
 const currentView = () => document.querySelector('.view.active')?.id.replace('view-', '') || 'home';
 
 function showKaizen() {
+  const k = kaizenMeaning();
   openSheet(`
-    <div class="kz-kanji" lang="ja">${KAIZEN_MEANING.kanji}</div>
-    <h3>${KAIZEN_MEANING.title}</h3>
-    ${KAIZEN_MEANING.body.map(p => `<p>${p}</p>`).join('')}
-    <button class="btn btn-primary btn-block" data-close="ok">Entendido</button>`);
+    <div class="kz-kanji" lang="ja">${k.kanji}</div>
+    <h3>${k.title}</h3>
+    ${k.body.map(p => `<p>${p}</p>`).join('')}
+    <button class="btn btn-primary btn-block" data-close="ok">${t('Entendido')}</button>`);
 }
 
 function showHelp() {
-  const g = GUIDES[currentView()] || GUIDES.home;
+  const g = guideFor(currentView());
   openSheet(`
-    <h3>${g.title}: qué hace cada cosa</h3>
+    <h3>${t('{title}: qué hace cada cosa', { title: g.title })}</h3>
     <ul class="guide-list">${g.points.map(p => `<li>${p}</li>`).join('')}</ul>
     <div class="btn-row">
-      <button class="btn" data-help="kaizen">¿Qué es Kaizen?</button>
-      <button class="btn btn-primary" data-help="tour">Ver tour</button>
+      <button class="btn" data-help="kaizen">${t('¿Qué es Kaizen?')}</button>
+      <button class="btn btn-primary" data-help="tour">${t('Ver tour')}</button>
     </div>
-    <button class="w-skip" data-close="cancel">Cerrar</button>`);
+    <button class="w-skip" data-close="cancel">${t('Cerrar')}</button>`);
 }
 
 let tourSteps = [], tourIdx = -1;
@@ -1042,7 +1083,7 @@ const visible = el => el && !el.hidden && el.getClientRects().length > 0;
 function startTour() {
   if (!$('#sheetBackdrop').hidden) closeSheet();
   showView('home');
-  tourSteps = TOUR.filter(st => visible(document.querySelector(st.sel)));
+  tourSteps = tourStepsFor().filter(st => visible(document.querySelector(st.sel)));
   tourIdx = 0;
   $('#tour').hidden = false;
   document.body.classList.add('touring');
@@ -1065,11 +1106,11 @@ function renderTour() {
     const last = tourIdx === tourSteps.length - 1;
     const b = $('#tourBubble');
     b.innerHTML = `
-      <small>${tourIdx + 1} de ${tourSteps.length}</small>
+      <small>${t('{n} de {total}', { n: tourIdx + 1, total: tourSteps.length })}</small>
       <b>${st.title}</b><p>${st.text}</p>
       <div class="btn-row">
-        ${last ? '' : '<button class="btn" data-tour="skip">Saltar</button>'}
-        <button class="btn btn-primary" data-tour="next">${last ? 'Terminar' : 'Siguiente'}</button>
+        ${last ? '' : `<button class="btn" data-tour="skip">${t('Saltar')}</button>`}
+        <button class="btn btn-primary" data-tour="next">${last ? t('Terminar') : t('Siguiente')}</button>
       </div>`;
     const below = r.top + r.height / 2 < innerHeight / 2;
     b.style.top = below ? `${Math.min(r.bottom + 14, innerHeight - 200)}px` : '';
@@ -1190,15 +1231,15 @@ function doLog(activityId, bonus, origin) {
   // Qué avanzó en el RPG: la guardiana de esa stat (con su Afinidad) y el jefe.
   const boss = G.bossStatus(state);
   const dmg = boss.claimed ? 0 : G.bossDamageFor(entry, boss);
-  const gName = GUARDIANS[entry.stat]?.name || G.statById(entry.stat).name;
-  const rpg = `${gName} +${entry.xp}${entry.guardXp ? ` <small>(Afinidad +${entry.guardXp})</small>` : ''}${dmg ? ` · ${esc(boss.name.split(',')[0])} −${dmg} PV` : ''}`;
+  const gName = GUARDIANS[entry.stat]?.name || statName(G.statById(entry.stat));
+  const rpg = `${gName} +${entry.xp}${entry.guardXp ? ` <small>${t('(Afinidad +{n})', { n: entry.guardXp })}</small>` : ''}${dmg ? ` · ${t('{boss} −{n} PV', { boss: esc(bossShort(boss)), n: dmg })}` : ''}`;
   const news = [rpg, ...lastNews];
   // La primera vez del día en esa stat, su guardiana dice algo de su propósito.
   const firstOfStat = state.log.filter(e => e.type === 'activity' && e.stat === entry.stat && G.dayKey(e.ts) === today).length === 1;
-  if (firstOfStat && !lastNews.length && GUARDIAN_LINES[entry.stat]) news.push(`<i>${esc(gName)}: «${esc(lineOfDay(GUARDIAN_LINES[entry.stat], entry.stat, today))}»</i>`);
+  if (firstOfStat && !lastNews.length && GUARDIAN_LINES[entry.stat] && getLang() === 'es') news.push(`<i>${esc(gName)}: «${esc(lineOfDay(GUARDIAN_LINES[entry.stat], entry.stat, today))}»</i>`);
   const coins = G.coinsFor(entry) + (firstToday ? G.chestFor(today) : 0);
-  showResult(`<b>${esc(entry.name)}</b> · +${entry.xp} XP · +${coins} 🪙`, news,
-    () => { commit(s => G.undoEntry(s, entry.id), { celebrate: false }); toast('Registro deshecho'); });
+  showResult(`<b>${esc(nameOf(entry))}</b> · +${entry.xp} XP · +${coins} 🪙`, news,
+    () => { commit(s => G.undoEntry(s, entry.id), { celebrate: false }); toast(t('Registro deshecho')); });
 }
 
 async function onActivityTap(btn) {
@@ -1348,33 +1389,33 @@ function eggCards(stage) {
 // Compartir (tarjetas ilustradas) y tienda
 // ---------------------------------------------------------------------
 async function share(card, text) {
-  toast('Preparando tarjeta…', { duration: 1500 });
+  toast(t('Preparando tarjeta…'), { duration: 1500 });
   try {
     const p = G.deriveProfile(state);
     // Solo datos generales: nivel y racha (sin nombres ni actividades).
-    const blob = await makeCard({ footer: `Nivel ${p.level} · Racha ${p.streak.current}`, accent: p.rank.color, art: characterImg(state.profile.character), ...card });
+    const blob = await makeCard({ footer: t('Nivel {lv} · Racha {n}', { lv: p.level, n: p.streak.current }), accent: p.rank.color, art: characterImg(state.profile.character), ...card });
     const result = await shareCard(blob, { text });
-    if (result === 'downloaded') toast('Tarjeta guardada como imagen');
+    if (result === 'downloaded') toast(t('Tarjeta guardada como imagen'));
   } catch (err) {
-    toast(`❌ No se pudo crear la tarjeta`);
+    toast(t('❌ No se pudo crear la tarjeta'));
     console.error(err);
   }
 }
 function shareProgress() {
   const p = G.deriveProfile(state);
-  return share({ kicker: `Rango ${p.rank.letter} · ${p.rank.title}`, title: `¡Nivel ${p.level}!`, sub: `${p.totalXp} XP · racha de ${plural(p.streak.current, 'día', 'días')} · ${G.unlockedAchievements(state, p).length} logros` },
-    `¡Voy en nivel ${p.level} en Kaizen!`);
+  return share({ kicker: t('Rango {letter} · {title}', { letter: p.rank.letter, title: t(p.rank.title) }), title: t('¡Nivel {lv}!', { lv: p.level }), sub: t('{xp} XP · racha de {days} · {ach} logros', { xp: p.totalXp, days: tn(p.streak.current, '{n} día', '{n} días'), ach: G.unlockedAchievements(state, p).length }) },
+    t('¡Voy en nivel {lv} en Kaizen!', { lv: p.level }));
 }
 function shareBoss() {
   const b = G.bossStatus(state);
-  return share({ kicker: 'Jefe derrotado', title: `¡Vencí a ${b.name.split(',')[0]}!`, sub: b.name, art: art.boss(b.id), accent: '#ff3b4e', dimArt: true },
-    `¡Derroté a ${b.name} en Kaizen!`);
+  return share({ kicker: t('Jefe derrotado'), title: t('¡Vencí a {boss}!', { boss: bossShort(b) }), sub: bossName(b), art: art.boss(b.id), accent: '#ff3b4e', dimArt: true },
+    t('¡Derroté a {boss} en Kaizen!', { boss: bossName(b) }));
 }
 function shareCoupon(id) {
   const c = state.purchases.find(x => x.id === id);
   if (!c) return;
-  return share({ kicker: 'Cupón ganado con esfuerzo', title: c.name, sub: 'Vale por una recompensa. ¡Me lo gané!', art: petImg(G.petStatus(state).stage), accent: '#ffd23f' },
-    `Me gané este cupón: ${c.name}`);
+  return share({ kicker: t('Cupón ganado con esfuerzo'), title: nameOf({ id: c.itemId, name: c.name }), sub: t('Vale por una recompensa. ¡Me lo gané!'), art: petImg(G.petStatus(state).stage), accent: '#ffd23f' },
+    t('Me gané este cupón: {name}', { name: nameOf({ id: c.itemId, name: c.name }) }));
 }
 
 function tryPay(fn, okMsg) {
@@ -1513,37 +1554,37 @@ function checkShields() {
  * look se cambia con un selector arriba de la lista. Elegir héroe o look solo
  * cambia el avatar: la XP es la misma con cualquiera.
  */
-function heroPicker(selected, { askLook = false, compact = false } = {}) {
+function heroPicker(selected, { askLook = false, compact = false, chosen = true } = {}) {
   const cur = characterById(selected);
   if (askLook) {
     const card = (lk, label) => `
       <button class="look-pick" data-look="${lk}">
         <span class="look-mosaic">${['relampago', 'titan', 'implacable'].map(h => `<img src="${characterImg(`${h}-${lk}`)}" alt="">`).join('')}</span>
-        <b>${label}</b>
+        <b>${t(label)}</b>
       </button>`;
     return `
-      <div class="hp-head"><b>¿Cómo quieres que se vea tu héroe?</b></div>
-      <p class="hp-hint">Los seis héroes existen en las dos versiones. Puedes cambiarlo cuando quieras.</p>
+      <div class="hp-head"><b>${t('¿Cómo quieres que se vea tu héroe?')}</b></div>
+      <p class="hp-hint">${t('Los seis héroes existen en las dos versiones. Puedes cambiarlo cuando quieras.')}</p>
       <div class="look-picks">${card('m', 'Hombre')}${card('f', 'Mujer')}</div>`;
   }
   const lk = cur.look;
   const cards = CHARACTERS.map(c => {
-    const key = `${c.id}-${lk}`, on = c.id === cur.hero;
+    const key = `${c.id}-${lk}`, on = chosen && c.id === cur.hero;
     return `
-      <button class="char-card ${on ? 'on' : ''}" data-char="${key}" style="--c:${c.accent}" aria-label="${esc(c.names[lk])}: ${esc(c.title)}">
+      <button class="char-card ${on ? 'on' : ''}" data-char="${key}" style="--c:${c.accent}" aria-label="${esc(heroName(c, lk))}: ${esc(heroTitle(c))}">
         ${on ? '<span class="char-check">✓</span>' : ''}
         <img class="char-fig" src="${characterImg(key)}" alt="">
-        <b>${esc(c.names[lk])}</b><em>${esc(c.title)}</em>${compact ? '' : `<small>${esc(c.blurb)}</small>`}
+        <b>${esc(heroName(c, lk))}</b><em>${esc(heroTitle(c))}</em>${compact ? '' : `<small>${esc(heroBlurb(c))}</small>`}
       </button>`;
   }).join('');
   return `
-    <div class="hp-head"><b>Elige tu héroe</b>
+    <div class="hp-head"><b>${t('Elige tu héroe')}</b>
       <span class="hp-looks" role="group" aria-label="Look">
-        <button class="${lk === 'm' ? 'on' : ''}" data-look="m">Hombre</button><button class="${lk === 'f' ? 'on' : ''}" data-look="f">Mujer</button>
+        <button class="${lk === 'm' ? 'on' : ''}" data-look="m">${t('Hombre')}</button><button class="${lk === 'f' ? 'on' : ''}" data-look="f">${t('Mujer')}</button>
       </span></div>
-    <p class="hp-hint">Elige un héroe que te represente o que encarne algo que quieres cultivar.</p>
+    <p class="hp-hint">${t('Elige un héroe que te represente o que encarne algo que quieres cultivar.')}</p>
     <div class="char-grid ${compact ? 'w-chars' : ''}">${cards}</div>
-    <p class="hp-note">Todas las actividades dan la misma XP con cualquier héroe, y puedes cambiarlo cuando quieras sin perder progreso.</p>`;
+    <p class="hp-note">${t('Todas las actividades dan la misma XP con cualquier héroe, y puedes cambiarlo cuando quieras sin perder progreso.')}</p>`;
 }
 const withLook = (id, lk) => `${charHero(id)}-${lk}`;
 
@@ -1571,21 +1612,21 @@ async function newProfileFlow() {
 // ---------------------------------------------------------------------
 // Bienvenida: 3 pasos para empezar (nombre y personaje → hábitos → listo)
 // ---------------------------------------------------------------------
-const welcomeDraft = { step: 1, name: '', character: DEFAULT_CHARACTER, lookChosen: false, habits: [], rewards: [] };
+const welcomeDraft = { step: 1, name: '', character: DEFAULT_CHARACTER, lookChosen: false, heroChosen: false, habits: [], rewards: [] };
 const W_STEPS = 4;
 const habitChips = (ids, selected) => ids.map(t => {
   const st = G.statById(t.stat);
-  return `<button class="w-habit ${selected.includes(t.id) ? 'on' : ''}" data-habit="${t.id}" style="--c:${st.color}">${esc(t.name)}</button>`;
+  return `<button class="w-habit ${selected.includes(t.id) ? 'on' : ''}" data-habit="${t.id}" style="--c:${st.color}">${esc(nameOf(t))}</button>`;
 }).join('');
 const areaGroups = (selected, filter = () => true) => G.HABIT_AREAS.map(ar => {
   const opts = G.HABIT_TEMPLATES.filter(t => t.area === ar.id && filter(t));
-  return opts.length ? `<div class="w-group"><div class="w-group-title ${ar.id === 'basico' ? 'basic' : ''}">${esc(ar.name)}</div>
-    ${ar.hint ? `<p class="w-hint">${esc(ar.hint)}</p>` : ''}<div class="w-habits">${habitChips(opts, selected)}</div></div>` : '';
+  return opts.length ? `<div class="w-group"><div class="w-group-title ${ar.id === 'basico' ? 'basic' : ''}">${esc(t(ar.name))}</div>
+    ${ar.hint ? `<p class="w-hint">${esc(t(ar.hint))}</p>` : ''}<div class="w-habits">${habitChips(opts, selected)}</div></div>` : '';
 }).join('');
 
 function maybeWelcome() {
   if (state.onboarded) { $('#welcome').hidden = true; return; }
-  Object.assign(welcomeDraft, { step: 1, name: state.profile.name === 'Héroe' ? '' : state.profile.name, character: state.profile.character, lookChosen: false, habits: [], rewards: [] });
+  Object.assign(welcomeDraft, { step: 1, name: state.profile.name === 'Héroe' ? '' : state.profile.name, character: state.profile.character, lookChosen: false, heroChosen: false, habits: [], rewards: [] });
   $('#welcome').hidden = false;
   renderWelcome();
 }
@@ -1597,54 +1638,55 @@ function renderWelcome() {
   if (d.step === 1) {
     body = `
       <div class="w-brand">KAI<span>ZEN</span></div>
-      <button class="w-kaizen" data-kaizen><span lang="ja">${KAIZEN_MEANING.kanji}</span> ${KAIZEN_MEANING.short} <u>¿Qué significa?</u></button>
-      <h2>Tu vida es la aventura</h2>
-      <p>Cada cosa buena que haces en la vida real le da experiencia a tu héroe. Empecemos por conocerte.</p>
-      <label class="field"><span>¿Cómo se llama tu héroe?</span>
-        <input type="text" id="wName" maxlength="16" placeholder="Héroe" value="${esc(d.name)}" autocomplete="off"></label>
-      <div class="field hero-picker" id="wChars">${heroPicker(d.character, { askLook: !d.lookChosen, compact: true })}</div>
-      <button class="btn btn-primary btn-block" data-w="next">Siguiente</button>`;
+      <div class="w-lang" role="group" aria-label="Idioma / Language">${LANGS.map(l => `<button class="${getLang() === l.id ? 'on' : ''}" data-lang="${l.id}">${l.name}</button>`).join('')}</div>
+      <button class="w-kaizen" data-kaizen><span lang="ja">${kaizenMeaning().kanji}</span> ${kaizenMeaning().short} <u>${t('¿Qué significa?')}</u></button>
+      <h2>${t('Tu vida es la aventura')}</h2>
+      <p>${t('Cada cosa buena que haces en la vida real le da experiencia a tu héroe. Empecemos por conocerte.')}</p>
+      <label class="field"><span>${t('¿Cómo se llama tu héroe?')}</span>
+        <input type="text" id="wName" maxlength="16" placeholder="${t('Héroe')}" value="${esc(d.name)}" autocomplete="off"></label>
+      <div class="field hero-picker" id="wChars">${heroPicker(d.character, { askLook: !d.lookChosen, compact: true, chosen: d.heroChosen })}</div>
+      <button class="btn btn-primary btn-block ${d.heroChosen ? '' : 'pending'}" data-w="next">${t('Siguiente')}</button>`;
   } else if (d.step === 2) {
     body = `
-      <h2>¿Qué quieres hacer más seguido?</h2>
-      <p>Empieza por lo básico (dormir, agua, comer): son retos de todos los días. Luego elige lo que quieres construir. De ${G.ONBOARD_MIN} a ${G.ONBOARD_MAX} en total.</p>
+      <h2>${t('¿Qué quieres hacer más seguido?')}</h2>
+      <p>${t('Empieza por lo básico (dormir, agua, comer): son retos de todos los días. Luego elige lo que quieres construir. De {min} a {max} en total.', { min: G.ONBOARD_MIN, max: G.ONBOARD_MAX })}</p>
       ${areaGroups(d.habits)}
       <div class="w-foot">
-        <span class="w-count">${d.habits.length === 1 ? '1 elegido' : `${d.habits.length} elegidos`}</span>
+        <span class="w-count">${tn(d.habits.length, '{n} elegido', '{n} elegidos')}</span>
         <div class="btn-row">
-          <button class="btn" data-w="back">Atrás</button>
-          <button class="btn btn-primary" data-w="next" ${d.habits.length < G.ONBOARD_MIN ? 'disabled' : ''}>Siguiente</button>
+          <button class="btn" data-w="back">${t('Atrás')}</button>
+          <button class="btn btn-primary" data-w="next" ${d.habits.length < G.ONBOARD_MIN ? 'disabled' : ''}>${t('Siguiente')}</button>
         </div>
-        <button class="w-skip" data-w="skip">Saltar y usar los hábitos sugeridos</button>
+        <button class="w-skip" data-w="skip">${t('Saltar y usar los hábitos sugeridos')}</button>
       </div>`;
   } else if (d.step === 3) {
     const groups = G.REWARD_TYPES.map(ty => `
-      <div class="w-group"><div class="w-group-title">${esc(ty.name)}</div>
+      <div class="w-group"><div class="w-group-title">${esc(t(ty.name))}</div>
         <div class="w-habits">${G.REWARD_TEMPLATES.filter(r => r.type === ty.id).map(r => `
-          <button class="w-habit w-reward ${d.rewards.includes(r.id) ? 'on' : ''}" data-reward="${r.id}">${esc(r.name)} <small>${r.cost} 🪙</small></button>`).join('')}</div>
+          <button class="w-habit w-reward ${d.rewards.includes(r.id) ? 'on' : ''}" data-reward="${r.id}">${esc(nameOf(r))} <small>${r.cost} 🪙</small></button>`).join('')}</div>
       </div>`).join('');
     body = `
-      <h2>¿Con qué te vas a premiar?</h2>
-      <p>Con lo que hagas ganas monedas para canjear premios reales. Los gratis son los más baratos: un premio no debería deshacer tu meta. Opcional, hasta ${G.REWARD_PICK_MAX}.</p>
+      <h2>${t('¿Con qué te vas a premiar?')}</h2>
+      <p>${t('Con lo que hagas ganas monedas para canjear premios reales. Los gratis son los más baratos: un premio no debería deshacer tu meta. Opcional, hasta {n}.', { n: G.REWARD_PICK_MAX })}</p>
       ${groups}
       <div class="w-foot">
-        <span class="w-count">${d.rewards.length ? `${d.rewards.length} de ${G.REWARD_PICK_MAX}` : 'Si no eliges, te dejamos algunas para empezar'}</span>
-        <div class="btn-row"><button class="btn" data-w="back">Atrás</button><button class="btn btn-primary" data-w="next">Siguiente</button></div>
+        <span class="w-count">${d.rewards.length ? t('{n} de {max}', { n: d.rewards.length, max: G.REWARD_PICK_MAX }) : t('Si no eliges, te dejamos algunas para empezar')}</span>
+        <div class="btn-row"><button class="btn" data-w="back">${t('Atrás')}</button><button class="btn btn-primary" data-w="next">${t('Siguiente')}</button></div>
       </div>`;
   } else {
     const first = G.HABIT_TEMPLATES.find(t => t.id === d.habits[0]);
     body = `
       <div class="w-hero"><img src="${characterImg(d.character)}" alt=""></div>
-      <h2>¡Listo, ${esc(d.name || 'Héroe')}!</h2>
+      <h2>${t('¡Listo, {name}!', { name: esc(d.name || t('Héroe')) })}</h2>
       <ul class="w-rules">
-        <li><b>Registra</b> lo que hiciste con un toque. Si te equivocas, toca <b>Deshacer</b>.</li>
-        <li><b>Lo básico</b> se marca una vez al día desde Inicio.</li>
-        <li>Cada día que registras algo, tu <b>huevo</b> se calienta. En 2 días nace tu mascota.</li>
-        <li>Lo demás (jefes, guardianas, tienda) lo irás descubriendo. Toca <b>?</b> arriba cuando tengas dudas.</li>
+        <li>${t('<b>Registra</b> lo que hiciste con un toque. Si te equivocas, toca <b>Deshacer</b>.')}</li>
+        <li>${t('<b>Lo básico</b> se marca una vez al día desde Inicio.')}</li>
+        <li>${t('Cada día que registras algo, tu <b>huevo</b> se calienta. En 2 días nace tu mascota.')}</li>
+        <li>${t('Lo demás (jefes, guardianas, tienda) lo irás descubriendo. Toca <b>?</b> arriba cuando tengas dudas.')}</li>
       </ul>
-      <button class="btn btn-primary btn-block" data-w="finish">${first ? `Empezar: registrar «${esc(first.name)}»` : 'Empezar'}</button>
-      <button class="btn btn-block" data-w="finish-tour">Entrar y ver un tour rápido</button>
-      <button class="w-skip" data-w="finish-only">Entrar sin registrar todavía</button>`;
+      <button class="btn btn-primary btn-block" data-w="finish">${first ? t('Empezar: registrar «{name}»', { name: esc(nameOf(first)) }) : t('Empezar')}</button>
+      <button class="btn btn-block" data-w="finish-tour">${t('Entrar y ver un tour rápido')}</button>
+      <button class="w-skip" data-w="finish-only">${t('Entrar sin registrar todavía')}</button>`;
   }
   $('#welcomeInner').innerHTML = `<div class="w-dots">${dots}</div>${body}`;
   $('#welcomeInner').scrollTop = 0;
@@ -1662,18 +1704,21 @@ function finishWelcome({ habits = welcomeDraft.habits, logFirst = false, quiet =
     const btn = document.querySelector(`#quickLog [data-act="${CSS.escape(habits[0])}"], #basicsRow [data-act="${CSS.escape(habits[0])}"]`);
     if (btn) onActivityTap(btn);
   }, 350);
-  else if (!quiet) toast(`¡Bienvenido, ${esc(state.profile.name)}! Registra algo cuando lo hagas. Si tienes dudas, toca <b>?</b> arriba.`);
+  else if (!quiet) toast(t('¡Bienvenido, {name}! Registra algo cuando lo hagas. Si tienes dudas, toca <b>?</b> arriba.', { name: esc(state.profile.name) }));
 }
 
 $('#welcome').addEventListener('input', e => { if (e.target.id === 'wName') welcomeDraft.name = e.target.value; });
 $('#welcome').addEventListener('click', e => {
   const d = welcomeDraft;
   if (e.target.closest('[data-kaizen]')) return showKaizen();
+  const lg = e.target.closest('[data-lang]');
+  if (lg) { changeLang(lg.dataset.lang); return; }
   const hp = e.target.closest('#wChars [data-look], #wChars [data-char]');
   if (hp) {
     if (hp.dataset.look) { d.character = withLook(d.character, hp.dataset.look); d.lookChosen = true; }
-    else d.character = hp.dataset.char;
-    $('#wChars').innerHTML = heroPicker(d.character, { compact: true });
+    else { d.character = hp.dataset.char; d.heroChosen = true; }
+    $('#wChars').innerHTML = heroPicker(d.character, { compact: true, chosen: d.heroChosen });
+    $('#welcomeInner [data-w="next"]').classList.toggle('pending', !d.heroChosen);
     return;
   }
   const rw = e.target.closest('[data-reward]');
@@ -1681,7 +1726,7 @@ $('#welcome').addEventListener('click', e => {
     const id = rw.dataset.reward;
     if (d.rewards.includes(id)) d.rewards = d.rewards.filter(x => x !== id);
     else if (d.rewards.length < G.REWARD_PICK_MAX) d.rewards.push(id);
-    else return toast(`Hasta ${G.REWARD_PICK_MAX}. Después puedes agregar más en la Tienda.`);
+    else return toast(t('Hasta {n}. Después puedes agregar más en la Tienda.', { n: G.REWARD_PICK_MAX }));
     const y = $('#welcomeInner').scrollTop; renderWelcome(); $('#welcomeInner').scrollTop = y;
     return;
   }
@@ -1690,13 +1735,22 @@ $('#welcome').addEventListener('click', e => {
     const id = h.dataset.habit;
     if (d.habits.includes(id)) d.habits = d.habits.filter(x => x !== id);
     else if (d.habits.length < G.ONBOARD_MAX) d.habits.push(id);
-    else return toast(`Puedes elegir hasta ${G.ONBOARD_MAX}. Después podrás agregar más.`);
+    else return toast(t('Puedes elegir hasta {n}. Después podrás agregar más.', { n: G.ONBOARD_MAX }));
     const y = $('#welcomeInner').scrollTop; renderWelcome(); $('#welcomeInner').scrollTop = y;
     return;
   }
   const a = e.target.closest('[data-w]'); if (!a || a.disabled) return;
   const act = a.dataset.w;
-  if (act === 'next') { d.step = Math.min(W_STEPS, d.step + 1); renderWelcome(); }
+  if (act === 'next') {
+    // Paso 1: no se avanza sin elegir cómo se ve y qué héroe es.
+    if (d.step === 1 && (!d.lookChosen || !d.heroChosen)) {
+      const box = $('#wChars');
+      box.classList.remove('need'); void box.offsetWidth; box.classList.add('need');
+      box.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      return toast(!d.lookChosen ? t('Primero elige cómo quieres que se vea tu héroe: Hombre o Mujer.') : t('Elige tu héroe tocando una de las tarjetas.'));
+    }
+    d.step = Math.min(W_STEPS, d.step + 1); renderWelcome();
+  }
   if (act === 'back') { d.step = Math.max(1, d.step - 1); renderWelcome(); }
   if (act === 'skip') finishWelcome({ habits: [] });
   if (act === 'finish') finishWelcome({ logFirst: true });
@@ -1781,7 +1835,7 @@ let stopSparks = null;
 function showLevelUp(p) {
   const el = $('#levelup');
   $('#levelupNum').textContent = p.level;
-  $('#levelupRank').textContent = `Rango ${p.rank.letter} · ${p.rank.title}`;
+  $('#levelupRank').textContent = t('Rango {letter} · {title}', { letter: p.rank.letter, title: t(p.rank.title) });
   $('#levelupArt').src = characterImg(state.profile.character);
   // Reinicia las animaciones
   el.hidden = true; void el.offsetWidth; el.hidden = false;
@@ -2046,16 +2100,16 @@ function welcomeBack() {
   const p = G.deriveProfile(state);
   const b = G.bossStatus(state);
   const lines = [p.streak.current > 0
-    ? `Tu racha sigue en <b>${p.streak.current}</b>${p.streak.graceDays.length ? ' gracias al día de gracia' : ''}. Registra algo hoy para mantenerla.`
-    : 'Tu racha empieza de nuevo hoy. Tu nivel, tus guardianas y tus monedas siguen igual.'];
+    ? (p.streak.graceDays.length ? t('Tu racha sigue en <b>{n}</b> gracias al día de gracia. Registra algo hoy para mantenerla.', { n: p.streak.current }) : t('Tu racha sigue en <b>{n}</b>. Registra algo hoy para mantenerla.', { n: p.streak.current }))
+    : t('Tu racha empieza de nuevo hoy. Tu nivel, tus guardianas y tus monedas siguen igual.')];
   // Lo que el jefe recuperó desde tu último registro (solo si es el mismo mes).
   const lastTs = Math.max(...state.log.filter(G.isBase).map(e => e.ts));
   const healedAway = b.healed - (G.monthKey(lastTs) === b.monthKey ? G.bossStatus(state, lastTs).healed : 0);
   if (healedAway > 0 && !b.defeated) {
     const ch = state.activities.find(a => a.resist === b.id);
-    lines.push(`${esc(b.name.split(',')[0])} recuperó ${healedAway} PV mientras no estabas.${ch ? ` Hoy «${esc(ch.name)}» le pega ×3.` : ''}`);
+    lines.push(t('{boss} recuperó {n} PV mientras no estabas.', { boss: esc(bossShort(b)), n: healedAway }) + (ch ? t(' Hoy «{name}» le pega ×3.', { name: esc(nameOf(ch)) }) : ''));
   }
-  setTimeout(() => toast(`<span class="res-head">💪 ${esc(lineOfDay(BACK_LINES, 'back', today))}</span>${lines.map(l => `<span class="res-line">${l}</span>`).join('')}`,
+  setTimeout(() => toast(`<span class="res-head">💪 ${esc(t(lineOfDay(BACK_LINES, 'back', today)))}</span>${lines.map(l => `<span class="res-line">${l}</span>`).join('')}`,
     { kind: 'result', duration: 8000 }), 700);
 }
 
@@ -2065,7 +2119,11 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) { ch
 // ---------------------------------------------------------------------
 // Inicio
 // ---------------------------------------------------------------------
+$('#langChips').addEventListener('click', e => { const b = e.target.closest('[data-lang]'); if (b) changeLang(b.dataset.lang); });
+
 // Lo ya desbloqueado al abrir no se vuelve a anunciar.
+setLang(getLang());
+translateStatic();
 syncSeen();
 save();
 checkShields();

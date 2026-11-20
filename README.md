@@ -63,6 +63,15 @@ Seis héroes, cada uno con una cualidad y dos looks (12 avatares): **Gladiador/a
 
 Los textos están en `js/phrases.js` (entrega T-04 de GPT). Al volver después de faltar, el mensaje alterna tres variantes.
 
+## 🌐 Idioma (español e inglés)
+
+Se elige en la bienvenida (arriba a la derecha) o en **Ajustes → Perfil → Idioma**. La primera vez se toma el idioma del teléfono. Cambiarlo **no toca el progreso** (el historial guarda ids y XP) y funciona sin conexión.
+
+- `js/i18n.js`: `t('texto en español')` devuelve la traducción o el mismo español si falta; el contenido (hábitos, recompensas, héroes, jefes, logros) se traduce por id. **Lo que el jugador escribió o renombró nunca se traduce.**
+- `js/names-en.js`: nombres en inglés de T-04.
+- **Fase 1 (lista):** bienvenida, hábitos y recompensas sugeridos, Inicio, Misiones, ayuda y tour, avisos al registrar y al volver, tarjetas para compartir y todos los textos fijos de la página.
+- **Fase 2 (pendiente):** Tienda, Progreso, Ajustes y hojas de edición; las frases del héroe y de las guardianas en inglés (mientras tanto, en inglés no se muestran).
+
 ## 🧭 Ayuda y tour
 
 El botón **?** de arriba explica qué hace cada cosa en la pantalla en la que estás. El **tour** (9 pasos que resaltan cada parte) se ofrece al terminar la bienvenida y se repite desde **?** o **Ajustes → Ayuda**. Los textos están en `js/guide.js`.

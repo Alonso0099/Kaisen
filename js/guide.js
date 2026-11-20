@@ -61,3 +61,67 @@ export const TOUR = [
   { view: 'home', sel: '.tab[data-view="achievements"]', title: 'Progreso', text: 'Logros, stats y tus guardianas, que te dan más XP y monedas al evolucionar.' },
   { view: 'home', sel: '#helpBtn', title: '¿Dudas?', text: 'Toca ? en cualquier pantalla para ver qué hace cada cosa o repetir este tour.' },
 ];
+
+// ---------------------------------------------------------------------
+// English
+// ---------------------------------------------------------------------
+import { getLang } from './i18n.js';
+
+const KAIZEN_MEANING_EN = {
+  title: 'What is Kaizen?', kanji: '改善', short: 'Get a little better every day.',
+  body: [
+    '<b>Kaizen</b> (改善) is a Japanese word: <b>改</b> "change" and <b>善</b> "good". It means <b>continuous improvement</b>.',
+    'The idea is to move forward a little every day instead of waiting for one big change. Ten minutes today beat a perfect plan for tomorrow.',
+    'That\'s why you don\'t need a perfect day here: every small thing you do counts, adds up and makes your hero grow.',
+  ],
+};
+const GUIDES_EN = {
+  home: { title: 'Home', points: [
+    'When you do something good in real life, tap <b>Log activity</b> or one of the shortcuts. If you make a mistake, tap <b>Undo</b>.',
+    '<b>Today\'s basics</b> (water, sleep, food…) are checked with one tap, once a day.',
+    'The <b>boss</b> card shows today\'s challenge; your <b>pet</b> grows with every day you log something.',
+  ] },
+  quests: { title: 'Quests', points: [
+    'The <b>boss of the month</b> takes damage from everything you log: its weak stat hits ×2 and its challenge hits ×3. If a day goes by with no hits, it recovers a little; doing its challenge gives you <b>Defense</b> for the next day.',
+    '<b>Weekly quests</b> reset every Monday and give extra XP.',
+    '<b>One-time quests</b> are tasks you do once (an appointment, an errand).',
+  ] },
+  shop: { title: 'Shop', points: [
+    'You earn <b>coins</b> from your activities\' XP, the daily chest and achievements.',
+    '<b>Rewards</b> are real prizes you choose. Big ones can have a <b>challenge</b>: they unlock when you complete it.',
+    'You can also buy <b>streak shields</b>, gear and titles.',
+  ] },
+  achievements: { title: 'Progress', points: [
+    '<b>Achievements</b>: badges you earn as you progress. Each one gives coins.',
+    '<b>Stats</b>: each stat has a guardian who evolves as it levels up and gives you <b>Affinity</b>: more XP and coins for that stat\'s activities.',
+    '<b>History</b>: everything you logged. You can undo any entry.',
+  ] },
+  gear: { title: 'Gear', points: [
+    'Each piece gives extra % XP in its stat.',
+    'Tap a slot to see your pieces and equip them.',
+    'Epic pieces are earned by defeating bosses.',
+  ] },
+  settings: { title: 'Settings', points: [
+    '<b>Profile</b>: your name, your hero and their look. Changing it doesn\'t touch your progress: every hero earns the same XP.',
+    '<b>Activities</b>: create, edit or add habits from the list.',
+    '<b>Backup</b>: save your progress to a file so you don\'t lose it if you change phones.',
+  ] },
+};
+GUIDES_EN.guardians = GUIDES_EN.achievements;
+GUIDES_EN.history = GUIDES_EN.achievements;
+const TOUR_EN = [
+  'Levels up with what you do in real life. Every day it gives you a line to get going.',
+  'Did something good? Log it here. One tap and done.',
+  'Water, sleep, eating well… Checked once a day.',
+  'Everything you log damages it. Its challenge hits ×3.',
+  'Hatches and grows with the days you log something.',
+  'The boss, this week\'s quests and your one-time tasks.',
+  'Trade your coins for real prizes you choose.',
+  'Achievements, stats and your guardians, who give you more XP and coins as they evolve.',
+  'Tap ? on any screen to see what each thing does or repeat this tour.',
+];
+const TOUR_TITLES_EN = ['Your hero', 'Log', 'Today\'s basics', 'Boss of the month', 'Your pet', 'Quests', 'Shop', 'Progress', 'Questions?'];
+
+export const kaizenMeaning = () => (getLang() === 'en' ? KAIZEN_MEANING_EN : KAIZEN_MEANING);
+export const guideFor = view => (getLang() === 'en' ? GUIDES_EN : GUIDES)[view] || (getLang() === 'en' ? GUIDES_EN : GUIDES).home;
+export const tourSteps = () => TOUR.map((st, i) => (getLang() === 'en' ? { ...st, title: TOUR_TITLES_EN[i], text: TOUR_EN[i] } : st));
