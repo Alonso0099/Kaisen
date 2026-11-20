@@ -88,6 +88,10 @@ Al editar una actividad, **¿Cuándo?** permite elegir *Cuando pueda* (libre), *
 
 En **¿Cómo se registra?** (al editar una actividad): *Un toque*, **Contador** con meta diaria (p. ej. agua 8 vasos: cada toque suma uno y al llegar a la meta se registra) o **Temporizador** (5–45 min: al terminar se registra solo, aunque la app esté cerrada; una píldora muestra el tiempo restante y se puede cancelar sin XP). La XP es la misma que la de la actividad. El agua viene como contador de 8 vasos y hay una plantilla nueva **Enfoque 25 min** con temporizador.
 
+## 🧭 Expedición de la semana (piloto)
+
+En **Misiones**, una expedición opcional por semana: eliges una **guardiana** y una **ruta** (🛡️ segura: 3 actividades de su stat → +40 🪙; ⚔️ arriesgada: 5 → +120 🪙). Sale al mundo que tengas puesto y avanza con las actividades de su stat. Al llegar vuelve con el botín (pantalla con el mundo y la guardiana) y deja una **postal** en el álbum. Si no llega, vuelve con las manos vacías, sin castigo. Da monedas, nunca XP extra. Lógica: `expeditionFor`, `startExpedition`, `claimExpedition` y `pastExpeditions` en `js/logic.js`.
+
 ## 🌤️ Volver sin castigo
 
 - **Día de gracia:** un día suelto sin registrar por semana no rompe la racha (no suma, pero no la corta). Los escudos se gastan solo cuando la gracia no alcanza.

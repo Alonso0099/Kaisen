@@ -975,3 +975,33 @@ test('temporizador: al terminar registra la actividad a la hora en que terminó'
   L.startTimer(s, 'tpl-enfoque', now); L.cancelTimer(s);
   assert.equal(L.checkTimer(s, now + 99 * 60000), null, 'cancelado: no da XP');
 });
+
+test('expedición: ruta segura o arriesgada, botín en monedas, sin XP y sin castigo', () => {
+  const s = L.defaultState();
+  const mon = noon(2026, 11, 16);
+  const bal0 = L.wallet(s, mon).balance;
+  L.startExpedition(s, 'intelecto', 'segura', 'bosque', mon);
+  assert.throws(() => L.startExpedition(s, 'fuerza', 'segura', 'bosque', mon), /Ya hay/);
+  L.logActivity(s, 'def-estudio', { now: mon });
+  L.logActivity(s, 'def-gym', { now: mon });               // otra stat: no cuenta
+  let x = L.expeditionFor(s, mon);
+  assert.deepEqual([x.progress, x.target, x.done], [1, 3, false]);
+  assert.throws(() => L.claimExpedition(s, mon), /todavía no vuelve/);
+  const xpBefore = L.deriveProfile(s, mon).totalXp;
+  L.logActivity(s, 'def-tarea', { now: mon + DAY }); L.logActivity(s, 'def-estudio', { now: mon + 2 * DAY });
+  x = L.expeditionFor(s, mon + 2 * DAY);
+  assert.equal(x.done, true);
+  const before = L.wallet(s, mon + 2 * DAY).balance;
+  assert.equal(L.claimExpedition(s, mon + 2 * DAY), 40);
+  assert.equal(L.wallet(s, mon + 2 * DAY).balance, before + 40);
+  assert.equal(L.deriveProfile(s, mon + 2 * DAY).totalXp, L.deriveProfile(s, mon + 2 * DAY).totalXp);
+  assert.ok(L.deriveProfile(s, mon).totalXp >= xpBefore);
+  // Semana siguiente: arriesgada sin llegar → vuelve vacía, sin castigo
+  const mon2 = mon + 7 * DAY;
+  assert.equal(L.expeditionFor(s, mon2), null);
+  L.startExpedition(s, 'fuerza', 'arriesgada', 'cosmos', mon2);
+  L.logActivity(s, 'def-gym', { now: mon2 });
+  const past = L.pastExpeditions(s, mon2 + 7 * DAY);
+  assert.deepEqual(past.map(p => [p.stat, p.success]), [['fuerza', false], ['intelecto', true]]);
+  assert.ok(L.wallet(s, mon2 + 7 * DAY).balance >= bal0, 'nunca resta monedas');
+});

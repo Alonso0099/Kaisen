@@ -13,7 +13,7 @@ import { t, tn, getLang, setLang, LANGS, nameOf, statName, bossName, bossShort, 
 import { GUARDIAN_LINES, lineOfDay, heroLines, guardianLines, bossLines, backLines } from './phrases.js';
 import { art, CHARACTERS, DEFAULT_CHARACTER, charHero, characterById, characterImg, guardianFor, guardianEvolutions, syncGuardianSeen, GUARDIANS, WORLDS, worldById, DEFAULT_WORLD, DEFAULT_PET, PET_SPECIES, speciesById } from './catalog.js';
 
-export const APP_VERSION = '2.9.0';
+export const APP_VERSION = '2.10.0';
 const BACKUP_REMINDER_DAYS = 7;
 
 const $ = sel => document.querySelector(sel);
@@ -565,6 +565,9 @@ function renderGoal(p, { boss, weekly, pet }) {
     else if (pet.next && pet.daysToNext <= 3) cands.push({ ico: '🐾', text: (pet.daysToNext === 1 ? t('Un día activo más y {name} será {stage}', { name: nameP, stage: stageName(pet.stage + 1) }) : t('{n} días activos más y {name} será {stage}', { n: pet.daysToNext, name: nameP, stage: stageName(pet.stage + 1) })), pct: 1 + pet.pct * .2, view: null });
     // Premios por reclamar
     if (boss.defeated && !boss.claimed) cands.push({ ico: '👹', text: t('¡Derrotaste al jefe! Reclama tu premio en Misiones'), pct: 2.5, view: 'quests' });
+    const ex = G.expeditionFor(state);
+    if (ex?.done && !ex.claimed) cands.push({ ico: '🧭', text: t('{name} volvió de la expedición: recibe el botín en Misiones', { name: GUARDIANS[ex.stat]?.name || '' }), pct: 2.45, view: 'quests' });
+    else if (ex && !ex.done && ex.target - ex.progress === 1) cands.push({ ico: '🧭', text: t('Una actividad de {stat} más y {name} vuelve con el botín', { stat: statName(G.statById(ex.stat)), name: GUARDIANS[ex.stat]?.name || '' }), pct: 1.1, view: 'quests' });
     for (const m of weekly) if (m.done && !m.claimed) cands.push({ ico: '🗓️', text: t('Misión cumplida: reclama «{name}»', { name: mText(m).title }), pct: 2.4, view: 'quests' });
     // Guardiana a punto de evolucionar
     for (const st of G.STATS) {
@@ -816,8 +819,92 @@ function renderMinis({ boss, pet }) {
     </div>`;
 }
 
+// ---------------------------------------------------------------------
+// Expedición de la semana
+// ---------------------------------------------------------------------
+let expedDraft = { stat: null, route: 'segura' };
+const guardianImg = (stat, p) => guardianFor(stat, (p || G.deriveProfile(state)).stats[stat].level);
+function renderExpedition() {
+  const p = G.deriveProfile(state);
+  const x = G.expeditionFor(state);
+  const card = $('#expedCard');
+  const past = G.pastExpeditions(state).slice(0, 8);
+  const album = past.length ? `
+    <h3 class="sub-title">${t('Postales de expediciones')}</h3>
+    <div class="postcards">${past.map(px => { const gg = guardianImg(px.stat, p); return `
+      <div class="postcard ${px.success ? 'ok' : 'miss'}">${artImg(art.world(px.world))}${artImg(gg.img, { fb: gg.fallback })}
+        <span>${esc(worldName(worldById(px.world)))} · ${esc(gg.name)} ${px.success ? '✓' : '·'}</span></div>`; }).join('')}</div>` : '';
+  if (!x) {
+    const d = expedDraft;
+    card.innerHTML = `
+      <div class="panel exped">
+        <p class="small">${t('Elige una guardiana y una ruta. Las actividades de su stat esta semana la hacen avanzar. Si no llega, vuelve sin botín y sin castigo.')}</p>
+        <div class="exped-guards">${G.STATS.map(s => {
+          const g = guardianImg(s.id, p);
+          return `<button class="exped-g ${d.stat === s.id ? 'on' : ''}" data-exped-stat="${s.id}" style="--c:${s.color}">
+            ${artImg(g.img, { fb: g.tier > 1 ? g.fallback : null })}<b>${esc(g.name || statName(s))}</b><small>${statName(s)}</small></button>`;
+        }).join('')}</div>
+        <div class="exped-routes">${Object.entries(G.EXPED_ROUTES).map(([id, r]) => `
+          <button class="exped-route ${d.route === id ? 'on' : ''}" data-exped-route="${id}">
+            <b>${id === 'segura' ? t('🛡️ Ruta segura') : t('⚔️ Ruta arriesgada')}</b>
+            <small>${t('{n} actividades esta semana', { n: r.target })}</small><em>+${r.coins} 🪙</em></button>`).join('')}</div>
+        <button class="btn btn-primary btn-block" id="expedGo" ${d.stat ? '' : 'disabled'}>${d.stat ? t('Enviar a {name}', { name: esc(GUARDIANS[d.stat]?.name || '') }) : t('Elige una guardiana')}</button>
+      </div>${album}`;
+    return;
+  }
+  const s = G.statById(x.stat);
+  const g = guardianImg(x.stat, p);
+  const w = worldById(x.world);
+  const days = G.weeklyMissions(state)[0].daysLeft;
+  card.innerHTML = `
+    <div class="panel exped live ${x.done ? 'done' : ''}" style="--c:${s.color}">
+      <div class="exped-scene">${artImg(art.world(x.world))}${artImg(g.img, { fb: g.tier > 1 ? g.fallback : null })}</div>
+      <div class="exped-body">
+        <b>${x.done ? (x.claimed ? t('{name} ya volvió de {world}', { name: esc(g.name), world: esc(worldName(w)) }) : t('¡{name} volvió de {world} con el botín!', { name: esc(g.name), world: esc(worldName(w)) }))
+          : t('{name} explora {world}', { name: esc(g.name), world: esc(worldName(w)) })}</b>
+        <small>${x.route === 'segura' ? t('🛡️ Ruta segura') : t('⚔️ Ruta arriesgada')} · ${t('{n} de {total} actividades de {stat}', { n: x.progress, total: x.target, stat: statName(s) })}</small>
+        <div class="hpbar goal"><i style="width:${Math.round(x.progress / x.target * 100)}%"></i></div>
+        ${x.done
+          ? (x.claimed ? `<small>${t('Puedes enviar otra expedición el lunes.')}</small>` : `<button class="btn btn-yellow btn-block" id="expedClaim">${t('Recibir +{n} 🪙', { n: x.coins })}</button>`)
+          : `<small>${days === 1 ? t('Vuelve mañana: queda 1 día.') : t('Vuelve el domingo: quedan {n} días.', { n: days })}</small>`}
+      </div>
+    </div>`;
+  card.innerHTML += album;
+}
+async function claimExpeditionFlow() {
+  const x = G.expeditionFor(state);
+  if (!x) return;
+  let coins;
+  try { commit(s => { coins = G.claimExpedition(s); }, { celebrate: false }); } catch (err) { return toast(`✋ ${esc(t(err.message))}`); }
+  const g = guardianImg(x.stat);
+  heroReact();
+  await openSheet(`
+    <div class="exped-result" style="--c:${G.statById(x.stat).color}">
+      <div class="exped-scene big">${artImg(art.world(x.world))}${artImg(g.img, { fb: g.fallback })}</div>
+      <h3>${t('¡{name} volvió con el botín!', { name: esc(g.name) })}</h3>
+      <p class="exped-loot">+${coins} 🪙</p>
+      <p class="small center">${t('Guardamos una postal de {world} en tu álbum.', { world: esc(worldName(worldById(x.world))) })}</p>
+    </div>
+    <button class="btn btn-primary btn-block" data-close="ok">${t('Genial')}</button>`);
+}
+$('#expedCard').addEventListener('click', e => {
+  const st = e.target.closest('[data-exped-stat]');
+  if (st) { expedDraft.stat = st.dataset.expedStat; return renderExpedition(); }
+  const rt = e.target.closest('[data-exped-route]');
+  if (rt) { expedDraft.route = rt.dataset.expedRoute; return renderExpedition(); }
+  if (e.target.closest('#expedGo') && expedDraft.stat) {
+    try { commit(s => G.startExpedition(s, expedDraft.stat, expedDraft.route, s.equipped?.world || DEFAULT_WORLD), { celebrate: false }); }
+    catch (err) { return toast(`✋ ${esc(t(err.message))}`); }
+    toast(t('🧭 ¡{name} salió de expedición!', { name: esc(GUARDIANS[expedDraft.stat]?.name || '') }));
+    expedDraft = { stat: null, route: 'segura' };
+    return;
+  }
+  if (e.target.closest('#expedClaim')) claimExpeditionFlow();
+});
+
 /** Pestaña Misiones: jefe del mes, misiones semanales y trofeos. */
 function renderAdventure({ boss, weekly }) {
+  renderExpedition();
   const weak = G.statById(boss.weak);
   $('#bossCard').innerHTML = `
     <div class="boss-card ${boss.defeated ? 'defeated' : ''}">

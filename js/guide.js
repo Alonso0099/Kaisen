@@ -22,7 +22,7 @@ export const GUIDES = {
   ] },
   quests: { title: 'Misiones', points: [
     'El <b>jefe del mes</b> recibe daño con todo lo que registras: su stat débil pega ×2 y su reto pega ×3. Si pasa un día sin golpes, se recupera un poco; cumplir su reto te da <b>Defensa</b> para el día siguiente.',
-    'Las <b>misiones semanales</b> cambian cada lunes y dan XP extra.',
+    'La <b>expedición de la semana</b> (opcional): eliges una guardiana y una ruta; sus actividades la hacen avanzar y vuelve con monedas. Las <b>misiones semanales</b> cambian cada lunes y dan XP extra.',
     'Las <b>misiones únicas</b> son tareas que haces una sola vez (una cita, un trámite).',
   ] },
   shop: { title: 'Tienda', points: [
@@ -84,7 +84,7 @@ const GUIDES_EN = {
   ] },
   quests: { title: 'Quests', points: [
     'The <b>boss of the month</b> takes damage from everything you log: its weak stat hits ×2 and its challenge hits ×3. If a day goes by with no hits, it recovers a little; doing its challenge gives you <b>Defense</b> for the next day.',
-    '<b>Weekly quests</b> reset every Monday and give extra XP.',
+    'The <b>weekly expedition</b> (optional): pick a guardian and a route; her activities move her forward and she comes back with coins. <b>Weekly quests</b> reset every Monday and give extra XP.',
     '<b>One-time quests</b> are tasks you do once (an appointment, an errand).',
   ] },
   shop: { title: 'Shop', points: [

@@ -1,5 +1,7 @@
 # Plan de mejoras · Kaizen v2.5 y siguientes
 
+> **Expedición (v2.10.0):** piloto con guardiana, mundo actual, ruta segura o arriesgada y postal: listo.
+>
 > **Contador y temporizador (v2.9.0):** agua con 8 vasos y Enfoque 25 min: listo.
 >
 > **Para hoy (v2.8.0):** días fijos, meta semanal flexible, «2 de 3» y fijar hábitos nuevos: listo.

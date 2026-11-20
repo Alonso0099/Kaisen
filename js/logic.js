@@ -325,6 +325,7 @@ export function defaultState() {
     pinned: [],          // actividades fijadas como acceso rápido en Inicio (máx. 3)
     counters: {},        // contadores del día: { 'AAAA-MM-DD': { idActividad: n } }
     timer: null,         // temporizador en curso: { act, startedAt, endsAt }
+    expeditions: [],     // expediciones semanales: { week, stat, route, world, claimed }
     onboarded: false,    // ya pasó por la bienvenida (elegir nombre, personaje y hábitos)
     notices: {},         // avisos únicos ya mostrados (p. ej. devolución de Ambientes)
     quests: [],
@@ -463,6 +464,7 @@ export function validateImport(obj) {
     pinned: Array.isArray(data.pinned) ? data.pinned.filter(x => typeof x === 'string').slice(0, 3) : [],
     counters: data.counters && typeof data.counters === 'object' ? data.counters : {},
     timer: data.timer && typeof data.timer.endsAt === 'number' ? data.timer : null,
+    expeditions: Array.isArray(data.expeditions) ? data.expeditions.filter(x => x && typeof x.week === 'string' && EXPED_ROUTES[x.route]) : [],
     // Quien ya tenía progreso (o venía de antes de la bienvenida) no la vuelve a ver.
     onboarded: typeof data.onboarded === 'boolean' ? data.onboarded || data.log.length > 0 : true,
     notices: data.notices && typeof data.notices === 'object' ? { ...data.notices } : {},
@@ -799,7 +801,8 @@ export function wallet(state, now = Date.now()) {
   const days = new Set(state.log.filter(isBase).map(e => dayKey(e.ts)));
   const fromChests = [...days].reduce((a, d) => a + chestFor(d), 0);
   const fromAchievements = unlockedAchievements(state, deriveProfile(state, now)).length * COINS.achievement;
-  const earned = fromLog + fromChests + fromAchievements;
+  const fromExpeditions = (state.expeditions || []).filter(x => x.claimed).reduce((a, x) => a + (EXPED_ROUTES[x.route]?.coins || 0), 0);
+  const earned = fromLog + fromChests + fromAchievements + fromExpeditions;
   // Los "Ambientes" (kind 'sky') se retiraron de la tienda: no cuentan como gasto,
   // así se devuelven solos. La compra queda en el historial.
   const spent = (state.purchases || []).filter(p => p.kind !== 'sky').reduce((a, p) => a + p.cost, 0);
@@ -1275,4 +1278,49 @@ export function addHabits(state, habitIds = []) {
     n++;
   }
   return n;
+}
+
+// ---------------------------------------------------------------------
+// Expedición de la semana (opcional). Eliges una guardiana y una ruta:
+// la segura pide 3 actividades de su stat en la semana y la arriesgada 5.
+// Da monedas (nunca XP extra: la XP de cada actividad no cambia). Si no se
+// llega, la guardiana vuelve con las manos vacías, sin castigo.
+// ---------------------------------------------------------------------
+export const EXPED_ROUTES = {
+  segura:     { target: 3, coins: 40 },
+  arriesgada: { target: 5, coins: 120 },
+};
+function expedProgress(state, x) {
+  return state.log.filter(e => e.type === 'activity' && e.stat === x.stat && weekKey(e.ts) === x.week).length;
+}
+/** Expedición de esta semana con su avance, o null si todavía no salió. */
+export function expeditionFor(state, now = Date.now()) {
+  const wk = weekKey(now);
+  const x = (state.expeditions || []).find(e => e.week === wk);
+  if (!x) return null;
+  const r = EXPED_ROUTES[x.route];
+  const progress = expedProgress(state, x);
+  return { ...x, target: r.target, coins: r.coins, progress: Math.min(progress, r.target), done: progress >= r.target };
+}
+export function startExpedition(state, stat, route, world, now = Date.now()) {
+  if (!STAT_IDS.includes(stat) || !EXPED_ROUTES[route]) throw new Error('Expedición no válida');
+  if (expeditionFor(state, now)) throw new Error('Ya hay una expedición esta semana');
+  state.expeditions = [...(state.expeditions || []), { week: weekKey(now), stat, route, world: world || 'atardecer', claimed: false }];
+  return expeditionFor(state, now);
+}
+export function claimExpedition(state, now = Date.now()) {
+  const x = expeditionFor(state, now);
+  if (!x || !x.done) throw new Error('La expedición todavía no vuelve');
+  if (x.claimed) throw new Error('Ya recibiste este botín');
+  state.expeditions.find(e => e.week === x.week).claimed = true;
+  return x.coins;
+}
+/** Expediciones de semanas pasadas (álbum de postales), de la más reciente a la más antigua. */
+export function pastExpeditions(state, now = Date.now()) {
+  const wk = weekKey(now);
+  return (state.expeditions || []).filter(x => x.week < wk).map(x => {
+    const r = EXPED_ROUTES[x.route];
+    const success = expedProgress(state, x) >= r.target;
+    return { ...x, success, coins: r.coins };
+  }).sort((a, b) => b.week.localeCompare(a.week));
 }
