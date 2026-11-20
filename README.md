@@ -84,6 +84,10 @@ Cuando una guardiana evoluciona, las actividades de su stat dan más XP **y más
 
 Al editar una actividad, **¿Cuándo?** permite elegir *Cuando pueda* (libre), **Días fijos** (p. ej. lun · mié · vie) o **Veces por semana** (p. ej. 3×). Inicio muestra la fila **Para hoy** con lo que toca y el progreso de la semana («2 de 3 esta semana»); al cumplir la meta sale «🎯 Meta de la semana cumplida». Un día fuera de agenda **nunca cuenta como falta**: solo se mide lo hecho en la semana. Lo que está en *Para hoy* no se repite en los accesos rápidos. Un hábito nuevo se **fija solo** en Inicio si queda espacio (hasta 3). Lógica: `planStatus` y `todayPlan` en `js/logic.js`.
 
+## 💧 Contador y ⏱ temporizador
+
+En **¿Cómo se registra?** (al editar una actividad): *Un toque*, **Contador** con meta diaria (p. ej. agua 8 vasos: cada toque suma uno y al llegar a la meta se registra) o **Temporizador** (5–45 min: al terminar se registra solo, aunque la app esté cerrada; una píldora muestra el tiempo restante y se puede cancelar sin XP). La XP es la misma que la de la actividad. El agua viene como contador de 8 vasos y hay una plantilla nueva **Enfoque 25 min** con temporizador.
+
 ## 🌤️ Volver sin castigo
 
 - **Día de gracia:** un día suelto sin registrar por semana no rompe la racha (no suma, pero no la corta). Los escudos se gastan solo cuando la gracia no alcanza.

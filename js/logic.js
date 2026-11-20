@@ -323,6 +323,8 @@ export function defaultState() {
     shieldDays: [],                                  // días salvados por un escudo de racha
     equipped: { title: null, world: 'atardecer', gear: {} },
     pinned: [],          // actividades fijadas como acceso rápido en Inicio (máx. 3)
+    counters: {},        // contadores del día: { 'AAAA-MM-DD': { idActividad: n } }
+    timer: null,         // temporizador en curso: { act, startedAt, endsAt }
     onboarded: false,    // ya pasó por la bienvenida (elegir nombre, personaje y hábitos)
     notices: {},         // avisos únicos ya mostrados (p. ej. devolución de Ambientes)
     quests: [],
@@ -387,6 +389,13 @@ export function undoEntry(state, entryId) {
   const i = state.log.findIndex(e => e.id === entryId);
   if (i < 0) return null;
   const [entry] = state.log.splice(i, 1);
+  // Contador: deshacer la meta deja el contador a un paso de cumplirla.
+  const act = state.activities.find(a => a.id === entry.refId);
+  const m = normalizeMeasure(act?.measure);
+  if (entry.type === 'activity' && m?.kind === 'count') {
+    const day = dayKey(entry.ts);
+    state.counters = { ...(state.counters || {}), [day]: { ...(state.counters?.[day] || {}), [act.id]: m.goal - 1 } };
+  }
   if (entry.type === 'quest') {
     const h = state.questHistory.findIndex(q => q.entryId === entryId);
     if (h >= 0) {
@@ -436,6 +445,9 @@ export function validateImport(obj) {
     for (const r of DEFAULT_RESIST) if (RESIST_V5.includes(r.id) && !activities.some(a => a.id === r.id)) activities.push({ ...r, bonus: null });
   }
   for (const a of activities) if (a.basic === undefined && BASIC_IDS.has(a.id)) a.basic = true;
+  // v2.9: el agua pasa a contador (8 vasos) y el enfoque a temporizador, si no tenían forma de registro.
+  for (const a of activities) if (a.measure === undefined && DEFAULT_MEASURES[a.id]) a.measure = { ...DEFAULT_MEASURES[a.id] };
+  for (const a of activities) if (a.id === 'tpl-agua' && a.name === 'Tomar mis vasos de agua') a.name = 'Tomar agua';
   return {
     ...base,
     ...data,
@@ -449,6 +461,8 @@ export function validateImport(obj) {
     shieldDays: Array.isArray(data.shieldDays) ? data.shieldDays : [],
     equipped: (({ sky, ...rest }) => rest)({ ...base.equipped, ...(data.equipped || {}), gear: { ...((data.equipped || {}).gear || {}) } }),
     pinned: Array.isArray(data.pinned) ? data.pinned.filter(x => typeof x === 'string').slice(0, 3) : [],
+    counters: data.counters && typeof data.counters === 'object' ? data.counters : {},
+    timer: data.timer && typeof data.timer.endsAt === 'number' ? data.timer : null,
     // Quien ya tenía progreso (o venía de antes de la bienvenida) no la vuelve a ver.
     onboarded: typeof data.onboarded === 'boolean' ? data.onboarded || data.log.length > 0 : true,
     notices: data.notices && typeof data.notices === 'object' ? { ...data.notices } : {},
@@ -1001,6 +1015,66 @@ export function quickActivities(state, now = Date.now(), n = QUICK_MAX) {
 
 export const isPinned = (state, id) => (state.pinned || []).includes(id);
 
+// ---------------------------------------------------------------------
+// Formas de registrar: un toque (por defecto), contador con meta diaria
+// ({ kind: 'count', goal: 8, unit: 'vasos' }) o temporizador
+// ({ kind: 'timer', minutes: 25 }). La XP es la misma que la de la
+// actividad: se gana una vez al llegar a la meta o al terminar el tiempo.
+// ---------------------------------------------------------------------
+export const DEFAULT_MEASURES = {
+  'tpl-agua': { kind: 'count', goal: 8, unit: 'vasos' },
+  'tpl-enfoque': { kind: 'timer', minutes: 25 },
+};
+export const TIMER_MINUTES = [5, 10, 15, 25, 45];
+export function normalizeMeasure(m) {
+  if (!m || typeof m !== 'object') return null;
+  if (m.kind === 'count') return { kind: 'count', goal: Math.min(30, Math.max(2, Math.round(Number(m.goal) || 0) || 8)), unit: String(m.unit || '').slice(0, 16) };
+  if (m.kind === 'timer') return { kind: 'timer', minutes: Math.min(120, Math.max(1, Math.round(Number(m.minutes) || 25))) };
+  return null;
+}
+const loggedOn = (state, id, day) => state.log.some(e => e.type === 'activity' && e.refId === id && dayKey(e.ts) === day);
+
+/** Valor del contador de hoy (si ya se cumplió la meta, la meta). */
+export function counterValue(state, id, now = Date.now()) {
+  const act = state.activities.find(a => a.id === id);
+  const m = normalizeMeasure(act?.measure);
+  if (m?.kind !== 'count') return 0;
+  const day = dayKey(now);
+  if (loggedOn(state, id, day)) return m.goal;
+  return Math.min(m.goal, state.counters?.[day]?.[id] || 0);
+}
+
+/** Suma uno al contador; al llegar a la meta registra la actividad (una vez al día). */
+export function tapCounter(state, id, now = Date.now()) {
+  const act = state.activities.find(a => a.id === id);
+  const m = normalizeMeasure(act?.measure);
+  if (m?.kind !== 'count') throw new Error('Actividad no encontrada');
+  const day = dayKey(now);
+  if (loggedOn(state, id, day)) throw new Error('Ya cumpliste la meta de hoy');
+  const value = Math.min(m.goal, (state.counters?.[day]?.[id] || 0) + 1);
+  // Solo se guarda el día de hoy: los contadores de otros días ya no sirven.
+  state.counters = { [day]: { ...(state.counters?.[day] || {}), [id]: value } };
+  const entry = value >= m.goal ? logActivity(state, id, { now }) : null;
+  return { value, goal: m.goal, entry };
+}
+
+export function startTimer(state, id, now = Date.now()) {
+  const act = state.activities.find(a => a.id === id);
+  const m = normalizeMeasure(act?.measure);
+  if (m?.kind !== 'timer') throw new Error('Actividad no encontrada');
+  state.timer = { act: id, startedAt: now, endsAt: now + m.minutes * 60000 };
+  return state.timer;
+}
+export function cancelTimer(state) { state.timer = null; }
+/** Si el temporizador terminó, registra la actividad (a la hora en que terminó). */
+export function checkTimer(state, now = Date.now()) {
+  const tm = state.timer;
+  if (!tm || now < tm.endsAt) return null;
+  state.timer = null;
+  if (!state.activities.some(a => a.id === tm.act)) return null;
+  return logActivity(state, tm.act, { now: tm.endsAt });
+}
+
 /** Fija una actividad nueva en Inicio si queda espacio (sin soltar ninguna). */
 export function pinIfRoom(state, id) {
   const a = state.activities.find(x => x.id === id);
@@ -1079,7 +1153,7 @@ export const HABIT_AREAS = [
 export const HABIT_TEMPLATES = [
   // Lo básico (una vez al día)
   { id: 'tpl-dormir',         name: 'Dormir 7 horas o más',          stat: 'resistencia', xp: 10, area: 'basico', basic: true },
-  { id: 'tpl-agua',           name: 'Tomar mis vasos de agua',       stat: 'resistencia', xp: 5,  area: 'basico', basic: true },
+  { id: 'tpl-agua',           name: 'Tomar agua',                    stat: 'resistencia', xp: 5,  area: 'basico', basic: true, measure: { kind: 'count', goal: 8, unit: 'vasos' } },
   { id: 'bas-fruta',          name: 'Comer fruta o verdura',         stat: 'fuerza',      xp: 5,  area: 'basico', basic: true },
   { id: 'bas-desayuno',       name: 'Desayunar bien',                stat: 'fuerza',      xp: 5,  area: 'basico', basic: true },
   { id: 'bas-aire',           name: 'Salir a tomar aire o sol',      stat: 'sabiduria',   xp: 5,  area: 'basico', basic: true },
@@ -1120,6 +1194,7 @@ export const HABIT_TEMPLATES = [
   { id: 'tpl-idioma',         name: 'Practicar un idioma',           stat: 'intelecto',   xp: 20, area: 'crecer' },
   { id: 'def-programar',      name: 'Avanzar un proyecto propio',    stat: 'intelecto',   xp: 25, area: 'crecer' },
   { id: 'tpl-curso',          name: 'Avanzar un curso',              stat: 'intelecto',   xp: 25, area: 'crecer' },
+  { id: 'tpl-enfoque',        name: 'Enfoque 25 min',                stat: 'intelecto',   xp: 20, area: 'crecer', measure: { kind: 'timer', minutes: 25 } },
   { id: 'def-tarea',          name: 'Entregar una tarea',            stat: 'intelecto',   xp: 40, area: 'crecer' },
 ];
 export const BASIC_IDS = new Set(HABIT_TEMPLATES.filter(t => t.basic).map(t => t.id));
@@ -1178,7 +1253,7 @@ export function applyOnboarding(state, { name, character, habitIds = [], rewardI
   const chosen = habitIds.map(id => HABIT_TEMPLATES.find(t => t.id === id)).filter(Boolean).slice(0, ONBOARD_MAX);
   if (chosen.length) {
     const resist = state.activities.filter(a => a.resist);
-    state.activities = [...chosen.map(t => ({ ...t, bonus: t.bonus ? { ...t.bonus } : null })), ...resist];
+    state.activities = [...chosen.map(t => ({ ...t, bonus: t.bonus ? { ...t.bonus } : null, ...(t.measure ? { measure: { ...t.measure } } : {}) })), ...resist];
     state.pinned = chosen.filter(t => !t.basic).slice(0, QUICK_MAX).map(t => t.id);
   }
   const rewards = rewardIds.map(id => REWARD_TEMPLATES.find(r => r.id === id)).filter(Boolean).slice(0, REWARD_PICK_MAX);
@@ -1194,7 +1269,7 @@ export function addHabits(state, habitIds = []) {
     const t = HABIT_TEMPLATES.find(x => x.id === id);
     if (!t || state.activities.some(a => a.id === id)) continue;
     const firstResist = state.activities.findIndex(a => a.resist);
-    const act = { ...t, bonus: t.bonus ? { ...t.bonus } : null };
+    const act = { ...t, bonus: t.bonus ? { ...t.bonus } : null, ...(t.measure ? { measure: { ...t.measure } } : {}) };
     if (firstResist < 0) state.activities.push(act); else state.activities.splice(firstResist, 0, act);
     pinIfRoom(state, act.id);
     n++;

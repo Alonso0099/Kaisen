@@ -1284,3 +1284,12 @@ body.scrolled .topbar {
 .weekdays .chip { min-width: 44px; justify-content: center; text-transform: capitalize; }
 #edPlanWeek { margin-top: 8px; }
 .plan-hint { display: block; margin-top: 6px; color: var(--muted); font-size: 12px; text-transform: none; letter-spacing: 0; line-height: 1.35; }
+
+/* Contador y temporizador */
+.act-measure { display: block; font-size: 10.5px; font-weight: 800; color: #9fd8ff; margin-top: 2px; }
+.basic-chip span { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; }
+.basic-chip small { font-size: 10.5px; font-weight: 800; opacity: .85; }
+.timer-face { text-align: center; margin: 8px 0 12px; }
+.timer-face b { display: block; font-family: var(--display); font-weight: 400; font-size: 64px; letter-spacing: 2px; color: var(--yellow); }
+.timer-pill { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(var(--safe-bottom, 0px) + 78px); z-index: 30;
+  border: 2px solid #000; border-radius: 999px; padding: 8px 14px; background: #ffd23f; color: #1a1205; font-weight: 900; font-size: 13px; box-shadow: 0 6px 18px rgba(0,0,0,.45); }

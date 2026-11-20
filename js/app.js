@@ -13,7 +13,7 @@ import { t, tn, getLang, setLang, LANGS, nameOf, statName, bossName, bossShort, 
 import { GUARDIAN_LINES, lineOfDay, heroLines, guardianLines, bossLines, backLines } from './phrases.js';
 import { art, CHARACTERS, DEFAULT_CHARACTER, charHero, characterById, characterImg, guardianFor, guardianEvolutions, syncGuardianSeen, GUARDIANS, WORLDS, worldById, DEFAULT_WORLD, DEFAULT_PET, PET_SPECIES, speciesById } from './catalog.js';
 
-export const APP_VERSION = '2.8.0';
+export const APP_VERSION = '2.9.0';
 const BACKUP_REMINDER_DAYS = 7;
 
 const $ = sel => document.querySelector(sel);
@@ -370,6 +370,7 @@ function actBtn(a) {
       ${actXp(a)}
       ${a.bonus ? `<span class="act-bonus-tag">★ ${esc(t(a.bonus.label))} +${a.bonus.xp}</span>` : ''}
       ${(() => { const st = G.planStatus(state, a); return st ? `<span class="act-plan">${planProgress(st)}</span>` : ''; })()}
+      ${a.measure ? `<span class="act-measure" ${state.timer?.act === a.id ? 'data-timer-tag' : ''}>${measureTag(a)}</span>` : ''}
     </span>
   </button>`;
 }
@@ -389,7 +390,7 @@ function renderBasics() {
     <div class="basics-list">${basics.map(a => {
       const st = G.statById(a.stat); const ok = done.has(a.id);
       return `<button class="basic-chip act-btn ${ok ? 'done' : ''}" data-act="${esc(a.id)}" style="--c:${st.color}" ${ok ? 'disabled' : ''}>
-        <i>${ok ? '✓' : '+'}</i><span>${esc(nameOf(a))}</span></button>`;
+        <i>${ok ? '✓' : a.measure?.kind === 'count' ? '💧' : '+'}</i><span>${esc(nameOf(a))}${a.measure ? `<small ${state.timer?.act === a.id ? 'data-timer-tag' : ''}>${measureTag(a)}</small>` : ''}</span></button>`;
     }).join('')}</div>`;
 }
 
@@ -405,6 +406,7 @@ function planLabel(plan) {
 const planProgress = st => st.met ? t('✓ Meta de la semana') : t('{n} de {total} esta semana', { n: st.done, total: st.target });
 
 /** "Para hoy": lo que toca hoy según el plan de cada actividad. */
+// (la píldora del temporizador se actualiza con cada render de Inicio)
 function renderPlan() {
   const row = $('#planRow');
   const items = G.todayPlan(state);
@@ -416,11 +418,12 @@ function renderPlan() {
     <div class="basics-list">${items.map(({ act: a, st }) => {
       const c = G.statById(a.stat).color;
       return `<button class="basic-chip plan-chip act-btn ${st.doneToday ? 'done' : ''}" data-act="${esc(a.id)}" style="--c:${c}" ${st.doneToday ? 'disabled' : ''}>
-        <i>${st.doneToday ? '✓' : '+'}</i><span>${esc(nameOf(a))}<small>${planProgress(st)}</small></span></button>`;
+        <i>${st.doneToday ? '✓' : '+'}</i><span>${esc(nameOf(a))}<small>${planProgress(st)}${a.measure ? ` · ${measureTag(a)}` : ''}</small></span></button>`;
     }).join('')}</div>`;
 }
 
 function renderQuick() {
+  renderTimer();
   renderPlan();
   renderBasics();
   // Lo que ya está en «Para hoy» no se repite en los accesos rápidos.
@@ -434,6 +437,71 @@ function renderQuick() {
   $('#quickLog').classList.toggle('n2', quick.length === 2);
 }
 
+// ---------------------------------------------------------------------
+// Contador y temporizador
+// ---------------------------------------------------------------------
+/** Etiqueta corta de cómo se registra: «3/8 vasos» o «⏱ 25 min». */
+function measureTag(a) {
+  const m = G.normalizeMeasure(a.measure);
+  if (!m) return '';
+  if (m.kind === 'count') return `${G.counterValue(state, a.id)}/${m.goal}${m.unit ? ` ${t(m.unit)}` : ''}`;
+  if (state.timer?.act === a.id) return `⏳ ${fmtLeft(state.timer.endsAt - Date.now())}`;
+  return `⏱ ${t('{n} min', { n: m.minutes })}`;
+}
+const fmtLeft = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+
+function tapCounterFlow(a, m, btn) {
+  const next = G.counterValue(state, a.id) + 1;
+  if (next >= m.goal) return doLog(a.id, false, btn, s => G.tapCounter(s, a.id).entry);
+  try { commit(s => G.tapCounter(s, a.id), { celebrate: false }); }
+  catch (err) { return toast(`✋ ${esc(t(err.message))}`); }
+  if (btn?.getBoundingClientRect) { const r = btn.getBoundingClientRect(); burst(r.left + r.width / 2, r.top + r.height / 2, G.statById(a.stat).color); }
+  toast(t('{name}: {n} de {goal}', { name: esc(nameOf(a)), n: next, goal: m.goal }) + (m.unit ? ` ${t(m.unit)}` : ''), { duration: 1600 });
+}
+
+async function openTimer(a, m) {
+  const running = state.timer?.act === a.id;
+  if (state.timer && !running) {
+    const other = state.activities.find(x => x.id === state.timer.act);
+    if (!(await confirmSheet(t('¿Cambiar de temporizador?'), t('«{name}» sigue contando. Si empiezas otro, ese se cancela sin XP.', { name: esc(other ? nameOf(other) : '') }), t('Empezar este')))) return;
+  }
+  if (!running) commit(s => G.startTimer(s, a.id), { celebrate: false });
+  const total = m.minutes * 60000;
+  const p = openSheet(`
+    <h3>${esc(nameOf(a))}</h3>
+    <div class="timer-face"><b class="timer-live" data-left>${fmtLeft(state.timer.endsAt - Date.now())}</b>
+      <div class="hpbar goal"><i class="timer-bar" style="width:${Math.round((1 - (state.timer.endsAt - Date.now()) / total) * 100)}%"></i></div></div>
+    <p class="small center">${t('Al terminar se registra solo: +{xp} XP. Puedes cerrar esta hoja; el tiempo sigue corriendo.', { xp: a.xp })}</p>
+    <div class="btn-row"><button class="btn btn-danger" data-close="cancel-timer">${t('Cancelar')}</button><button class="btn btn-primary" data-close="ok">${t('Seguir')}</button></div>`);
+  const res = await p;
+  if (res === 'cancel-timer' && state.timer?.act === a.id) { commit(s => G.cancelTimer(s), { celebrate: false }); toast(t('Temporizador cancelado')); }
+  renderTimer();
+}
+
+/** Píldora con el tiempo restante y revisión cada segundo. Al terminar, se registra. */
+function renderTimer() {
+  const tm = state.timer;
+  const pill = $('#timerPill');
+  pill.hidden = !tm;
+  if (!tm) return;
+  if (Date.now() >= tm.endsAt) {
+    const id = tm.act;
+    pill.hidden = true;
+    doLog(id, false, null, s => G.checkTimer(s));
+    return;
+  }
+  const a = state.activities.find(x => x.id === tm.act);
+  pill.textContent = `⏳ ${a ? nameOf(a) : ''} · ${fmtLeft(tm.endsAt - Date.now())}`;
+  const live = document.querySelector('#sheet .timer-live');
+  if (live) {
+    live.textContent = fmtLeft(tm.endsAt - Date.now());
+    const bar = document.querySelector('#sheet .timer-bar');
+    if (bar) bar.style.width = `${Math.round((1 - (tm.endsAt - Date.now()) / (tm.endsAt - tm.startedAt)) * 100)}%`;
+  }
+}
+setInterval(() => { if (state.timer) { renderTimer(); document.querySelectorAll('[data-timer-tag]').forEach(el => { el.textContent = `⏳ ${fmtLeft(state.timer.endsAt - Date.now())}`; }); } }, 1000);
+$('#timerPill').onclick = () => { const a = state.activities.find(x => x.id === state.timer?.act); if (a) openTimer(a, G.normalizeMeasure(a.measure)); };
+
 /** Catálogo completo: todas las actividades por stat, con ★ para fijar y ✎ para editar. */
 async function openCatalog() {
   const today = G.dayKey(Date.now());
@@ -445,7 +513,7 @@ async function openCatalog() {
     return `<div class="cat-row ${done ? 'done' : ''}" style="--c:${st.color}">
       <button class="cat-main" data-pick="${esc(a.id)}" ${done ? 'disabled' : ''}>
         <img src="${a.resist ? art.boss(a.resist) : statIcon(st.id)}" alt="">
-        <span><b>${done ? '✔ ' : ''}${esc(nameOf(a))}</b><small>+${a.xp + extra} XP${a.bonus ? ` · ★ ${esc(t(a.bonus.label))}` : ''}${a.resist === boss.id ? t(' · ⚡ ×3 al jefe') : ''}${a.plan ? ` · 📅 ${planLabel(a.plan)}` : ''}</small></span>
+        <span><b>${done ? '✔ ' : ''}${esc(nameOf(a))}</b><small>+${a.xp + extra} XP${a.bonus ? ` · ★ ${esc(t(a.bonus.label))}` : ''}${a.resist === boss.id ? t(' · ⚡ ×3 al jefe') : ''}${a.plan ? ` · 📅 ${planLabel(a.plan)}` : ''}${a.measure ? ` · ${measureTag(a)}` : ''}</small></span>
       </button>
       ${a.resist || a.basic ? '' : `<button class="cat-pin ${G.isPinned(state, a.id) ? 'on' : ''}" data-pin="${esc(a.id)}" aria-label="${t('Fijar en Inicio')}">★</button>`}
       <button class="cat-edit" data-edit="${esc(a.id)}" aria-label="${t('Editar')}">✎</button>
@@ -1207,6 +1275,19 @@ async function editorSheet({ title, item, maxXp, allowBonus, allowDelete }) {
       </div>
       <small class="plan-hint">${t('Aparecerá en «Para hoy» los días que toca. Un día fuera de agenda nunca cuenta como falta.')}</small>
     </div>
+    <div class="field"><span>${t('¿Cómo se registra?')}</span>
+      <div class="chips" id="edMeasureKind">
+        ${[['', t('Un toque')], ['count', t('Contador')], ['timer', t('Temporizador')]].map(([k, l]) => `<button type="button" class="chip ${(it.measure?.kind || '') === k ? 'on' : ''}" data-measure="${k}">${l}</button>`).join('')}
+      </div>
+      <div id="edCount" class="rw-lock-opts" ${it.measure?.kind === 'count' ? '' : 'hidden'}>
+        <select id="edCountGoal">${[3, 4, 5, 6, 8, 10, 12].map(n => `<option value="${n}" ${(it.measure?.goal || 8) === n ? 'selected' : ''}>${t('Meta: {n}', { n })}</option>`).join('')}</select>
+        <input type="text" id="edCountUnit" maxlength="16" placeholder="${t('vasos')}" value="${esc(it.measure?.unit ? t(it.measure.unit) : '')}">
+      </div>
+      <div class="chips" id="edTimer" ${it.measure?.kind === 'timer' ? '' : 'hidden'} style="margin-top:8px">
+        ${G.TIMER_MINUTES.map(n => `<button type="button" class="chip ${(it.measure?.minutes || 25) === n ? 'on' : ''}" data-min="${n}">${t('{n} min', { n })}</button>`).join('')}
+      </div>
+      <small class="plan-hint">${t('La XP es la misma: se gana una vez al llegar a la meta o al terminar el tiempo.')}</small>
+    </div>
     <label class="toggle"><input type="checkbox" id="edBonusOn" ${it.bonus ? 'checked' : ''}> <span>${t('Bono opcional (ej. ruta larga)')}</span></label>
     <div id="edBonus" ${it.bonus ? '' : 'hidden'} class="char-editor">
       <label class="field"><span>${t('Nombre del bono')}</span>
@@ -1240,7 +1321,19 @@ async function editorSheet({ title, item, maxXp, allowBonus, allowDelete }) {
     document.querySelectorAll('#edStats .chip').forEach(x => x.classList.toggle('on', x === c));
   };
   let plan = G.normalizePlan(it.plan);
+  let mKind = it.measure?.kind || '', minutes = it.measure?.minutes || 25;
   if (allowBonus) {
+    $('#edMeasureKind').onclick = e => {
+      const b = e.target.closest('[data-measure]'); if (!b) return;
+      mKind = b.dataset.measure;
+      document.querySelectorAll('#edMeasureKind .chip').forEach(x => x.classList.toggle('on', x === b));
+      $('#edCount').hidden = mKind !== 'count'; $('#edTimer').hidden = mKind !== 'timer';
+    };
+    $('#edTimer').onclick = e => {
+      const b = e.target.closest('[data-min]'); if (!b) return;
+      minutes = +b.dataset.min;
+      document.querySelectorAll('#edTimer .chip').forEach(x => x.classList.toggle('on', x === b));
+    };
     $('#edPlanKind').onclick = e => {
       const b = e.target.closest('[data-plan]'); if (!b) return;
       const k = b.dataset.plan;
@@ -1285,6 +1378,11 @@ async function editorSheet({ title, item, maxXp, allowBonus, allowDelete }) {
         : null;
       out.resist = $('#edResist').value || null;
       out.plan = G.normalizePlan(plan);
+      const unitIn = $('#edCountUnit').value.trim();
+      // Si la unidad traducida no cambió, se guarda la original («vasos»).
+      const unit = it.measure?.unit && unitIn === t(it.measure.unit) ? it.measure.unit : unitIn;
+      out.measure = mKind === 'count' ? G.normalizeMeasure({ kind: 'count', goal: +$('#edCountGoal').value, unit })
+        : mKind === 'timer' ? G.normalizeMeasure({ kind: 'timer', minutes }) : null;
     }
     closeSheet(out);
   };
@@ -1294,12 +1392,13 @@ async function editorSheet({ title, item, maxXp, allowBonus, allowDelete }) {
 // ---------------------------------------------------------------------
 // Acciones
 // ---------------------------------------------------------------------
-function doLog(activityId, bonus, origin) {
+function doLog(activityId, bonus, origin, run = s => G.logActivity(s, activityId, { bonus })) {
   const planAct = state.activities.find(x => x.id === activityId);
   const planBefore = G.planStatus(state, planAct);
   let entry;
-  try { entry = commit(s => G.logActivity(s, activityId, { bonus })); }
+  try { entry = commit(run); }
   catch (err) { toast(`✋ ${esc(t(err.message))}`); return; }
+  if (!entry) return;
   const today = G.dayKey(Date.now());
   const firstToday = state.log.filter(e => G.isBase(e) && G.dayKey(e.ts) === today).length === 1;
   if (origin) {
@@ -1329,6 +1428,9 @@ function doLog(activityId, bonus, origin) {
 async function onActivityTap(btn) {
   const a = state.activities.find(x => x.id === btn.dataset.act);
   if (!a) return;
+  const m = G.normalizeMeasure(a.measure);
+  if (m?.kind === 'count') return tapCounterFlow(a, m, btn);
+  if (m?.kind === 'timer') return openTimer(a, m);
   if (!a.bonus) return doLog(a.id, false, btn);
   const choice = await openSheet(`
     <h3>${esc(nameOf(a))}</h3>

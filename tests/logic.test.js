@@ -942,3 +942,36 @@ test('fijar un hábito nuevo si hay espacio en Inicio', () => {
   assert.deepEqual(s.pinned, ['tpl-correr', 'tpl-yoga', 'tpl-nadar'], 'hasta 3, sin soltar ninguno; lo básico no se fija');
   assert.equal(L.pinIfRoom(s, 'def-gym'), false);
 });
+
+test('contador: suma por toque y registra una vez al llegar a la meta; deshacer deja uno antes', () => {
+  const s = L.defaultState();
+  L.addHabits(s, ['tpl-agua']);
+  const now = noon(2026, 11, 18);
+  assert.deepEqual(s.activities.find(a => a.id === 'tpl-agua').measure, { kind: 'count', goal: 8, unit: 'vasos' });
+  for (let i = 1; i < 8; i++) assert.equal(L.tapCounter(s, 'tpl-agua', now + i).entry, null);
+  assert.equal(L.counterValue(s, 'tpl-agua', now), 7);
+  const r = L.tapCounter(s, 'tpl-agua', now + 9);
+  assert.ok(r.entry); assert.equal(r.entry.xp, 5, 'misma XP de la actividad');
+  assert.throws(() => L.tapCounter(s, 'tpl-agua', now + 10), /meta de hoy/);
+  L.undoEntry(s, r.entry.id);
+  assert.equal(L.counterValue(s, 'tpl-agua', now), 7);
+  assert.equal(L.counterValue(s, 'tpl-agua', now + DAY), 0, 'cada día empieza de cero');
+  // Respaldos viejos: el agua recibe su contador
+  const old = L.defaultState(); old.activities.push({ id: 'tpl-agua', name: 'Tomar mis vasos de agua', stat: 'resistencia', xp: 5 });
+  const back = L.validateImport(JSON.parse(JSON.stringify(L.exportPayload(old))));
+  assert.equal(back.activities.find(a => a.id === 'tpl-agua').measure.kind, 'count');
+  assert.equal(back.activities.find(a => a.id === 'tpl-agua').name, 'Tomar agua', 'nombre nuevo, más corto');
+});
+
+test('temporizador: al terminar registra la actividad a la hora en que terminó', () => {
+  const s = L.defaultState();
+  L.addHabits(s, ['tpl-enfoque']);
+  const now = noon(2026, 11, 18);
+  L.startTimer(s, 'tpl-enfoque', now);
+  assert.equal(L.checkTimer(s, now + 10 * 60000), null);
+  const e = L.checkTimer(s, now + 26 * 60000);
+  assert.ok(e); assert.equal(e.ts, now + 25 * 60000); assert.equal(e.xp, 20);
+  assert.equal(s.timer, null);
+  L.startTimer(s, 'tpl-enfoque', now); L.cancelTimer(s);
+  assert.equal(L.checkTimer(s, now + 99 * 60000), null, 'cancelado: no da XP');
+});

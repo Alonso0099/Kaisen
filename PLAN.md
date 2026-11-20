@@ -1,5 +1,7 @@
 # Plan de mejoras · Kaizen v2.5 y siguientes
 
+> **Contador y temporizador (v2.9.0):** agua con 8 vasos y Enfoque 25 min: listo.
+>
 > **Para hoy (v2.8.0):** días fijos, meta semanal flexible, «2 de 3» y fijar hábitos nuevos: listo.
 >
 > **Idioma (v2.7.0):** inglés completo en toda la app (ver README → Idioma). Las frases en inglés son una traducción provisional.
